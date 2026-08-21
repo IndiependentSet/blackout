@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin: 0; padding: 0; background: #05060a; -webkit-tap-highlight-color: transparent; }
+  body { font-family: "IBM Plex Mono", ui-monospace, monospace; overflow-x: hidden; }
+  body::after {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 40;
+    opacity: var(--grain, 0.05); mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  a { color: #3fe8ff; text-decoration: none; }
+  a:hover { color: #a9f4ff; }
+  button { font-family: inherit; }
+  @keyframes bo-pulse { 0%,100% { opacity: .25; r: 7 } 50% { opacity: 1; r: 13 } }
+  @keyframes bo-dash { to { stroke-dashoffset: -24 } }
+</style>
+</helmet>
+<div style="min-height: 100vh; background: #05060a; color: #9aa6c4; display: flex; justify-content: center;">
+  <div style="width: 100%; max-width: 430px; padding: 16px 14px 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px;">
+
+    <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px;">
+      <div style="display: flex; align-items: baseline; gap: 9px;">
+        <span style="font-size: 15px; font-weight: 600; letter-spacing: 0.34em; color: #e6eef7;">BLACKOUT</span>
+        <span style="font-size: 11px; letter-spacing: 0.14em; color: #4d5677;">#{{ day }}</span>
+      </div>
+      <span style="font-size: 12px; letter-spacing: 0.18em; color: {{ lit }};">{{ stars }}</span>
+    </div>
+
+    <div style="display: flex; gap: 0; align-items: center; justify-content: space-between; border-top: 1px solid #12172e; border-bottom: 1px solid #12172e;">
+      <sc-for list="{{ pips }}" as="p" hint-placeholder-count="7">
+        <button type="button" onClick="{{ p.tap }}" aria-label="{{ p.label }}" style="flex: 1; height: 44px; background: none; border: 0; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+          <span style="display: block; width: 100%; margin: 0 3px; height: {{ p.h }}px; background: {{ p.fill }};"></span>
+        </button>
+      </sc-for>
+    </div>
+
+    <svg viewBox="{{ box }}" width="100%" role="application" tabindex="0" aria-label="power grid" style="display: block; touch-action: manipulation; outline: none;">
+      <sc-for list="{{ edges }}" as="e" hint-placeholder-count="14">
+        <g>
+          <line x1="{{ e.x1 }}" y1="{{ e.y1 }}" x2="{{ e.x2 }}" y2="{{ e.y2 }}" stroke="#171d42" stroke-width="1.5"></line>
+          <line x1="{{ e.x1 }}" y1="{{ e.y1 }}" x2="{{ e.x2 }}" y2="{{ e.y2 }}" stroke="{{ lit }}" stroke-width="7" stroke-opacity="0.13" stroke-dasharray="{{ e.dash }}" stroke-dashoffset="{{ e.off }}" style="transition: stroke-dashoffset 420ms cubic-bezier(.15,.85,.25,1);"></line>
+          <line x1="{{ e.x1 }}" y1="{{ e.y1 }}" x2="{{ e.x2 }}" y2="{{ e.y2 }}" stroke="{{ lit }}" stroke-width="1.7" stroke-dasharray="{{ e.dash }}" stroke-dashoffset="{{ e.off }}" style="transition: stroke-dashoffset 340ms cubic-bezier(.15,.85,.25,1);"></line>
+        </g>
+      </sc-for>
+      <sc-for list="{{ proof }}" as="m" hint-placeholder-count="0">
+        <line x1="{{ m.x1 }}" y1="{{ m.y1 }}" x2="{{ m.x2 }}" y2="{{ m.y2 }}" stroke="#ffb454" stroke-width="3" stroke-opacity="0.85" stroke-dasharray="7 5" style="animation: bo-dash 900ms linear infinite;"></line>
+      </sc-for>
+      <sc-for list="{{ nodes }}" as="n" hint-placeholder-count="14">
+        <g>
+          <circle cx="{{ n.x }}" cy="{{ n.y }}" r="{{ n.pulseR }}" fill="none" stroke="{{ lit }}" stroke-width="1" opacity="{{ n.pulseO }}" style="animation: {{ n.anim }};"></circle>
+          <circle id="bloom-{{ n.i }}" cx="{{ n.x }}" cy="{{ n.y }}" r="6" fill="none" stroke="{{ lit }}" stroke-width="1.4" opacity="0"></circle>
+          <circle cx="{{ n.x }}" cy="{{ n.y }}" r="9" fill="none" stroke="{{ lit }}" stroke-width="1" opacity="{{ n.ringO }}"></circle>
+          <circle cx="{{ n.x }}" cy="{{ n.y }}" r="{{ n.r }}" fill="{{ n.fill }}" stroke="{{ n.stroke }}" stroke-width="1.2"></circle>
+          <rect x="{{ n.fx }}" y="{{ n.fx2 }}" width="24" height="24" fill="none" stroke="#e6eef7" stroke-width="1" stroke-dasharray="4 4" opacity="{{ n.focusO }}"></rect>
+        </g>
+      </sc-for>
+      <rect x="0" y="0" width="{{ boxW }}" height="{{ boxH }}" fill="transparent" onClick="{{ pickAt }}" style="cursor: pointer;"></rect>
+    </svg>
+
+    <div style="display: flex; flex-direction: column; gap: 5px;">
+      <div style="font-size: 12.5px; letter-spacing: 0.06em; color: #9aa6c4;">
+        <span style="color: {{ usedColor }}; font-weight: 600;">{{ used }} / {{ par }}</span> transformers · <span style="color: #cdd8ea;">{{ litCount }}</span> of {{ edgeCount }} cables lit
+      </div>
+      <div style="font-size: 11px; letter-spacing: 0.16em; min-height: 15px; color: {{ msgColor }};">{{ msg }}</div>
+    </div>
+
+    <div style="display: flex; gap: 6px;">
+      <sc-for list="{{ hints }}" as="h" hint-placeholder-count="3">
+        <button type="button" onClick="{{ h.tap }}" style="flex: 1; min-height: 44px; background: {{ h.bg }}; border: 1px solid {{ h.border }}; color: {{ h.color }}; font-size: 10.5px; letter-spacing: 0.14em; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;">
+          <span style="opacity: .5; font-size: 9px;">{{ h.tier }}</span>
+          <span>{{ h.label }}</span>
+        </button>
+      </sc-for>
+    </div>
+
+    <div style="display: flex; gap: 6px; align-items: stretch;">
+      <button type="button" onClick="{{ reset }}" style="min-height: 44px; padding: 0 16px; background: none; border: 1px solid #1c2342; color: #6f7899; font-size: 10.5px; letter-spacing: 0.16em; cursor: pointer;">CLEAR</button>
+      <div style="flex: 1; min-height: 44px; border: 1px solid {{ bannerBorder }}; display: flex; align-items: center; justify-content: space-between; padding: 0 4px 0 14px; gap: 8px;">
+        <span style="font-size: 11px; letter-spacing: 0.14em; white-space: nowrap; color: {{ bannerColor }};">{{ banner }}</span>
+        <button type="button" onClick="{{ next }}" style="height: 36px; padding: 0 14px; background: {{ nextBg }}; border: 0; color: #05060a; font-size: 10.5px; font-weight: 600; letter-spacing: 0.14em; cursor: pointer; opacity: {{ nextO }};">{{ nextLabel }}</button>
+      </div>
+    </div>
+
+    <sc-if value="{{ showShare }}" hint-placeholder-val="{{ false }}">
+      <div style="border: 1px solid #1c2342; padding: 14px; display: flex; flex-direction: column; gap: 10px;">
+        <div style="font-size: 10px; letter-spacing: 0.2em; color: #4d5677;">GRID LOG</div>
+        <div style="font-size: 13px; line-height: 1.7; color: #cdd8ea; white-space: pre-wrap;">{{ shareText }}</div>
+        <button type="button" onClick="{{ copy }}" style="min-height: 44px; background: none; border: 1px solid {{ lit }}; color: {{ lit }}; font-size: 10.5px; letter-spacing: 0.16em; cursor: pointer;">{{ copyLabel }}</button>
+      </div>
+    </sc-if>
+
+    <div style="font-size: 9.5px; line-height: 1.9; letter-spacing: 0.1em; color: #363e5c;">TAP A JUNCTION TO INSTALL · TAP AGAIN TO REMOVE · ARROWS + ENTER · 1 2 3 HINTS · R CLEAR</div>
+  </div>
+</div>
+<div id="bo-flash" style="position: fixed; inset: 0; background: #ffffff; opacity: 0; pointer-events: none; z-index: 30;"></div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:402,&quot;height&quot;:900},&quot;dayOffset&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:0,&quot;min&quot;:-30,&quot;max&quot;:30,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Puzzle&quot;},&quot;soundOn&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Feel&quot;},&quot;litColor&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#3fe8ff&quot;,&quot;options&quot;:[&quot;#3fe8ff&quot;,&quot;#7cf0c8&quot;,&quot;#ffb454&quot;,&quot;#c8a3ff&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Feel&quot;},&quot;grain&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:0.05,&quot;min&quot;:0,&quot;max&quot;:0.16,&quot;step&quot;:0.01,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Feel&quot;}}">
+class Component extends DCLogic {
+  state = {
+    levels: [null, null, null, null, null, null, null],
+    idx: 0, placed: [], results: [null, null, null, null, null, null, null],
+    hint: null, focus: 0, msg: '', copied: false,
+  };
+
+  componentDidMount() {
+    document.body.style.setProperty('--grain', String(this.props.grain ?? 0.05));
+    this.onKey = this.onKey.bind(this);
+    window.addEventListener('keydown', this.onKey);
+    import('./engine.js').then(E => {
+      this.E = E;
+      const levels = this.state.levels.slice();
+      levels[0] = E.makeLevelForDay(this.seed(), 0);
+      this.setState({ levels });
+      this.queue(1);
+    });
+  }
+  componentDidUpdate() { document.body.style.setProperty('--grain', String(this.props.grain ?? 0.05)); }
+  componentWillUnmount() { window.removeEventListener('keydown', this.onKey); this.hush(); }
+
+  seed() { return this.day() + 3; }
+  day() {
+    const d = Math.floor((Date.now() - Date.UTC(2026, 3, 15)) / 86400000);
+    return Math.max(1, d) + (this.props.dayOffset ?? 0);
+  }
+  queue(i) {
+    if (i > 6) return;
+    setTimeout(() => {
+      if (!this.E) return;
+      const levels = this.state.levels.slice();
+      levels[i] = this.E.makeLevelForDay(this.seed(), i);
+      this.setState({ levels });
+      this.queue(i + 1);
+    }, 40);
+  }
+  lv() { return this.state.levels[this.state.idx]; }
+  litSet(lv, placed) {
+    const p = new Set(placed), s = new Set();
+    lv.edges.forEach(([u, v], i) => { if (p.has(u) || p.has(v)) s.add(i); });
+    return s;
+  }
+  solved() { const lv = this.lv(); return !!lv && this.litSet(lv, this.state.placed).size === lv.edges.length; }
+
+  /* ---- audio ---- */
+  ac() {
+    if (this.props.soundOn === false) return null;
+    if (!this._ac) { const C = window.AudioContext || window.webkitAudioContext; if (!C) return null; this._ac = new C(); }
+    if (this._ac.state === 'suspended') this._ac.resume();
+    return this._ac;
+  }
+  thunk(n, up) {
+    const ac = this.ac(); if (!ac) return;
+    const t = ac.currentTime;
+    const o = ac.createOscillator(), g = ac.createGain(), f = ac.createBiquadFilter();
+    o.type = 'triangle';
+    const base = 58 * Math.pow(1.055, Math.max(0, n - 1));
+    o.frequency.setValueAtTime(base * (up ? 2.1 : 1.7), t);
+    o.frequency.exponentialRampToValueAtTime(base, t + 0.13);
+    f.type = 'lowpass'; f.frequency.setValueAtTime(up ? 1500 : 900, t);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(up ? 0.16 : 0.09, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + (up ? 0.34 : 0.18));
+    o.connect(f); f.connect(g); g.connect(ac.destination);
+    o.start(t); o.stop(t + 0.4);
+  }
+  overload() {
+    const ac = this.ac(); if (!ac) return;
+    const t = ac.currentTime;
+    const buf = ac.createBuffer(1, ac.sampleRate * 0.5, ac.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3);
+    const src = ac.createBufferSource(), ng = ac.createGain(), bp = ac.createBiquadFilter();
+    src.buffer = buf; bp.type = 'bandpass'; bp.frequency.value = 1800; bp.Q.value = 0.7;
+    ng.gain.value = 0.14;
+    src.connect(bp); bp.connect(ng); ng.connect(ac.destination); src.start(t);
+    this.hush();
+    const g = ac.createGain(); g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(0.055, t + 0.5);
+    g.gain.linearRampToValueAtTime(0.0001, t + 6);
+    const a = ac.createOscillator(), b = ac.createOscillator();
+    a.type = b.type = 'sine'; a.frequency.value = 55; b.frequency.value = 82.4;
+    a.connect(g); b.connect(g); g.connect(ac.destination);
+    a.start(t); b.start(t); a.stop(t + 6.2); b.stop(t + 6.2);
+    this._hum = [a, b];
+  }
+  hush() { if (this._hum) { try { this._hum.forEach(o => o.stop()); } catch (e) {} this._hum = null; } }
+
+  bloom(i) {
+    requestAnimationFrame(() => {
+      const el = document.getElementById('bloom-' + i);
+      if (el && el.animate) el.animate(
+        [{ r: 4, opacity: 0.9, strokeWidth: 2 }, { r: 26, opacity: 0, strokeWidth: 0.4 }],
+        { duration: 620, easing: 'cubic-bezier(.1,.8,.2,1)' });
+    });
+  }
+  flash() {
+    const el = document.getElementById('bo-flash');
+    if (el && el.animate) el.animate([{ opacity: 0.82 }, { opacity: 0.82, offset: 0.24 }, { opacity: 0 }],
+      { duration: 620, easing: 'ease-out' });
+  }
+
+  /* ---- moves ---- */
+  tap(i) {
+    const lv = this.lv(); if (!lv) return;
+    const placed = this.state.placed.slice();
+    const at = placed.indexOf(i);
+    if (at >= 0) {
+      placed.splice(at, 1);
+      this.setState({ placed, msg: '', focus: i, hint: this.state.hint === 'reveal' ? null : this.state.hint });
+      this.thunk(placed.length + 1, false);
+      return;
+    }
+    if (this.solved()) return;
+    if (placed.length >= lv.k + 1) {
+      this.setState({ msg: 'BUDGET SPENT — REMOVE ONE', focus: i });
+      this.thunk(1, false);
+      return;
+    }
+    placed.push(i);
+    const done = this.litSet(lv, placed).size === lv.edges.length;
+    const results = this.state.results.slice();
+    if (done) results[this.state.idx] = placed.length <= lv.k ? 'perfect' : 'over';
+    this.setState({ placed, results, focus: i, hint: null, msg: '', copied: false });
+    this.thunk(placed.length, true);
+    this.bloom(i);
+    if (done) { this.flash(); this.overload(); } 
+  }
+  reset() { this.hush(); this.setState({ placed: [], hint: null, msg: '', focus: 0 }); }
+  go(i) {
+    if (i < 0 || i > 6 || !this.state.levels[i]) return;
+    this.hush();
+    this.setState({ idx: i, placed: [], hint: null, msg: '', focus: 0, copied: false });
+  }
+  next() {
+    if (!this.solved()) return;
+    if (this.state.idx < 6) this.go(this.state.idx + 1);
+  }
+  hint(tier) {
+    const lv = this.lv(); if (!lv || !this.E) return;
+    const p = new Set(this.state.placed);
+    if (tier === 1) {
+      const h = this.E.hintLeaf(lv, p);
+      this.setState({ hint: h ? { kind: 'leaf', leaf: h.leaf, forced: h.forced } : null,
+        msg: h ? 'ONE CABLE ONLY — ITS NEIGHBOUR IS FORCED' : 'NO SINGLE-CABLE JUNCTION LEFT' });
+    } else if (tier === 2) {
+      const m = this.E.hintMatching(lv);
+      this.setState({ hint: { kind: 'proof', edges: m }, msg: 'YOU\u2019LL NEED ' + m.length + ' OR MORE' });
+    } else {
+      const v = this.E.hintReveal(lv, p);
+      this.setState({ hint: v == null ? null : { kind: 'reveal', node: v },
+        msg: v == null ? 'EVERY TRANSFORMER IS ALREADY PLACED' : 'THIS JUNCTION IS IN THE SOLUTION' });
+    }
+  }
+
+  onKey(e) {
+    const lv = this.lv(); if (!lv) return;
+    const k = e.key;
+    if (!this.state.kbd) this.setState({ kbd: true });
+    if (k === 'r' || k === 'R') { e.preventDefault(); return this.reset(); }
+    if (k === 'n' || k === 'N') { e.preventDefault(); return this.next(); }
+    if (k === '1' || k === '2' || k === '3') { e.preventDefault(); return this.hint(+k); }
+    if (k === 'Enter' || k === ' ') { e.preventDefault(); return this.tap(this.state.focus); }
+    const dirs = { ArrowRight: [1, 0], ArrowLeft: [-1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+    if (!dirs[k]) return;
+    e.preventDefault();
+    const [dx, dy] = dirs[k], cur = lv.nodes[this.state.focus] || lv.nodes[0];
+    let best = -1, bestScore = Infinity;
+    lv.nodes.forEach((n, i) => {
+      if (i === this.state.focus) return;
+      const vx = n.c - cur.c, vy = n.r - cur.r;
+      const along = vx * dx + vy * dy, off = Math.abs(vx * dy - vy * dx);
+      if (along <= 0) return;
+      const s = along + off * 2.5;
+      if (s < bestScore) { bestScore = s; best = i; }
+    });
+    if (best >= 0) this.setState({ focus: best });
+  }
+
+  layout(lv) {
+    const W = 390, HMAX = 420, pad = 40;
+    const cs = lv.nodes.map(n => n.c), rs = lv.nodes.map(n => n.r);
+    const c0 = Math.min(...cs), c1 = Math.max(...cs), r0 = Math.min(...rs), r1 = Math.max(...rs);
+    const cols = Math.max(1, c1 - c0), rows = Math.max(1, r1 - r0);
+    const sp = Math.min((W - 2 * pad) / cols, (HMAX - 2 * pad) / rows, 84);
+    const H = Math.max(200, Math.min(HMAX, rows * sp + 2 * pad));
+    const ox = (W - cols * sp) / 2 - c0 * sp, oy = (H - rows * sp) / 2 - r0 * sp;
+    return { H, box: '0 0 ' + W + ' ' + H, pos: lv.nodes.map(n => ({ x: ox + n.c * sp, y: oy + n.r * sp })) };
+  }
+
+  renderVals() {
+    const litColor = this.props.litColor || '#3fe8ff';
+    const lv = this.lv(), st = this.state, hint = st.hint;
+    const day = this.day();
+    const vals = {
+      lit: litColor, day, stars: lv ? '\u2605'.repeat(lv.stars) : '', box: '0 0 390 300',
+      edges: [], nodes: [], proof: [], used: st.placed.length, par: lv ? lv.k : 0,
+      litCount: 0, edgeCount: lv ? lv.edges.length : 0,
+      usedColor: '#cdd8ea', msg: st.msg || (lv ? '' : 'ENERGISING GRID\u2026'), msgColor: '#6f7899',
+      reset: () => this.reset(), next: () => this.next(), copy: () => this.copyShare(),
+      hints: [1, 2, 3].map(t => ({
+        tier: t, label: ['FORCED', 'PROOF', 'REVEAL'][t - 1], tap: () => this.hint(t),
+        bg: 'none',
+        border: hint && ((t === 1 && hint.kind === 'leaf') || (t === 2 && hint.kind === 'proof') || (t === 3 && hint.kind === 'reveal')) ? litColor : '#1c2342',
+        color: hint && ((t === 1 && hint.kind === 'leaf') || (t === 2 && hint.kind === 'proof') || (t === 3 && hint.kind === 'reveal')) ? litColor : '#8a94b4',
+      })),
+      pips: [0, 1, 2, 3, 4, 5, 6].map(i => ({
+        i, label: 'grid ' + (i + 1), tap: () => this.go(i), h: i === st.idx ? 3 : 1,
+        fill: i === st.idx ? litColor : st.results[i] === 'perfect' ? '#3a5f7a'
+          : st.results[i] === 'over' ? '#6b5330' : this.state.levels[i] ? '#1c2342' : '#101528',
+      })),
+      showShare: st.results.filter(Boolean).length === 7,
+      shareText: this.share(), copyLabel: st.copied ? 'COPIED' : 'COPY GRID LOG',
+      banner: '', bannerColor: '#4d5677', bannerBorder: '#1c2342',
+      nextLabel: 'NEXT', nextBg: '#1c2342', nextO: 0.35,
+    };
+    vals.msgColor = st.msg && st.msg.indexOf('MORE') > 0 ? '#ffb454' : '#6f7899';
+    if (!lv) return vals;
+
+    const L = this.layout(lv), pos = L.pos, pset = new Set(st.placed);
+    vals.box = L.box; vals.boxH = L.H; vals.boxW = 390;
+    this._pos = pos;
+    // one canvas-wide target: the tap picks the NEAREST junction, so 44px comfort
+    // never steals a tap from a neighbouring junction on the dense grids
+    vals.pickAt = ev => {
+      const svg = ev.currentTarget.ownerSVGElement || ev.currentTarget;
+      const m = svg.getScreenCTM(); if (!m) return;
+      const p = svg.createSVGPoint(); p.x = ev.clientX; p.y = ev.clientY;
+      const q = p.matrixTransform(m.inverse());
+      let best = -1, bd = Infinity;
+      this._pos.forEach((n, i) => { const d = Math.hypot(n.x - q.x, n.y - q.y); if (d < bd) { bd = d; best = i; } });
+      if (best >= 0 && bd <= 26) this.tap(best);
+    };
+    const litE = this.litSet(lv, st.placed);
+    vals.litCount = litE.size;
+    vals.usedColor = st.placed.length > lv.k ? '#ffb454' : st.placed.length === lv.k ? litColor : '#cdd8ea';
+
+    vals.edges = lv.edges.map(([u, v], i) => {
+      const on = litE.has(i);
+      const ou = pset.has(u) ? st.placed.indexOf(u) : -1, ov = pset.has(v) ? st.placed.indexOf(v) : -1;
+      const flip = ov > ou;
+      const A = pos[flip ? v : u], B = pos[flip ? u : v];
+      const L = Math.round(Math.hypot(B.x - A.x, B.y - A.y) * 10) / 10;
+      return { x1: A.x, y1: A.y, x2: B.x, y2: B.y, dash: L + ' ' + L, off: on ? 0 : L };
+    });
+
+    if (hint && hint.kind === 'proof')
+      vals.proof = hint.edges.map(i => {
+        const [u, v] = lv.edges[i];
+        return { x1: pos[u].x, y1: pos[u].y, x2: pos[v].x, y2: pos[v].y };
+      });
+
+    const solvedNow = litE.size === lv.edges.length;
+    vals.nodes = lv.nodes.map((_, i) => {
+      const on = pset.has(i);
+      const pulsing = hint && hint.kind === 'leaf' && (i === hint.leaf || i === hint.forced);
+      const revealed = hint && hint.kind === 'reveal' && i === hint.node;
+      return {
+        i, x: pos[i].x, y: pos[i].y,
+        r: on ? 4.8 : 3.2, fill: on ? litColor : '#080b18', stroke: on ? litColor : '#2c3568',
+        ringO: on ? 0.4 : 0, pulseR: revealed ? 11 : 9, pulseO: pulsing || revealed ? 1 : 0,
+        anim: pulsing ? 'bo-pulse 1.15s ease-in-out infinite' : 'none',
+        focusO: st.kbd && i === st.focus ? 0.5 : 0, fx: pos[i].x - 12, fx2: pos[i].y - 12,
+      };
+    });
+
+    if (solvedNow) {
+      const perfect = st.placed.length <= lv.k;
+      vals.banner = perfect ? 'PERFECT ' + lv.k + '/' + lv.k : 'OVER ' + st.placed.length + '/' + lv.k;
+      vals.bannerColor = perfect ? litColor : '#ffb454';
+      vals.bannerBorder = perfect ? litColor : '#4a3a1c';
+      vals.nextBg = perfect ? litColor : '#ffb454';
+      vals.nextO = st.idx < 6 ? 1 : 0.35;
+      vals.nextLabel = st.idx < 6 ? 'NEXT' : 'DONE';
+    } else {
+      vals.banner = 'GRID ' + (st.idx + 1) + '/7 \u00b7 PAR ' + lv.k;
+    }
+    return vals;
+  }
+
+  share() {
+    const r = this.state.results;
+    const glyphs = r.map(x => (x === 'perfect' ? '\u26a1' : '\u2b1c')).join('');
+    const n = r.filter(x => x === 'perfect').length;
+    return 'BLACKOUT #' + this.day() + '\n' + glyphs + '  ' + n + '/7 perfect';
+  }
+  copyShare() {
+    const t = this.share();
+    const done = () => { this.setState({ copied: true }); setTimeout(() => this.setState({ copied: false }), 1800); };
+    if (navigator.clipboard) navigator.clipboard.writeText(t).then(done, done); else done();
+  }
+}
+
+</script>
+</body>
+</html>
