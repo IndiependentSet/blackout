@@ -1,0 +1,39 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #05060a;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 40;
+  opacity: var(--grain, 0.05);
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+a { color: #3fe8ff; text-decoration: none; }
+a:hover { color: #a9f4ff; }
+button { font-family: inherit; }
+
+@keyframes bo-pulse {
+  0%, 100% { opacity: .25; r: 7; }
+  50% { opacity: 1; r: 13; }
+}
+
+@keyframes bo-dash {
+  to { stroke-dashoffset: -24; }
+}
