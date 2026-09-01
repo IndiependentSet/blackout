@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin: 0; padding: 0; background: #150E20; -webkit-tap-highlight-color: transparent; }
+  body { font-family: "Nunito", ui-rounded, system-ui, sans-serif; overflow-x: hidden; }
+  a { color: #F7B32B; text-decoration: none; }
+  a:hover { color: #F06BFF; }
+  button { font-family: inherit; }
+  @keyframes cc-dash { to { stroke-dashoffset: -32 } }
+  @keyframes cc-pulse { 0%,100% { opacity: .25; r: 20 } 50% { opacity: 1; r: 30 } }
+  @keyframes cc-wiggle { 0%,100% { transform: rotate(-3deg) } 50% { transform: rotate(3deg) } }
+  @keyframes cc-bob { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-2.5px) } }
+  @keyframes cc-tail { 0%,100% { transform: rotate(-10deg) } 50% { transform: rotate(18deg) } }
+  @keyframes cc-dust { 0% { opacity: .8; transform: translateY(0) scale(.5) } 100% { opacity: 0; transform: translateY(-10px) scale(1.5) } }
+  @keyframes cc-spark { 0%,100% { opacity: .35; transform: scale(.8) } 50% { opacity: 1; transform: scale(1.25) } }
+  @keyframes cc-glow { 0%,100% { opacity: .5 } 50% { opacity: .95 } }
+</style>
+</helmet>
+<div style="min-height: 100vh; background: radial-gradient(120% 90% at 50% 0%, #2A1B3D 0%, #170F22 55%, #100A18 100%); color: #F4E4C4; padding: 18px 14px 30px; box-sizing: border-box;">
+  <div style="max-width: 1240px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: flex-start; gap: 16px;">
+
+    <aside style="flex: 1 1 250px; min-width: 250px; display: flex; flex-direction: column; gap: 14px;">
+      <div style="display: flex; flex-direction: column; line-height: .84; padding-top: 2px;">
+        <span style="font-family: 'Luckiest Guy', cursive; font-size: 58px; letter-spacing: .01em; color: #F7B32B; -webkit-text-stroke: 7px #2A1524; paint-order: stroke fill; text-shadow: 0 6px 0 #2A1524;">CAT</span>
+        <span style="font-family: 'Luckiest Guy', cursive; font-size: 46px; letter-spacing: .02em; color: #EADDF7; -webkit-text-stroke: 7px #2A1524; paint-order: stroke fill; text-shadow: 0 6px 0 #2A1524;">COVER</span>
+      </div>
+
+      <div style="background: linear-gradient(#F6E8CA, #EBD8AE); border: 3px solid #2A1524; border-radius: 4px 14px 6px 16px; box-shadow: 0 5px 0 #2A1524, inset 0 0 26px rgba(150,110,60,.25); padding: 13px 15px; transform: rotate(-1.2deg);">
+        <div style="font-family: 'Luckiest Guy', cursive; font-size: 19px; line-height: 1.22; color: #3E2718; text-wrap: pretty;">SELECT THE LEAST NUMBER OF CATS REQUIRED TO <span style="color: #8A3FC0;">RUIN THE HOUSE.</span></div>
+      </div>
+
+      <div style="background: linear-gradient(#FFF7E6, #F2E3C2); border: 3px solid #2A1524; border-radius: 16px 16px 16px 4px; box-shadow: 0 5px 0 #2A1524; padding: 12px 14px; font-size: 14px; font-weight: 700; line-height: 1.45; color: #4A3120;">
+        These cats are connected by destructive paths. Put a cat on one end of each path and <span style="color: #8A3FC0; font-weight: 900;">EVERYTHING</span> falls!
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="align-self: flex-start; background: #6E3FA3; border: 3px solid #2A1524; border-radius: 8px; box-shadow: 0 4px 0 #2A1524; padding: 4px 14px; font-family: 'Luckiest Guy', cursive; font-size: 14px; letter-spacing: .06em; color: #FFD469;">HOUSES</div>
+        <div style="display: flex; gap: 6px;">
+          <sc-for list="{{ pips }}" as="p" hint-placeholder-count="7">
+            <button type="button" onClick="{{ p.tap }}" aria-label="{{ p.label }}" style="flex: 1; min-height: 40px; background: {{ p.fill }}; border: 3px solid #2A1524; border-radius: 10px; padding: 0; cursor: pointer; color: {{ p.ink }}; font-family: 'Luckiest Guy', cursive; font-size: 15px; box-shadow: 0 {{ p.lift }}px 0 #2A1524; transform: translateY({{ p.dy }}px);">{{ p.n }}</button>
+          </sc-for>
+        </div>
+      </div>
+    </aside>
+
+    <main style="flex: 5 1 460px; min-width: 300px; max-width: 780px; display: flex; flex-direction: column; gap: 11px;">
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 0;">
+        <div style="background: #6E3FA3; border: 3px solid #2A1524; border-radius: 10px; box-shadow: 0 4px 0 #2A1524; padding: 3px 22px; font-family: 'Luckiest Guy', cursive; font-size: 17px; letter-spacing: .05em; color: #FFD469; position: relative; z-index: 2;">HOUSE {{ levelNo }} <span style="color: #F06BFF;">{{ stars }}</span></div>
+        <div style="margin-top: -6px; width: 92%; background: linear-gradient(#F6E8CA, #E8D3A6); border: 3px solid #2A1524; border-radius: 3px 3px 10px 10px; box-shadow: 0 5px 0 #2A1524; padding: 9px 12px 6px; text-align: center; font-family: 'Luckiest Guy', cursive; font-size: 20px; letter-spacing: .02em; color: #3E2718;">{{ plaque }}</div>
+      </div>
+
+      <div style="background: repeating-linear-gradient(96deg, #6B4730 0 46px, #664129 46px 48px, #6E4A32 48px 94px, #5E3B25 94px 96px); border: 6px solid #34200F; border-radius: 18px; box-shadow: 0 8px 0 #1E1208, inset 0 0 70px rgba(0,0,0,.55); padding: 6px; position: relative;">
+        <div style="position: absolute; inset: 6px; border-radius: 12px; pointer-events: none; box-shadow: inset 0 0 60px rgba(0,0,0,.5);"></div>
+        <svg viewBox="{{ box }}" width="100%" role="application" tabindex="0" aria-label="cat cover grid" style="display: block; touch-action: manipulation; outline: none; border-radius: 12px;">
+          <sc-for list="{{ edges }}" as="e" hint-placeholder-count="12">
+            <g>
+              <path d="{{ e.d }}" fill="none" stroke="#241409" stroke-width="{{ e.w1 }}" stroke-linecap="round" opacity=".92"></path>
+              <path d="{{ e.d }}" fill="none" stroke="#D6C2A6" stroke-width="{{ e.w2 }}" stroke-linecap="round" stroke-dasharray="{{ e.dash }}" opacity=".85"></path>
+              <path d="{{ e.d }}" pathLength="1" fill="none" stroke="#F06BFF" stroke-width="{{ e.w3 }}" stroke-opacity=".22" stroke-linecap="round" stroke-dasharray="1 1" stroke-dashoffset="{{ e.off }}" style="transition: stroke-dashoffset 500ms cubic-bezier(.15,.85,.25,1);"></path>
+              <path d="{{ e.d }}" pathLength="1" fill="none" stroke="#C64BE8" stroke-width="{{ e.w4 }}" stroke-linecap="round" stroke-dasharray="1 1" stroke-dashoffset="{{ e.off }}" style="transition: stroke-dashoffset 420ms cubic-bezier(.15,.85,.25,1);"></path>
+              <path d="{{ e.d }}" pathLength="1" fill="none" stroke="#FFEFFF" stroke-width="{{ e.w5 }}" stroke-linecap="round" stroke-dasharray="1 1" stroke-dashoffset="{{ e.off }}" style="transition: stroke-dashoffset 360ms cubic-bezier(.15,.85,.25,1);"></path>
+              <sc-if value="{{ e.on }}" hint-placeholder-val="{{ false }}">
+                <path d="{{ e.d }}" fill="none" stroke="#FFFFFF" stroke-width="{{ e.w5 }}" stroke-linecap="round" stroke-dasharray="{{ e.flow }}" style="animation: cc-dash 800ms linear infinite;"></path>
+              </sc-if>
+            </g>
+          </sc-for>
+
+          <sc-for list="{{ proof }}" as="m" hint-placeholder-count="0">
+            <path d="{{ m.d }}" fill="none" stroke="#FFD469" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="9 8" style="animation: cc-dash 900ms linear infinite;"></path>
+          </sc-for>
+
+          <sc-for list="{{ things }}" as="o" hint-placeholder-count="12">
+            <g transform="translate({{ o.x }} {{ o.y }}) scale({{ o.s }})">
+              <ellipse cx="0" cy="11" rx="13" ry="4" fill="#000000" opacity=".28"></ellipse>
+              <g transform="rotate({{ o.rot }} 0 10)" style="transition: transform 420ms cubic-bezier(.2,1.5,.4,1);">
+                <sc-if value="{{ o.k0 }}" hint-placeholder-val="{{ true }}">
+                  <path d="M -7 -2 Q -12 -12 -3 -13 Q -1 -20 3 -13 Q 12 -12 6 -2 Z" fill="#5FBB63" stroke="#2A1524" stroke-width="2" stroke-linejoin="round"></path>
+                  <path d="M -8 -1 L 8 -1 L 6 10 L -6 10 Z" fill="#D2703F" stroke="#2A1524" stroke-width="2.2" stroke-linejoin="round"></path>
+                  <path d="M -8.6 -1 L 8.6 -1" stroke="#2A1524" stroke-width="2.2" stroke-linecap="round"></path>
+                </sc-if>
+                <sc-if value="{{ o.k1 }}" hint-placeholder-val="{{ false }}">
+                  <path d="M -3.4 -13 L 3.4 -13 L 3.4 -9 Q 9 -4 8 3 Q 7 10 0 10 Q -7 10 -8 3 Q -9 -4 -3.4 -9 Z" fill="#6FA8DC" stroke="#2A1524" stroke-width="2.2" stroke-linejoin="round"></path>
+                  <path d="M -3.6 0 Q -1 3 -3.4 6" fill="none" stroke="#DFF0FF" stroke-width="2" stroke-linecap="round" opacity=".8"></path>
+                </sc-if>
+                <sc-if value="{{ o.k2 }}" hint-placeholder-val="{{ false }}">
+                  <path d="M 6 -5 Q 13 -5 13 0 Q 13 5 6 5" fill="none" stroke="#2A1524" stroke-width="4.4" stroke-linecap="round"></path>
+                  <path d="M -8 -8 L 8 -8 L 6.4 10 L -6.4 10 Z" fill="#F6F1E7" stroke="#2A1524" stroke-width="2.2" stroke-linejoin="round"></path>
+                  <path d="M -7.2 -4.4 L 7.2 -4.4" stroke="#C64BE8" stroke-width="2.6" stroke-linecap="round"></path>
+                </sc-if>
+                <sc-if value="{{ o.k3 }}" hint-placeholder-val="{{ false }}">
+                  <circle cx="0" cy="0" r="11" fill="#7FD3F0" fill-opacity=".55" stroke="#2A1524" stroke-width="2.2"></circle>
+                  <path d="M -9.6 2 Q 0 6 9.6 2 L 9.6 4 Q 0 8 -9.6 4 Z" fill="#3FA8D8" opacity=".7"></path>
+                  <path d="M -3 -1 L 2 -3.4 L 2 1.4 Z" fill="#F08C3A" stroke="#2A1524" stroke-width="1.2" stroke-linejoin="round"></path>
+                  <path d="M 2 -1 L 5.4 -3.6 L 5.4 1.6 Z" fill="#F08C3A" stroke="#2A1524" stroke-width="1.2" stroke-linejoin="round"></path>
+                </sc-if>
+                <sc-if value="{{ o.k4 }}" hint-placeholder-val="{{ false }}">
+                  <path d="M -9 -3 L -5 -13 L 5 -13 L 9 -3 Z" fill="#F3C969" stroke="#2A1524" stroke-width="2.2" stroke-linejoin="round"></path>
+                  <path d="M 0 -3 L 0 7" stroke="#2A1524" stroke-width="2.6" stroke-linecap="round"></path>
+                  <path d="M -6 10 L 6 10 Q 7 7 0 7 Q -7 7 -6 10 Z" fill="#8B5E3C" stroke="#2A1524" stroke-width="2" stroke-linejoin="round"></path>
+                </sc-if>
+              </g>
+              <g opacity="{{ o.dustO }}">
+                <circle cx="-11" cy="6" r="2.6" fill="#FFE9C4" style="animation: cc-dust 1.4s ease-out infinite;"></circle>
+                <circle cx="10" cy="4" r="2.2" fill="#FFE9C4" style="animation: cc-dust 1.4s .5s ease-out infinite;"></circle>
+                <path d="M 0 -16 l 2 4 l 4 1 l -4 1.6 l -2 4 l -2 -4 l -4 -1.6 l 4 -1 Z" fill="#FFEFAF" style="animation: cc-spark 1.1s ease-in-out infinite;"></path>
+              </g>
+            </g>
+          </sc-for>
+
+          <sc-for list="{{ nodes }}" as="n" hint-placeholder-count="10">
+            <g transform="translate({{ n.x }} {{ n.y }}) scale({{ n.s }})">
+              <circle cx="0" cy="0" r="{{ n.pulseR }}" fill="none" stroke="#FFD469" stroke-width="3" opacity="{{ n.pulseO }}" style="animation: {{ n.anim }};"></circle>
+              <ellipse cx="0" cy="17" rx="17" ry="5" fill="#000000" opacity=".33"></ellipse>
+              <circle cx="0" cy="2" r="24" fill="#F06BFF" opacity="{{ n.haloO }}" style="animation: {{ n.glow }};"></circle>
+              <ellipse cx="0" cy="15" rx="20" ry="6.5" fill="none" stroke="#F06BFF" stroke-width="3.5" opacity="{{ n.ringO }}"></ellipse>
+              <circle id="cc-bloom-{{ n.i }}" cx="0" cy="0" r="8" fill="none" stroke="#FFEFFF" stroke-width="3" opacity="0"></circle>
+              <g style="animation: {{ n.bob }}; transform-origin: 0px 6px;">
+                <path d="M 15 12 Q 26 12 25 2" fill="none" stroke="{{ n.dark }}" stroke-width="5.5" stroke-linecap="round" style="animation: {{ n.tail }}; transform-origin: 15px 12px;"></path>
+                <path d="M -14 16 Q -16 4 -6 4 L 6 4 Q 16 4 14 16 Z" fill="{{ n.fur }}" stroke="#2A1524" stroke-width="2.4" stroke-linejoin="round"></path>
+                <ellipse cx="-7" cy="15.4" rx="4.6" ry="3" fill="{{ n.paw }}" stroke="#2A1524" stroke-width="2"></ellipse>
+                <ellipse cx="7" cy="15.4" rx="4.6" ry="3" fill="{{ n.paw }}" stroke="#2A1524" stroke-width="2"></ellipse>
+                <path d="M -12.5 -6 L -14.5 -19 L -2.5 -11.5 Z" fill="{{ n.fur }}" stroke="#2A1524" stroke-width="2.2" stroke-linejoin="round"></path>
+                <path d="M 12.5 -6 L 14.5 -19 L 2.5 -11.5 Z" fill="{{ n.fur }}" stroke="#2A1524" stroke-width="2.2" stroke-linejoin="round"></path>
+                <path d="M -11.6 -8.6 L -12.4 -15.4 L -6.4 -11.6 Z" fill="{{ n.ear }}"></path>
+                <path d="M 11.6 -8.6 L 12.4 -15.4 L 6.4 -11.6 Z" fill="{{ n.ear }}"></path>
+                <ellipse cx="0" cy="-1" rx="14.5" ry="12.6" fill="{{ n.fur }}" stroke="#2A1524" stroke-width="2.4"></ellipse>
+                <ellipse cx="-8" cy="-6" rx="6" ry="5" fill="{{ n.patch }}" opacity="{{ n.patchO }}"></ellipse>
+                <g opacity="{{ n.awake }}">
+                  <ellipse cx="-5.6" cy="-3" rx="4.2" ry="4.6" fill="#FFFDF6" stroke="#2A1524" stroke-width="1.6"></ellipse>
+                  <ellipse cx="5.6" cy="-3" rx="4.2" ry="4.6" fill="#FFFDF6" stroke="#2A1524" stroke-width="1.6"></ellipse>
+                  <circle cx="-5.2" cy="-2.6" r="2.4" fill="{{ n.eye }}"></circle>
+                  <circle cx="6" cy="-2.6" r="2.4" fill="{{ n.eye }}"></circle>
+                  <circle cx="-5.2" cy="-2.6" r="1.1" fill="#2A1524"></circle>
+                  <circle cx="6" cy="-2.6" r="1.1" fill="#2A1524"></circle>
+                  <circle cx="-6.4" cy="-4.2" r="1" fill="#FFFFFF"></circle>
+                  <circle cx="4.8" cy="-4.2" r="1" fill="#FFFFFF"></circle>
+                  <path d="M -6.4 3.6 Q -3.2 6.6 -0.6 3.8 M 6.4 3.6 Q 3.2 6.6 0.6 3.8" fill="none" stroke="#2A1524" stroke-width="1.7" stroke-linecap="round"></path>
+                </g>
+                <g opacity="{{ n.asleep }}">
+                  <path d="M -9.4 -2.6 Q -5.6 1.4 -1.8 -2.6" fill="none" stroke="#2A1524" stroke-width="2" stroke-linecap="round"></path>
+                  <path d="M 1.8 -2.6 Q 5.6 1.4 9.4 -2.6" fill="none" stroke="#2A1524" stroke-width="2" stroke-linecap="round"></path>
+                  <path d="M -3 4.6 Q 0 6.4 3 4.6" fill="none" stroke="#2A1524" stroke-width="1.7" stroke-linecap="round"></path>
+                </g>
+                <path d="M -2.4 1.6 L 2.4 1.6 L 0 4.2 Z" fill="#E27B9B" stroke="#2A1524" stroke-width="1.2" stroke-linejoin="round"></path>
+                <path d="M -10 0.6 L -19 -1.4 M -10 3.4 L -19 3.6 M 10 0.6 L 19 -1.4 M 10 3.4 L 19 3.6" stroke="#FFF6E4" stroke-width="1.4" stroke-linecap="round" opacity=".85"></path>
+                <g opacity="{{ n.on }}">
+                  <path d="M -22 -14 l 3.6 1.4 l 1.4 3.6 l 1.4 -3.6 l 3.6 -1.4 l -3.6 -1.4 l -1.4 -3.6 l -1.4 3.6 Z" fill="#FFD469" style="animation: cc-spark 1.2s ease-in-out infinite;"></path>
+                  <path d="M 15 -18 l 3 1.2 l 1.2 3 l 1.2 -3 l 3 -1.2 l -3 -1.2 l -1.2 -3 l -1.2 3 Z" fill="#F06BFF" style="animation: cc-spark 1.5s .3s ease-in-out infinite;"></path>
+                </g>
+              </g>
+              <rect x="-24" y="-24" width="48" height="46" rx="14" fill="none" stroke="#FFD469" stroke-width="3" stroke-dasharray="7 6" opacity="{{ n.focusO }}"></rect>
+            </g>
+          </sc-for>
+          <rect x="0" y="0" width="{{ boxW }}" height="{{ boxH }}" fill="transparent" onClick="{{ pickAt }}" style="cursor: pointer;"></rect>
+        </svg>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
+        <div style="flex: 1 1 190px; display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,.06); border: 3px solid #2A1524; border-radius: 13px; padding: 8px 13px;">
+          <span style="font-family: 'Luckiest Guy', cursive; font-size: 22px; color: {{ usedColor }};">{{ used }}/{{ par }}</span>
+          <span style="font-size: 13px; font-weight: 800; color: #C9B8E0;">cats</span>
+          <span style="margin-left: auto; font-family: 'Luckiest Guy', cursive; font-size: 22px; color: #F06BFF;">{{ litCount }}/{{ edgeCount }}</span>
+          <span style="font-size: 13px; font-weight: 800; color: #C9B8E0;">smashed</span>
+        </div>
+        <div style="flex: 1 1 170px; min-height: 44px; display: flex; align-items: center; justify-content: flex-end; text-align: right; font-size: 13px; font-weight: 900; letter-spacing: .02em; color: {{ msgColor }};">{{ msg }}</div>
+      </div>
+
+      <div style="display: flex; gap: 8px;">
+        <sc-for list="{{ hints }}" as="h" hint-placeholder-count="3">
+          <button type="button" onClick="{{ h.tap }}" style="flex: 1; min-height: 52px; background: {{ h.bg }}; border: 3px solid #2A1524; border-radius: 13px; color: {{ h.ink }}; font-size: 13px; font-weight: 900; letter-spacing: .04em; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 0 #2A1524;">
+            <span style="opacity: .6; font-size: 9px; font-weight: 800; letter-spacing: .12em;">HINT {{ h.tier }}</span>
+            <span>{{ h.label }}</span>
+          </button>
+        </sc-for>
+      </div>
+
+      <div style="display: flex; gap: 8px; align-items: stretch;">
+        <button type="button" onClick="{{ reset }}" style="min-height: 56px; padding: 0 18px; background: #F4E4C4; border: 3px solid #2A1524; border-radius: 14px; color: #3E2718; font-family: 'Luckiest Guy', cursive; font-size: 15px; letter-spacing: .04em; cursor: pointer; box-shadow: 0 4px 0 #2A1524;">TIDY UP</button>
+        <div style="flex: 1; min-height: 56px; background: {{ bannerBg }}; border: 3px solid #2A1524; border-radius: 14px; box-shadow: 0 4px 0 #2A1524; display: flex; align-items: center; justify-content: space-between; padding: 0 7px 0 15px; gap: 8px;">
+          <span style="font-family: 'Luckiest Guy', cursive; font-size: 15px; letter-spacing: .02em; color: {{ bannerInk }};">{{ banner }}</span>
+          <button type="button" onClick="{{ next }}" style="height: 42px; padding: 0 18px; background: {{ nextBg }}; border: 3px solid #2A1524; border-radius: 11px; color: #3E2718; font-family: 'Luckiest Guy', cursive; font-size: 14px; letter-spacing: .04em; cursor: pointer; opacity: {{ nextO }};">{{ nextLabel }}</button>
+        </div>
+      </div>
+    </main>
+
+    <aside style="flex: 1 1 250px; min-width: 250px; display: flex; flex-direction: column; gap: 14px;">
+      <div style="align-self: center; background: #6E3FA3; border: 3px solid #2A1524; border-radius: 9px; box-shadow: 0 4px 0 #2A1524; padding: 4px 18px; font-family: 'Luckiest Guy', cursive; font-size: 15px; letter-spacing: .05em; color: #FFD469; position: relative; z-index: 2;">HOW IT WORKS</div>
+      <div style="margin-top: -20px; background: linear-gradient(#F6E8CA, #EBD8AE); border: 3px solid #2A1524; border-radius: 14px; box-shadow: 0 5px 0 #2A1524, inset 0 0 30px rgba(150,110,60,.22); padding: 22px 15px 14px; display: flex; flex-direction: column; gap: 12px;">
+        <sc-for list="{{ steps }}" as="s" hint-placeholder-count="3">
+          <div style="display: flex; gap: 9px;">
+            <span style="flex: none; width: 22px; height: 22px; border-radius: 50%; background: #6E3FA3; border: 2px solid #2A1524; color: #FFD469; font-family: 'Luckiest Guy', cursive; font-size: 12px; display: flex; align-items: center; justify-content: center;">{{ s.n }}</span>
+            <div>
+              <div style="font-family: 'Luckiest Guy', cursive; font-size: 14px; color: #3E2718; line-height: 1.2;">{{ s.head }}</div>
+              <div style="font-size: 12.5px; font-weight: 700; color: #6A4A30; line-height: 1.35;">{{ s.body }}</div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="align-self: center; background: #C877D8; border: 3px solid #2A1524; border-radius: 9px; box-shadow: 0 4px 0 #2A1524; padding: 4px 18px; font-family: 'Luckiest Guy', cursive; font-size: 15px; letter-spacing: .05em; color: #3E1B4A; position: relative; z-index: 2;">SCORING</div>
+      <div style="margin-top: -20px; background: linear-gradient(#F6E8CA, #EBD8AE); border: 3px solid #2A1524; border-radius: 14px; box-shadow: 0 5px 0 #2A1524; padding: 22px 12px 12px; display: flex; gap: 8px;">
+        <div style="flex: 1; background: #FFF7E6; border: 2.5px solid #2A1524; border-radius: 10px; padding: 9px 10px;">
+          <div style="font-family: 'Luckiest Guy', cursive; font-size: 13px; color: #3E2718;">{{ overLabel }}</div>
+          <div style="font-size: 11.5px; font-weight: 800; color: #7A5638; line-height: 1.3;">GOOD, BUT YOU CAN DO BETTER!</div>
+        </div>
+        <div style="flex: 1; background: #EBD4F5; border: 2.5px solid #2A1524; border-radius: 10px; padding: 9px 10px;">
+          <div style="font-family: 'Luckiest Guy', cursive; font-size: 13px; color: #3E1B4A;">{{ parLabel }}</div>
+          <div style="font-size: 11.5px; font-weight: 800; color: #6E3FA3; line-height: 1.3;">PURR-FECT CHAOS!</div>
+        </div>
+      </div>
+
+      <sc-if value="{{ showShare }}" hint-placeholder-val="{{ false }}">
+        <div style="background: linear-gradient(#F6E8CA, #EBD8AE); border: 3px solid #2A1524; border-radius: 14px; box-shadow: 0 5px 0 #2A1524; padding: 13px; display: flex; flex-direction: column; gap: 9px;">
+          <div style="font-family: 'Luckiest Guy', cursive; font-size: 13px; letter-spacing: .08em; color: #8A3FC0;">DAMAGE REPORT</div>
+          <div style="font-size: 15px; font-weight: 800; line-height: 1.55; color: #3E2718; white-space: pre-wrap;">{{ shareText }}</div>
+          <button type="button" onClick="{{ copy }}" style="min-height: 46px; background: #FFD469; border: 3px solid #2A1524; border-radius: 12px; color: #3E2718; font-family: 'Luckiest Guy', cursive; font-size: 14px; letter-spacing: .04em; cursor: pointer; box-shadow: 0 4px 0 #2A1524;">{{ copyLabel }}</button>
+        </div>
+      </sc-if>
+
+      <div style="font-size: 11px; font-weight: 800; line-height: 1.7; letter-spacing: .04em; color: #8E7AAE;">TAP A CAT TO UNLEASH IT · TAP AGAIN TO CALM IT · ARROWS + ENTER · 1 2 3 HINTS · R TIDY UP</div>
+    </aside>
+  </div>
+</div>
+<div id="cc-flash" style="position: fixed; inset: 0; background: #FFE9FF; opacity: 0; pointer-events: none; z-index: 30;"></div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1200,&quot;height&quot;:900},&quot;dayOffset&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:0,&quot;min&quot;:-30,&quot;max&quot;:30,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Puzzle&quot;},&quot;soundOn&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Feel&quot;},&quot;cableSag&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:0.1,&quot;min&quot;:0,&quot;max&quot;:0.3,&quot;step&quot;:0.01,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Feel&quot;}}">
+const BREEDS = [
+  { name: 'CHAOS', fur: '#E8873A', dark: '#C4661F', ear: '#F2A9A0', eye: '#5BD9A6', paw: '#FBD9AE', patch: 'none' },
+  { name: 'NINJA', fur: '#3B3245', dark: '#241E2E', ear: '#8A5A78', eye: '#F7C948', paw: '#4A4055', patch: 'none' },
+  { name: 'PRINCESS FLUFF', fur: '#F7EFE3', dark: '#D9CBB8', ear: '#F2B8C6', eye: '#57B6F0', paw: '#FFFBF4', patch: 'none' },
+  { name: 'MR. WHISKERS', fur: '#8C8894', dark: '#68646F', ear: '#D9A3B0', eye: '#7FD98F', paw: '#BFBAC6', patch: 'none' },
+  { name: 'TROUBLE', fur: '#EFE5D8', dark: '#3B3245', ear: '#F2B8C6', eye: '#F7C948', paw: '#FFF8EC', patch: '#E8873A' },
+];
+
+class Component extends DCLogic {
+  state = {
+    levels: [null, null, null, null, null, null, null],
+    idx: 0, placed: [], results: [null, null, null, null, null, null, null],
+    hint: null, focus: 0, msg: '', copied: false,
+  };
+
+  componentDidMount() {
+    this.onKey = this.onKey.bind(this);
+    window.addEventListener('keydown', this.onKey);
+    import('./engine.js').then(E => {
+      this.E = E;
+      const levels = this.state.levels.slice();
+      levels[0] = E.makeLevelForDay(this.seed(), 0);
+      this.setState({ levels });
+      this.queue(1);
+    });
+  }
+  componentWillUnmount() { window.removeEventListener('keydown', this.onKey); }
+
+  seed() { return this.day() + 11; }
+  day() {
+    const d = Math.floor((Date.now() - Date.UTC(2026, 3, 15)) / 86400000);
+    return Math.max(1, d) + (this.props.dayOffset ?? 0);
+  }
+  queue(i) {
+    if (i > 6) return;
+    setTimeout(() => {
+      if (!this.E) return;
+      const levels = this.state.levels.slice();
+      levels[i] = this.E.makeLevelForDay(this.seed(), i);
+      this.setState({ levels });
+      this.queue(i + 1);
+    }, 40);
+  }
+  lv() { return this.state.levels[this.state.idx]; }
+  litSet(lv, placed) {
+    const p = new Set(placed), s = new Set();
+    lv.edges.forEach(([u, v], i) => { if (p.has(u) || p.has(v)) s.add(i); });
+    return s;
+  }
+  solved() { const lv = this.lv(); return !!lv && this.litSet(lv, this.state.placed).size === lv.edges.length; }
+
+  /* ---- audio: chirp on wake, crash on smash ---- */
+  ac() {
+    if (this.props.soundOn === false) return null;
+    if (!this._ac) { const C = window.AudioContext || window.webkitAudioContext; if (!C) return null; this._ac = new C(); }
+    if (this._ac.state === 'suspended') this._ac.resume();
+    return this._ac;
+  }
+  chirp(n, up) {
+    const ac = this.ac(); if (!ac) return;
+    const t = ac.currentTime;
+    const o = ac.createOscillator(), g = ac.createGain(), f = ac.createBiquadFilter();
+    o.type = 'triangle';
+    const base = 330 * Math.pow(1.0595, Math.max(0, (n - 1) * 2));
+    o.frequency.setValueAtTime(up ? base * 0.7 : base, t);
+    o.frequency.exponentialRampToValueAtTime(up ? base * 1.6 : base * 0.55, t + 0.12);
+    f.type = 'lowpass'; f.frequency.value = 4200;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.09, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+    o.connect(f); f.connect(g); g.connect(ac.destination);
+    o.start(t); o.stop(t + 0.36);
+  }
+  crash(count) {
+    const ac = this.ac(); if (!ac || !count) return;
+    const t = ac.currentTime, dur = 0.28;
+    const buf = ac.createBuffer(1, ac.sampleRate * dur, ac.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 2.4);
+    const src = ac.createBufferSource(), g = ac.createGain(), bp = ac.createBiquadFilter();
+    src.buffer = buf; bp.type = 'highpass'; bp.frequency.value = 1400;
+    g.gain.value = Math.min(0.13, 0.05 + count * 0.02);
+    src.connect(bp); bp.connect(g); g.connect(ac.destination); src.start(t);
+  }
+  fanfare() {
+    const ac = this.ac(); if (!ac) return;
+    const t0 = ac.currentTime;
+    [523.25, 659.25, 783.99, 1046.5].forEach((hz, i) => {
+      const t = t0 + i * 0.09;
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.type = 'square'; o.frequency.setValueAtTime(hz, t);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.085, t + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.42);
+      o.connect(g); g.connect(ac.destination);
+      o.start(t); o.stop(t + 0.46);
+    });
+  }
+
+  bloom(i) {
+    requestAnimationFrame(() => {
+      const el = document.getElementById('cc-bloom-' + i);
+      if (el && el.animate) el.animate(
+        [{ r: 8, opacity: 0.9, strokeWidth: 5 }, { r: 44, opacity: 0, strokeWidth: 0.6 }],
+        { duration: 620, easing: 'cubic-bezier(.1,.8,.2,1)' });
+    });
+  }
+  flash() {
+    const el = document.getElementById('cc-flash');
+    if (el && el.animate) el.animate([{ opacity: 0.55 }, { opacity: 0.55, offset: 0.16 }, { opacity: 0 }],
+      { duration: 520, easing: 'ease-out' });
+  }
+
+  tap(i) {
+    const lv = this.lv(); if (!lv) return;
+    const placed = this.state.placed.slice();
+    const at = placed.indexOf(i);
+    const before = this.litSet(lv, placed).size;
+    if (at >= 0) {
+      placed.splice(at, 1);
+      this.setState({ placed, msg: '', focus: i, hint: this.state.hint && this.state.hint.kind === 'reveal' ? null : this.state.hint });
+      this.chirp(placed.length + 1, false);
+      return;
+    }
+    if (this.solved()) return;
+    if (placed.length >= lv.k + 1) {
+      this.setState({ msg: 'TOO MANY CATS — YOU WASTED FUR', focus: i });
+      this.chirp(1, false);
+      return;
+    }
+    placed.push(i);
+    const after = this.litSet(lv, placed).size;
+    const done = after === lv.edges.length;
+    const results = this.state.results.slice();
+    if (done) results[this.state.idx] = placed.length <= lv.k ? 'perfect' : 'over';
+    this.setState({ placed, results, focus: i, hint: null, msg: '', copied: false });
+    this.chirp(placed.length, true);
+    this.crash(after - before);
+    this.bloom(i);
+    if (done) { this.flash(); this.fanfare(); }
+  }
+  reset() { this.setState({ placed: [], hint: null, msg: '', focus: 0 }); }
+  go(i) {
+    if (i < 0 || i > 6 || !this.state.levels[i]) return;
+    this.setState({ idx: i, placed: [], hint: null, msg: '', focus: 0, copied: false });
+  }
+  next() { if (this.solved() && this.state.idx < 6) this.go(this.state.idx + 1); }
+  hint(tier) {
+    const lv = this.lv(); if (!lv || !this.E) return;
+    const p = new Set(this.state.placed);
+    if (tier === 1) {
+      const h = this.E.hintLeaf(lv, p);
+      this.setState({ hint: h ? { kind: 'leaf', leaf: h.leaf, forced: h.forced } : null,
+        msg: h ? 'ONE THING ONLY — ITS NEIGHBOUR MUST GO' : 'NO ONE-THING CAT LEFT' });
+    } else if (tier === 2) {
+      const m = this.E.hintMatching(lv);
+      this.setState({ hint: { kind: 'proof', edges: m }, msg: 'YOU\u2019LL NEED ' + m.length + ' CATS OR MORE' });
+    } else {
+      const v = this.E.hintReveal(lv, p);
+      this.setState({ hint: v == null ? null : { kind: 'reveal', node: v },
+        msg: v == null ? 'EVERY CULPRIT IS ALREADY OUT' : 'THIS CAT IS IN THE ANSWER' });
+    }
+  }
+
+  onKey(e) {
+    const lv = this.lv(); if (!lv) return;
+    const k = e.key;
+    if (!this.state.kbd) this.setState({ kbd: true });
+    if (k === 'r' || k === 'R') { e.preventDefault(); return this.reset(); }
+    if (k === 'n' || k === 'N') { e.preventDefault(); return this.next(); }
+    if (k === '1' || k === '2' || k === '3') { e.preventDefault(); return this.hint(+k); }
+    if (k === 'Enter' || k === ' ') { e.preventDefault(); return this.tap(this.state.focus); }
+    const dirs = { ArrowRight: [1, 0], ArrowLeft: [-1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+    if (!dirs[k]) return;
+    e.preventDefault();
+    const [dx, dy] = dirs[k], cur = lv.nodes[this.state.focus] || lv.nodes[0];
+    let best = -1, bestScore = Infinity;
+    lv.nodes.forEach((n, i) => {
+      if (i === this.state.focus) return;
+      const vx = n.c - cur.c, vy = n.r - cur.r;
+      const along = vx * dx + vy * dy, off = Math.abs(vx * dy - vy * dx);
+      if (along <= 0) return;
+      const s = along + off * 2.5;
+      if (s < bestScore) { bestScore = s; best = i; }
+    });
+    if (best >= 0) this.setState({ focus: best });
+  }
+
+  layout(lv) {
+    const W = 560, HMAX = 610, pad = 60;
+    const cs = lv.nodes.map(n => n.c), rs = lv.nodes.map(n => n.r);
+    const c0 = Math.min(...cs), c1 = Math.max(...cs), r0 = Math.min(...rs), r1 = Math.max(...rs);
+    const cols = Math.max(1, c1 - c0), rows = Math.max(1, r1 - r0);
+    const sp = Math.min((W - 2 * pad) / cols, (HMAX - 2 * pad) / rows, 150);
+    const H = Math.max(300, Math.min(HMAX, rows * sp + 2 * pad));
+    const ox = (W - cols * sp) / 2 - c0 * sp, oy = (H - rows * sp) / 2 - r0 * sp;
+    return { W, H, sp, box: '0 0 ' + W + ' ' + H, pos: lv.nodes.map(n => ({ x: ox + n.c * sp, y: oy + n.r * sp })) };
+  }
+
+  cable(A, B) {
+    const s = (this.props.cableSag ?? 0.1);
+    const mx = (A.x + B.x) / 2, my = (A.y + B.y) / 2;
+    const sag = Math.abs(B.x - A.x) * s + 3;
+    return { d: 'M ' + A.x + ' ' + A.y + ' Q ' + mx + ' ' + (my + sag) + ' ' + B.x + ' ' + B.y, mx, my: my + sag / 2 };
+  }
+
+  renderVals() {
+    const lv = this.lv(), st = this.state, hint = st.hint;
+    const active = t => hint && ((t === 1 && hint.kind === 'leaf') || (t === 2 && hint.kind === 'proof') || (t === 3 && hint.kind === 'reveal'));
+    const vals = {
+      levelNo: st.idx + 1, stars: lv ? '\u2726'.repeat(lv.stars) : '',
+      plaque: lv ? 'KNOCK IT ALL OVER!' : 'WAKING THE CATS\u2026',
+      box: '0 0 420 300', boxW: 420, boxH: 300,
+      edges: [], things: [], nodes: [], proof: [],
+      used: st.placed.length, par: lv ? lv.k : 0, litCount: 0, edgeCount: lv ? lv.edges.length : 0,
+      usedColor: '#FFF3D8', msg: st.msg, msgColor: '#C9B8E0',
+      reset: () => this.reset(), next: () => this.next(), copy: () => this.copyShare(),
+      steps: [
+        { n: 1, head: 'CATS CAUSE CHAOS.', body: 'Each cat knocks over everything it is connected to.' },
+        { n: 2, head: 'COVER EVERY PATH.', body: 'Put a cat on at least one end of every path.' },
+        { n: 3, head: 'USE AS FEW AS POSSIBLE.', body: 'Match par and the chaos is purr-fect.' },
+      ],
+      overLabel: lv ? (lv.k + 1) + ' CATS USED' : '\u2014',
+      parLabel: lv ? lv.k + ' CATS USED' : '\u2014',
+      hints: [1, 2, 3].map(t => ({
+        tier: t, label: ['FORCED', 'PROOF', 'REVEAL'][t - 1], tap: () => this.hint(t),
+        bg: active(t) ? '#FFD469' : '#F4E4C4', ink: '#3E2718',
+      })),
+      pips: [0, 1, 2, 3, 4, 5, 6].map(i => ({
+        i, n: i + 1, label: 'house ' + (i + 1), tap: () => this.go(i),
+        lift: i === st.idx ? 0 : 4, dy: i === st.idx ? 4 : 0,
+        ink: st.results[i] || i === st.idx ? '#2A1524' : '#C9B8E0',
+        fill: i === st.idx ? '#FFD469' : st.results[i] === 'perfect' ? '#C877D8'
+          : st.results[i] === 'over' ? '#E8A34A' : this.state.levels[i] ? 'rgba(255,255,255,.14)' : 'rgba(255,255,255,.06)',
+      })),
+      showShare: st.results.filter(Boolean).length === 7,
+      shareText: this.share(), copyLabel: st.copied ? 'COPIED!' : 'COPY REPORT',
+      banner: '', bannerBg: 'rgba(255,255,255,.08)', bannerInk: '#F4E4C4',
+      nextBg: 'rgba(255,255,255,.22)', nextLabel: 'NEXT', nextO: 0.45,
+    };
+    vals.msgColor = st.msg && st.msg.indexOf('TOO MANY') === 0 ? '#FF8FA8' : '#FFD469';
+    if (!lv) return vals;
+
+    const L = this.layout(lv), pos = L.pos, pset = new Set(st.placed);
+    vals.box = L.box; vals.boxW = L.W; vals.boxH = L.H;
+    this._pos = pos; this._hit = Math.max(22, L.sp * 0.42);
+    vals.pickAt = ev => {
+      const svg = ev.currentTarget.ownerSVGElement || ev.currentTarget;
+      const m = svg.getScreenCTM(); if (!m) return;
+      const p = svg.createSVGPoint(); p.x = ev.clientX; p.y = ev.clientY;
+      const q = p.matrixTransform(m.inverse());
+      let best = -1, bd = Infinity;
+      this._pos.forEach((n, i) => { const d = Math.hypot(n.x - q.x, n.y - q.y); if (d < bd) { bd = d; best = i; } });
+      if (best >= 0 && bd <= this._hit) this.tap(best);
+    };
+
+    const litE = this.litSet(lv, st.placed);
+    vals.litCount = litE.size;
+    vals.usedColor = st.placed.length > lv.k ? '#FF8FA8' : st.placed.length === lv.k ? '#8CE8B0' : '#FFF3D8';
+
+    const catS = Math.max(0.6, Math.min(1.4, L.sp / 110));
+    const objS = Math.max(0.8, Math.min(1.5, L.sp / 95));
+
+    lv.edges.forEach(([u, v], i) => {
+      const on = litE.has(i);
+      const ou = pset.has(u) ? st.placed.indexOf(u) : -1, ov = pset.has(v) ? st.placed.indexOf(v) : -1;
+      const flip = ov > ou;
+      const A = pos[flip ? v : u], B = pos[flip ? u : v];
+      const c = this.cable(A, B);
+      vals.edges.push({ d: c.d, off: on ? 0 : 1, on,
+        w1: +(15 * catS).toFixed(1), w2: +(6 * catS).toFixed(1), w3: +(26 * catS).toFixed(1),
+        w4: +(13 * catS).toFixed(1), w5: +(4.4 * catS).toFixed(1),
+        dash: (11 * catS).toFixed(1) + ' ' + (11 * catS).toFixed(1),
+        flow: (5 * catS).toFixed(1) + ' ' + (16 * catS).toFixed(1) });
+      const kind = (u * 7 + v * 3 + i) % 5;
+      vals.things.push({
+        i, x: c.mx, y: c.my, s: objS, rot: on ? (i % 2 ? 74 : -74) : 0, dustO: on ? 1 : 0,
+        k0: kind === 0, k1: kind === 1, k2: kind === 2, k3: kind === 3, k4: kind === 4,
+      });
+    });
+
+    if (hint && hint.kind === 'proof')
+      vals.proof = hint.edges.map(i => {
+        const [u, v] = lv.edges[i];
+        return { d: this.cable(pos[u], pos[v]).d };
+      });
+
+    vals.nodes = lv.nodes.map((_, i) => {
+      const on = pset.has(i);
+      const b = BREEDS[(i * 3 + 2) % BREEDS.length];
+      const pulsing = hint && hint.kind === 'leaf' && (i === hint.leaf || i === hint.forced);
+      const revealed = hint && hint.kind === 'reveal' && i === hint.node;
+      return {
+        i, x: pos[i].x, y: pos[i].y, s: catS,
+        fur: b.fur, dark: b.dark, ear: b.ear, eye: b.eye, paw: b.paw,
+        patch: b.patch === 'none' ? 'transparent' : b.patch, patchO: b.patch === 'none' ? 0 : 0.9,
+        on: on ? 1 : 0, awake: on ? 1 : 0, asleep: on ? 0 : 1,
+        haloO: on ? 0.2 : 0, ringO: on ? 1 : 0,
+        glow: on ? 'cc-glow 1.8s ease-in-out infinite' : 'none',
+        bob: on ? 'cc-wiggle 1.1s ease-in-out infinite' : 'cc-bob 3.4s ease-in-out infinite',
+        tail: on ? 'cc-tail .7s ease-in-out infinite' : 'cc-tail 3s ease-in-out infinite',
+        pulseR: 22, pulseO: pulsing || revealed ? 1 : 0,
+        anim: pulsing || revealed ? 'cc-pulse 1.15s ease-in-out infinite' : 'none',
+        focusO: st.kbd && i === st.focus ? 0.9 : 0,
+      };
+    });
+
+    if (litE.size === lv.edges.length) {
+      const perfect = st.placed.length <= lv.k;
+      vals.banner = perfect ? 'PURR-FECT CHAOS! ' + lv.k + '/' + lv.k : 'GOOD \u2014 BUT ' + st.placed.length + '/' + lv.k;
+      vals.bannerBg = perfect ? '#C877D8' : '#E8A34A';
+      vals.bannerInk = '#2A1524';
+      vals.nextBg = '#F4E4C4';
+      vals.nextO = st.idx < 6 ? 1 : 0.45;
+      vals.nextLabel = st.idx < 6 ? 'NEXT HOUSE' : 'ALL DONE';
+    } else {
+      vals.banner = 'HOUSE ' + (st.idx + 1) + '/7 \u00b7 PAR ' + lv.k + ' CATS';
+      if (!st.msg && st.placed.length && st.placed.length >= lv.k) vals.msg = 'SOMETHING SURVIVED\u2026';
+    }
+    return vals;
+  }
+
+  share() {
+    const r = this.state.results;
+    const glyphs = r.map(x => (x === 'perfect' ? '\ud83d\udc3e' : '\u2b1c')).join('');
+    const n = r.filter(x => x === 'perfect').length;
+    return 'CAT COVER #' + this.day() + '\n' + glyphs + '  ' + n + '/7 purr-fect';
+  }
+  copyShare() {
+    const t = this.share();
+    const done = () => { this.setState({ copied: true }); setTimeout(() => this.setState({ copied: false }), 1800); };
+    if (navigator.clipboard) navigator.clipboard.writeText(t).then(done, done); else done();
+  }
+}
+
+</script>
+</body>
+</html>
