@@ -1,12 +1,12 @@
 html, body {
   margin: 0;
   padding: 0;
-  background: #05060a;
+  background: #150E20;
   -webkit-tap-highlight-color: transparent;
 }
 
 body {
-  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-family: "Nunito", ui-rounded, system-ui, sans-serif;
   overflow-x: hidden;
 }
 
@@ -14,26 +14,15 @@ body {
   min-height: 100vh;
 }
 
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 40;
-  opacity: var(--grain, 0.05);
-  mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
-}
-
-a { color: #3fe8ff; text-decoration: none; }
-a:hover { color: #a9f4ff; }
+a { color: #F7B32B; text-decoration: none; }
+a:hover { color: #F06BFF; }
 button { font-family: inherit; }
 
-@keyframes bo-pulse {
-  0%, 100% { opacity: .25; r: 7; }
-  50% { opacity: 1; r: 13; }
-}
-
-@keyframes bo-dash {
-  to { stroke-dashoffset: -24; }
-}
+@keyframes cc-dash { to { stroke-dashoffset: -32; } }
+@keyframes cc-pulse { 0%, 100% { opacity: .25; r: 20; } 50% { opacity: 1; r: 30; } }
+@keyframes cc-wiggle { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+@keyframes cc-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2.5px); } }
+@keyframes cc-tail { 0%, 100% { transform: rotate(-10deg); } 50% { transform: rotate(18deg); } }
+@keyframes cc-dust { 0% { opacity: .8; transform: translateY(0) scale(.5); } 100% { opacity: 0; transform: translateY(-10px) scale(1.5); } }
+@keyframes cc-spark { 0%, 100% { opacity: .35; transform: scale(.8); } 50% { opacity: 1; transform: scale(1.25); } }
+@keyframes cc-glow { 0%, 100% { opacity: .5; } 50% { opacity: .95; } }
