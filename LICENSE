@@ -1,0 +1,37 @@
+PROPRIETARY SOFTWARE LICENSE
+Copyright (c) 2026 IndiependentSet. All Rights Reserved.
+
+This software and all associated files, source code, object code, designs,
+artwork, copy, game mechanics, documentation, and other materials contained in
+this repository (collectively, the "Software") are the exclusive property of
+IndiependentSet (the "Owner") and are protected by copyright, trade secret, and
+other intellectual property laws and treaties.
+
+NO LICENSE IS GRANTED.
+
+No permission, express or implied, is granted to any person or entity to use,
+copy, modify, merge, publish, distribute, sublicense, sell, host, deploy,
+reverse engineer, decompile, disassemble, translate, or create derivative works
+from the Software, in whole or in part, in any form or by any means.
+
+Viewing this repository, or having been granted access to it, does not grant any
+license or right to the Software. Any access is provided solely for the Owner's
+own purposes and confers no rights of any kind.
+
+Unauthorized reproduction, distribution, or use of the Software, or of any
+portion of it, may result in severe civil and criminal penalties, and will be
+prosecuted to the maximum extent possible under law.
+
+Any use of the Software requires the prior express written permission of the
+Owner. To request permission, contact the Owner directly.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE OWNER BE
+LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+Third-party components (for example, npm dependencies declared in `app/`) remain
+subject to their own respective licenses; this license applies only to the
+Owner's own materials.
