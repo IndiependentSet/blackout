@@ -1,17 +1,15 @@
 import { Component } from 'react';
 import * as E from './engine.js';
+import { BREEDS, CAT_BASELINE } from './assets/cats/index.js';
 
 const SOUND_ON = true;
 const CABLE_SAG = 0.1;
 const DAY_EPOCH = Date.UTC(2026, 3, 15);
 
-const BREEDS = [
-  { name: 'CHAOS', fur: '#E8873A', dark: '#C4661F', ear: '#F2A9A0', eye: '#5BD9A6', paw: '#FBD9AE', patch: 'none' },
-  { name: 'NINJA', fur: '#3B3245', dark: '#241E2E', ear: '#8A5A78', eye: '#F7C948', paw: '#4A4055', patch: 'none' },
-  { name: 'PRINCESS FLUFF', fur: '#F7EFE3', dark: '#D9CBB8', ear: '#F2B8C6', eye: '#57B6F0', paw: '#FFFBF4', patch: 'none' },
-  { name: 'MR. WHISKERS', fur: '#8C8894', dark: '#68646F', ear: '#D9A3B0', eye: '#7FD98F', paw: '#BFBAC6', patch: 'none' },
-  { name: 'TROUBLE', fur: '#EFE5D8', dark: '#3B3245', ear: '#F2B8C6', eye: '#F7C948', paw: '#FFF8EC', patch: '#E8873A' },
-];
+/* how big a sticker cat is drawn, and where its feet land, in node units */
+const CAT_D = 56;
+const CAT_FOOT = 18;
+const CAT_TOP = CAT_FOOT - CAT_D * CAT_BASELINE;
 
 export default class CatCoverGame extends Component {
   state = {
@@ -276,7 +274,8 @@ export default class CatCoverGame extends Component {
 
     const L = this.layout(lv), pos = L.pos, pset = new Set(st.placed);
     vals.box = L.box; vals.boxW = L.W; vals.boxH = L.H;
-    this._pos = pos; this._hit = Math.max(22, L.sp * 0.42);
+    /* the sticker cats stand above their node point, so keep the tap target generous */
+    this._pos = pos; this._hit = Math.max(26, L.sp * 0.46);
     vals.pickAt = ev => {
       const svg = ev.currentTarget.ownerSVGElement || ev.currentTarget;
       const m = svg.getScreenCTM(); if (!m) return;
@@ -322,19 +321,22 @@ export default class CatCoverGame extends Component {
 
     vals.nodes = lv.nodes.map((_, i) => {
       const on = pset.has(i);
-      const b = BREEDS[(i * 3 + 2) % BREEDS.length];
+      /* 5 is coprime with the breed count, so neighbouring cats differ; the
+         level index shifts the whole cast so each house has its own line-up */
+      const b = BREEDS[(i * 5 + st.idx * 2) % BREEDS.length];
       const pulsing = hint && hint.kind === 'leaf' && (i === hint.leaf || i === hint.forced);
       const revealed = hint && hint.kind === 'reveal' && i === hint.node;
       return {
         i, x: pos[i].x, y: pos[i].y, s: catS,
-        fur: b.fur, dark: b.dark, ear: b.ear, eye: b.eye, paw: b.paw,
-        patch: b.patch === 'none' ? 'transparent' : b.patch, patchO: b.patch === 'none' ? 0 : 0.9,
+        name: b.name, sleep: b.sleep, wakeA: b.wakeA, wakeB: b.wakeB,
         on: on ? 1 : 0, awake: on ? 1 : 0, asleep: on ? 0 : 1,
         haloO: on ? 0.2 : 0, ringO: on ? 1 : 0,
         glow: on ? 'cc-glow 1.8s ease-in-out infinite' : 'none',
-        bob: on ? 'cc-wiggle 1.1s ease-in-out infinite' : 'cc-bob 3.4s ease-in-out infinite',
-        tail: on ? 'cc-tail .7s ease-in-out infinite' : 'cc-tail 3s ease-in-out infinite',
-        pulseR: 22, pulseO: pulsing || revealed ? 1 : 0,
+        /* dozing cats breathe; woken cats hop between their two poses */
+        bob: on ? 'cc-pounce .7s ease-in-out infinite' : 'cc-snooze 3.4s ease-in-out infinite',
+        frameA: on ? 'cc-frame-a .7s steps(1, end) infinite' : 'none',
+        frameB: on ? 'cc-frame-b .7s steps(1, end) infinite' : 'none',
+        pulseR: 26, pulseO: pulsing || revealed ? 1 : 0,
         anim: pulsing || revealed ? 'cc-pulse 1.15s ease-in-out infinite' : 'none',
         focusO: st.kbd && i === st.focus ? 0.9 : 0,
       };
@@ -464,46 +466,31 @@ export default class CatCoverGame extends Component {
 
                 {v.nodes.map(n => (
                   <g key={n.i} transform={'translate(' + n.x + ' ' + n.y + ') scale(' + n.s + ')'}>
-                    <circle cx={0} cy={0} r={n.pulseR} fill="none" stroke="#FFD469" strokeWidth={3} opacity={n.pulseO} style={{ animation: n.anim }} />
-                    <ellipse cx={0} cy={17} rx={17} ry={5} fill="#000000" opacity={.33} />
-                    <circle cx={0} cy={2} r={24} fill="#F06BFF" opacity={n.haloO} style={{ animation: n.glow }} />
-                    <ellipse cx={0} cy={15} rx={20} ry={6.5} fill="none" stroke="#F06BFF" strokeWidth={3.5} opacity={n.ringO} />
+                    <circle cx={0} cy={-8} r={n.pulseR} fill="none" stroke="#FFD469" strokeWidth={3} opacity={n.pulseO} style={{ animation: n.anim }} />
+                    <ellipse cx={0} cy={18} rx={19} ry={5.5} fill="#000000" opacity={.33} />
+                    <circle cx={0} cy={-2} r={27} fill="#F06BFF" opacity={n.haloO} style={{ animation: n.glow }} />
+                    <ellipse cx={0} cy={17} rx={22} ry={7} fill="none" stroke="#F06BFF" strokeWidth={3.5} opacity={n.ringO} />
                     <circle id={'cc-bloom-' + n.i} cx={0} cy={0} r={8} fill="none" stroke="#FFEFFF" strokeWidth={3} opacity={0} />
-                    <g style={{ animation: n.bob, transformOrigin: '0px 6px' }}>
-                      <path d="M 15 12 Q 26 12 25 2" fill="none" stroke={n.dark} strokeWidth={5.5} strokeLinecap="round" style={{ animation: n.tail, transformOrigin: '15px 12px' }} />
-                      <path d="M -14 16 Q -16 4 -6 4 L 6 4 Q 16 4 14 16 Z" fill={n.fur} stroke="#2A1524" strokeWidth={2.4} strokeLinejoin="round" />
-                      <ellipse cx={-7} cy={15.4} rx={4.6} ry={3} fill={n.paw} stroke="#2A1524" strokeWidth={2} />
-                      <ellipse cx={7} cy={15.4} rx={4.6} ry={3} fill={n.paw} stroke="#2A1524" strokeWidth={2} />
-                      <path d="M -12.5 -6 L -14.5 -19 L -2.5 -11.5 Z" fill={n.fur} stroke="#2A1524" strokeWidth={2.2} strokeLinejoin="round" />
-                      <path d="M 12.5 -6 L 14.5 -19 L 2.5 -11.5 Z" fill={n.fur} stroke="#2A1524" strokeWidth={2.2} strokeLinejoin="round" />
-                      <path d="M -11.6 -8.6 L -12.4 -15.4 L -6.4 -11.6 Z" fill={n.ear} />
-                      <path d="M 11.6 -8.6 L 12.4 -15.4 L 6.4 -11.6 Z" fill={n.ear} />
-                      <ellipse cx={0} cy={-1} rx={14.5} ry={12.6} fill={n.fur} stroke="#2A1524" strokeWidth={2.4} />
-                      <ellipse cx={-8} cy={-6} rx={6} ry={5} fill={n.patch} opacity={n.patchO} />
-                      <g opacity={n.awake}>
-                        <ellipse cx={-5.6} cy={-3} rx={4.2} ry={4.6} fill="#FFFDF6" stroke="#2A1524" strokeWidth={1.6} />
-                        <ellipse cx={5.6} cy={-3} rx={4.2} ry={4.6} fill="#FFFDF6" stroke="#2A1524" strokeWidth={1.6} />
-                        <circle cx={-5.2} cy={-2.6} r={2.4} fill={n.eye} />
-                        <circle cx={6} cy={-2.6} r={2.4} fill={n.eye} />
-                        <circle cx={-5.2} cy={-2.6} r={1.1} fill="#2A1524" />
-                        <circle cx={6} cy={-2.6} r={1.1} fill="#2A1524" />
-                        <circle cx={-6.4} cy={-4.2} r={1} fill="#FFFFFF" />
-                        <circle cx={4.8} cy={-4.2} r={1} fill="#FFFFFF" />
-                        <path d="M -6.4 3.6 Q -3.2 6.6 -0.6 3.8 M 6.4 3.6 Q 3.2 6.6 0.6 3.8" fill="none" stroke="#2A1524" strokeWidth={1.7} strokeLinecap="round" />
-                      </g>
-                      <g opacity={n.asleep}>
-                        <path d="M -9.4 -2.6 Q -5.6 1.4 -1.8 -2.6" fill="none" stroke="#2A1524" strokeWidth={2} strokeLinecap="round" />
-                        <path d="M 1.8 -2.6 Q 5.6 1.4 9.4 -2.6" fill="none" stroke="#2A1524" strokeWidth={2} strokeLinecap="round" />
-                        <path d="M -3 4.6 Q 0 6.4 3 4.6" fill="none" stroke="#2A1524" strokeWidth={1.7} strokeLinecap="round" />
-                      </g>
-                      <path d="M -2.4 1.6 L 2.4 1.6 L 0 4.2 Z" fill="#E27B9B" stroke="#2A1524" strokeWidth={1.2} strokeLinejoin="round" />
-                      <path d="M -10 0.6 L -19 -1.4 M -10 3.4 L -19 3.6 M 10 0.6 L 19 -1.4 M 10 3.4 L 19 3.6" stroke="#FFF6E4" strokeWidth={1.4} strokeLinecap="round" opacity={.85} />
-                      <g opacity={n.on}>
-                        <path d="M -22 -14 l 3.6 1.4 l 1.4 3.6 l 1.4 -3.6 l 3.6 -1.4 l -3.6 -1.4 l -1.4 -3.6 l -1.4 3.6 Z" fill="#FFD469" style={{ animation: 'cc-spark 1.2s ease-in-out infinite' }} />
-                        <path d="M 15 -18 l 3 1.2 l 1.2 3 l 1.2 -3 l 3 -1.2 l -3 -1.2 l -1.2 -3 l -1.2 3 Z" fill="#F06BFF" style={{ animation: 'cc-spark 1.5s .3s ease-in-out infinite' }} />
-                      </g>
+                    <g style={{ animation: n.bob, transformOrigin: '0px ' + CAT_FOOT + 'px' }}>
+                      <image href={n.sleep} x={-CAT_D / 2} y={CAT_TOP} width={CAT_D} height={CAT_D} opacity={n.asleep}
+                        style={{ transition: 'opacity 160ms ease-out' }}>
+                        <title>{n.name} — dozing</title>
+                      </image>
+                      <image href={n.wakeA} x={-CAT_D / 2} y={CAT_TOP} width={CAT_D} height={CAT_D} opacity={0} style={{ animation: n.frameA }}>
+                        <title>{n.name} — on the loose</title>
+                      </image>
+                      <image href={n.wakeB} x={-CAT_D / 2} y={CAT_TOP} width={CAT_D} height={CAT_D} opacity={0} style={{ animation: n.frameB }} />
                     </g>
-                    <rect x={-24} y={-24} width={48} height={46} rx={14} fill="none" stroke="#FFD469" strokeWidth={3} strokeDasharray="7 6" opacity={n.focusO} />
+                    <g opacity={n.asleep} style={{ transition: 'opacity 160ms ease-out' }}>
+                      <text x={11} y={-13} fontFamily="'Luckiest Guy', cursive" fontSize={8} fill="#9ED2FF" stroke="#1B2A4A" strokeWidth={.9} paintOrder="stroke fill" style={{ animation: 'cc-zzz 3.3s ease-out infinite' }}>z</text>
+                      <text x={15} y={-19} fontFamily="'Luckiest Guy', cursive" fontSize={10} fill="#9ED2FF" stroke="#1B2A4A" strokeWidth={.9} paintOrder="stroke fill" style={{ animation: 'cc-zzz 3.3s 1.1s ease-out infinite' }}>z</text>
+                      <text x={19} y={-26} fontFamily="'Luckiest Guy', cursive" fontSize={12} fill="#9ED2FF" stroke="#1B2A4A" strokeWidth={.9} paintOrder="stroke fill" style={{ animation: 'cc-zzz 3.3s 2.2s ease-out infinite' }}>z</text>
+                    </g>
+                    <g opacity={n.on}>
+                      <path d="M -26 -18 l 3.6 1.4 l 1.4 3.6 l 1.4 -3.6 l 3.6 -1.4 l -3.6 -1.4 l -1.4 -3.6 l -1.4 3.6 Z" fill="#FFD469" style={{ animation: 'cc-spark 1.2s ease-in-out infinite' }} />
+                      <path d="M 19 -30 l 3 1.2 l 1.2 3 l 1.2 -3 l 3 -1.2 l -3 -1.2 l -1.2 -3 l -1.2 3 Z" fill="#F06BFF" style={{ animation: 'cc-spark 1.5s .3s ease-in-out infinite' }} />
+                    </g>
+                    <rect x={-29} y={-34} width={58} height={56} rx={15} fill="none" stroke="#FFD469" strokeWidth={3} strokeDasharray="7 6" opacity={n.focusO} />
                   </g>
                 ))}
                 <rect x={0} y={0} width={v.boxW} height={v.boxH} fill="transparent" onClick={v.pickAt} style={{ cursor: 'pointer' }} />
