@@ -1,6 +1,7 @@
 import { Component } from 'react';
 import * as E from './engine.js';
 import { BREEDS, CAT_BASELINE } from './assets/cats/index.js';
+import { THINGS, THING_BASELINE } from './assets/things/index.js';
 
 const SOUND_ON = true;
 const CABLE_SAG = 0.1;
@@ -10,6 +11,11 @@ const DAY_EPOCH = Date.UTC(2026, 3, 15);
 const CAT_D = 56;
 const CAT_FOOT = 18;
 const CAT_TOP = CAT_FOOT - CAT_D * CAT_BASELINE;
+
+/* same, for the smashable sitting on the middle of a cable */
+const THING_D = 52;
+const THING_FOOT = 11;
+const THING_TOP = THING_FOOT - THING_D * THING_BASELINE;
 
 export default class CatCoverGame extends Component {
   state = {
@@ -306,10 +312,19 @@ export default class CatCoverGame extends Component {
         dash: (11 * catS).toFixed(1) + ' ' + (11 * catS).toFixed(1),
         flow: (5 * catS).toFixed(1) + ' ' + (16 * catS).toFixed(1),
       });
-      const kind = (u * 7 + v * 3 + i) % 5;
+      const t = THINGS[(u * 7 + v * 3 + i) % THINGS.length];
       vals.things.push({
-        key: i, x: c.mx, y: c.my, s: objS, rot: on ? (i % 2 ? 74 : -74) : 0, dustO: on ? 1 : 0,
-        k0: kind === 0, k1: kind === 1, k2: kind === 2, k3: kind === 3, k4: kind === 4,
+        key: i, x: c.mx, y: c.my, s: objS, dustO: on ? 1 : 0,
+        label: t.label, idle: t.idle, wobble: t.wobble, hit: t.hit, broken: t.broken,
+        /* untouched things teeter; a smashed one plays idle -> wobble -> hit ->
+           broken once and holds the wreckage */
+        body: on ? 'cc-tumble .5s ease-out forwards'
+          : 'cc-teeter 4.2s ease-in-out ' + (-0.7 * (i % 6)).toFixed(1) + 's infinite',
+        f0: on ? 'cc-break-0 .5s steps(1, end) forwards' : 'none',
+        f1: on ? 'cc-break-1 .5s steps(1, end) forwards' : 'none',
+        f2: on ? 'cc-break-2 .5s steps(1, end) forwards' : 'none',
+        f3: on ? 'cc-break-3 .5s steps(1, end) forwards' : 'none',
+        idleO: on ? 0 : 1,
       });
     });
 
@@ -418,48 +433,19 @@ export default class CatCoverGame extends Component {
 
                 {v.things.map(o => (
                   <g key={o.key} transform={'translate(' + o.x + ' ' + o.y + ') scale(' + o.s + ')'}>
-                    <ellipse cx={0} cy={11} rx={13} ry={4} fill="#000000" opacity={.28} />
-                    <g transform={'rotate(' + o.rot + ' 0 10)'} style={{ transition: 'transform 420ms cubic-bezier(.2,1.5,.4,1)' }}>
-                      {o.k0 && (
-                        <>
-                          <path d="M -7 -2 Q -12 -12 -3 -13 Q -1 -20 3 -13 Q 12 -12 6 -2 Z" fill="#5FBB63" stroke="#2A1524" strokeWidth={2} strokeLinejoin="round" />
-                          <path d="M -8 -1 L 8 -1 L 6 10 L -6 10 Z" fill="#D2703F" stroke="#2A1524" strokeWidth={2.2} strokeLinejoin="round" />
-                          <path d="M -8.6 -1 L 8.6 -1" stroke="#2A1524" strokeWidth={2.2} strokeLinecap="round" />
-                        </>
-                      )}
-                      {o.k1 && (
-                        <>
-                          <path d="M -3.4 -13 L 3.4 -13 L 3.4 -9 Q 9 -4 8 3 Q 7 10 0 10 Q -7 10 -8 3 Q -9 -4 -3.4 -9 Z" fill="#6FA8DC" stroke="#2A1524" strokeWidth={2.2} strokeLinejoin="round" />
-                          <path d="M -3.6 0 Q -1 3 -3.4 6" fill="none" stroke="#DFF0FF" strokeWidth={2} strokeLinecap="round" opacity={.8} />
-                        </>
-                      )}
-                      {o.k2 && (
-                        <>
-                          <path d="M 6 -5 Q 13 -5 13 0 Q 13 5 6 5" fill="none" stroke="#2A1524" strokeWidth={4.4} strokeLinecap="round" />
-                          <path d="M -8 -8 L 8 -8 L 6.4 10 L -6.4 10 Z" fill="#F6F1E7" stroke="#2A1524" strokeWidth={2.2} strokeLinejoin="round" />
-                          <path d="M -7.2 -4.4 L 7.2 -4.4" stroke="#C64BE8" strokeWidth={2.6} strokeLinecap="round" />
-                        </>
-                      )}
-                      {o.k3 && (
-                        <>
-                          <circle cx={0} cy={0} r={11} fill="#7FD3F0" fillOpacity={.55} stroke="#2A1524" strokeWidth={2.2} />
-                          <path d="M -9.6 2 Q 0 6 9.6 2 L 9.6 4 Q 0 8 -9.6 4 Z" fill="#3FA8D8" opacity={.7} />
-                          <path d="M -3 -1 L 2 -3.4 L 2 1.4 Z" fill="#F08C3A" stroke="#2A1524" strokeWidth={1.2} strokeLinejoin="round" />
-                          <path d="M 2 -1 L 5.4 -3.6 L 5.4 1.6 Z" fill="#F08C3A" stroke="#2A1524" strokeWidth={1.2} strokeLinejoin="round" />
-                        </>
-                      )}
-                      {o.k4 && (
-                        <>
-                          <path d="M -9 -3 L -5 -13 L 5 -13 L 9 -3 Z" fill="#F3C969" stroke="#2A1524" strokeWidth={2.2} strokeLinejoin="round" />
-                          <path d="M 0 -3 L 0 7" stroke="#2A1524" strokeWidth={2.6} strokeLinecap="round" />
-                          <path d="M -6 10 L 6 10 Q 7 7 0 7 Q -7 7 -6 10 Z" fill="#8B5E3C" stroke="#2A1524" strokeWidth={2} strokeLinejoin="round" />
-                        </>
-                      )}
+                    <ellipse cx={0} cy={11} rx={15} ry={4.5} fill="#000000" opacity={.28} />
+                    <g style={{ animation: o.body, transformOrigin: '0px ' + THING_FOOT + 'px' }}>
+                      <image href={o.idle} x={-THING_D / 2} y={THING_TOP} width={THING_D} height={THING_D} opacity={o.idleO} style={{ animation: o.f0 }}>
+                        <title>{o.label}</title>
+                      </image>
+                      <image href={o.wobble} x={-THING_D / 2} y={THING_TOP} width={THING_D} height={THING_D} opacity={0} style={{ animation: o.f1 }} />
+                      <image href={o.hit} x={-THING_D / 2} y={THING_TOP} width={THING_D} height={THING_D} opacity={0} style={{ animation: o.f2 }} />
+                      <image href={o.broken} x={-THING_D / 2} y={THING_TOP} width={THING_D} height={THING_D} opacity={0} style={{ animation: o.f3 }} />
                     </g>
                     <g opacity={o.dustO}>
-                      <circle cx={-11} cy={6} r={2.6} fill="#FFE9C4" style={{ animation: 'cc-dust 1.4s ease-out infinite' }} />
-                      <circle cx={10} cy={4} r={2.2} fill="#FFE9C4" style={{ animation: 'cc-dust 1.4s .5s ease-out infinite' }} />
-                      <path d="M 0 -16 l 2 4 l 4 1 l -4 1.6 l -2 4 l -2 -4 l -4 -1.6 l 4 -1 Z" fill="#FFEFAF" style={{ animation: 'cc-spark 1.1s ease-in-out infinite' }} />
+                      <circle cx={-13} cy={6} r={2.6} fill="#FFE9C4" style={{ animation: 'cc-dust 1.4s ease-out infinite' }} />
+                      <circle cx={12} cy={4} r={2.2} fill="#FFE9C4" style={{ animation: 'cc-dust 1.4s .5s ease-out infinite' }} />
+                      <path d="M 0 -18 l 2 4 l 4 1 l -4 1.6 l -2 4 l -2 -4 l -4 -1.6 l 4 -1 Z" fill="#FFEFAF" style={{ animation: 'cc-spark 1.1s ease-in-out infinite' }} />
                     </g>
                   </g>
                 ))}

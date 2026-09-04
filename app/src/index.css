@@ -40,3 +40,17 @@ button { font-family: inherit; }
   60% { opacity: .9; }
   100% { opacity: 0; transform: translate(5px, -11px) scale(1.12); }
 }
+
+/* smashables: an untouched thing teeters, a smashed one plays its four
+   sticker frames once and holds the wreckage */
+@keyframes cc-teeter { 0%, 100% { transform: rotate(-1.5deg); } 50% { transform: rotate(1.5deg); } }
+@keyframes cc-tumble {
+  0% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-4px) rotate(-7deg); }
+  55% { transform: translateY(0) rotate(5deg); }
+  100% { transform: translateY(0) rotate(0deg); }
+}
+@keyframes cc-break-0 { 0%, 19.9% { opacity: 1; } 20%, 100% { opacity: 0; } }
+@keyframes cc-break-1 { 0%, 19.9% { opacity: 0; } 20%, 44.9% { opacity: 1; } 45%, 100% { opacity: 0; } }
+@keyframes cc-break-2 { 0%, 44.9% { opacity: 0; } 45%, 69.9% { opacity: 1; } 70%, 100% { opacity: 0; } }
+@keyframes cc-break-3 { 0%, 69.9% { opacity: 0; } 70%, 100% { opacity: 1; } }
