@@ -44,8 +44,27 @@ chat transcript for the CAT COVER pivot.
     generator (leaf chains, degree-2 paths, cycles, hubs, crowns), exact
     branch-and-bound solver, hint helpers (`hintLeaf`, `hintMatching`,
     `hintReveal`). No React imports — keep it that way if you touch it.
+  - `src/assets/cats/` — the graph nodes themselves: cat stickers cut out of
+    a hand-drawn sticker sheet, three poses per breed (`sleep`, `wakeA`,
+    `wakeB`). Every sprite is baked onto the same 192x192 canvas at the same
+    scale with the cat's feet on the same baseline (y = 182, exported as
+    `CAT_BASELINE`), so a node can swap poses without the cat shifting.
+    `index.js` is the only thing the game imports. If you add a breed, cut it
+    to the same canvas convention — don't rescale sprites individually, or
+    the cats stop looking like one cast.
+  - `src/assets/things/` — the smashables that sit on the cables, cut from a
+    destructible-items sticker sheet: four states per item (`idle`, `wobble`,
+    `hit`, `broken`) on a shared 128x128 canvas with a common base line
+    (`THING_BASELINE`). `index.js` picks them up by glob, so the file name
+    `<name>-<pose>.png` is the contract; adding an item means four frames
+    plus a line in `ITEMS`.
   - `src/index.css` / `index.html` — global styles, fonts (Luckiest Guy +
-    Nunito from Google Fonts), page title/meta.
+    Nunito from Google Fonts), page title/meta. The `cc-*` keyframes live
+    here; the cats use `cc-snooze` (breathing) when calm and
+    `cc-pounce` + `cc-frame-a`/`cc-frame-b` (a two-frame flip-book) when
+    they're out causing chaos, and the smashables use `cc-teeter` when
+    untouched and `cc-tumble` + `cc-break-0..3` (a one-shot four-frame
+    sequence that holds on the wreckage) when a cat gets to them.
   - No backend, no persistence layer (by design — see the original brief:
     "no backend, no localStorage"). Don't add either without checking with
     the user first; it's a deliberate constraint, not an oversight.
