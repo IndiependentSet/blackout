@@ -39,7 +39,7 @@ chat transcript for the CAT COVER pivot.
   ships and what you should be editing for any real feature/bug work.
   - `src/CatCoverGame.jsx` — the entire game (single class component): state,
     level queueing, input handling, audio (Web Audio chirps/crashes), share
-    card, keyboard support.
+    card, keyboard support, and the camera (below).
   - `src/engine.js` — pure, framework-free: seeded RNG, gadget-based level
     generator (leaf chains, degree-2 paths, cycles, hubs, crowns), exact
     branch-and-bound solver, hint helpers (`hintLeaf`, `hintMatching`,
@@ -68,6 +68,37 @@ chat transcript for the CAT COVER pivot.
   - No backend, no persistence layer (by design — see the original brief:
     "no backend, no localStorage"). Don't add either without checking with
     the user first; it's a deliberate constraint, not an oversight.
+
+## The board is a camera, not a fit
+
+Levels used to be scaled down to fit a fixed viewBox, so spacing collapsed as
+graphs grew (150 world units per lattice step in house 1, 40 in the worst house
+7 — where a smashable ended up wider than the cable it sat on). Instead:
+
+- **One fixed `SPACING` (130) for every house.** A cat is the same size in
+  house 7 as in house 1. `layout()` maps lattice → world at that scale and
+  memoizes per level object.
+- **The board is a camera over that world**, `{x, y, z}` driving the SVG's
+  **viewBox**. Keep it in the viewBox: `pick()` maps client → world through
+  `getScreenCTM().inverse()`, which an inner `<g transform>` would break.
+- `CAM_H` (520) is fixed and the camera's *width* follows the board's real
+  aspect (a `ResizeObserver` on the SVG keeps `state.aspect` current), so the
+  frame never letterboxes and the expand toggle genuinely shows more world.
+- **Two rects per level.** `content` is the puzzle plus a little padding — it
+  decides what Fit frames and whether a house overflows (and so whether the
+  minimap appears). `world` is the floor you can pan into, with extra headroom
+  at the top for the back wall.
+- Entering a house plays an **establishing shot**: fit for ~420ms, then eases
+  to `Z_PLAY` (1). `reset()` deliberately does *not* move the camera.
+- Sprites are drawn in **one depth-sorted pass** (cats and smashables together,
+  by baseline y), and anything outside the frame grown 30% each way is culled —
+  that's what keeps a 100-node house affordable.
+- Because spacing is fixed, the old `sp`-derived sprite scales are gone;
+  `CAT_S`/`THING_S` are plain constants. Tune the feel through the constant
+  block at the top of the file, not by reintroducing per-level scaling.
+
+None of this touched `engine.js` — seeded generation, the uniqueness check and
+day-determinism are exactly as they were.
 
 ## Naming note
 
