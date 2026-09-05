@@ -17,6 +17,23 @@ const THING_D = 52;
 const THING_FOOT = 11;
 const THING_TOP = THING_FOOT - THING_D * THING_BASELINE;
 
+/* ---- world + camera ----
+   Every house is laid out at the same lattice spacing, so a cat is exactly the
+   same size in house 7 as in house 1 and a big graph costs navigation instead
+   of legibility. The board is a camera over that world, driven by the SVG's
+   viewBox (an inner transform would break getScreenCTM hit-testing). */
+const SPACING = 130;        // world units between neighbouring junctions
+const WORLD_MARGIN = 140;   // floor you can pan into, around the graph
+const CONTENT_PAD = 46;     // what "the whole house" means when fitting it
+const WALL_H = 130;         // back wall band above the floor
+const CAM_H = 520;          // camera frame height in world units; the width
+const CAM_A = 640 / 520;    // follows the board's real aspect, so it never letterboxes
+const Z_PLAY = 1;           // the zoom every house settles at
+const Z_MAX = 1.8;
+const CAT_S = 1;            // sprite scales are constants now that spacing is
+const THING_S = 1.15;       // fixed — nothing left to compensate for
+const MAP_W = 152, MAP_H = 118;   // minimap, shown only when a house overflows
+
 export default class CatCoverGame extends Component {
   state = {
     levels: [null, null, null, null, null, null, null],
@@ -28,17 +45,30 @@ export default class CatCoverGame extends Component {
     kbd: false,
     msg: '',
     copied: false,
+    cam: { x: 0, y: 0, z: Z_PLAY },
+    aspect: CAM_A,
+    boardW: 640,
+    expanded: false,
+    grabbing: false,
   };
+
+  _ptrs = new Map();
 
   componentDidMount() {
     this.onKey = this.onKey.bind(this);
     window.addEventListener('keydown', this.onKey);
     const levels = this.state.levels.slice();
     levels[0] = E.makeLevelForDay(this.seed(), 0);
-    this.setState({ levels });
+    this.setState({ levels }, () => this.frame(0));
     this.queue(1);
   }
-  componentWillUnmount() { window.removeEventListener('keydown', this.onKey); }
+  componentWillUnmount() {
+    window.removeEventListener('keydown', this.onKey);
+    if (this._ro) this._ro.disconnect();
+    cancelAnimationFrame(this._raf);
+    clearTimeout(this._shot);
+    if (this._svg) this._svg.removeEventListener('wheel', this.onWheel);
+  }
 
   seed() { return this.day() + 11; }
   day() {
@@ -164,6 +194,7 @@ export default class CatCoverGame extends Component {
   go(i) {
     if (i < 0 || i > 6 || !this.state.levels[i]) return;
     this.setState({ idx: i, placed: [], hint: null, msg: '', focus: 0, copied: false });
+    this.frame(i);
   }
   next() { if (this.solved() && this.state.idx < 6) this.go(this.state.idx + 1); }
   hint(tier) {
@@ -193,6 +224,10 @@ export default class CatCoverGame extends Component {
     if (!this.state.kbd) this.setState({ kbd: true });
     if (k === 'r' || k === 'R') { e.preventDefault(); return this.reset(); }
     if (k === 'n' || k === 'N') { e.preventDefault(); return this.next(); }
+    if (k === 'f' || k === 'F') { e.preventDefault(); return this.fit(); }
+    if (k === 'e' || k === 'E') { e.preventDefault(); return this.setState(s => ({ expanded: !s.expanded })); }
+    if (k === '+' || k === '=') { e.preventDefault(); return this.zoomBy(1.25); }
+    if (k === '-' || k === '_') { e.preventDefault(); return this.zoomBy(0.8); }
     if (k === '1' || k === '2' || k === '3') { e.preventDefault(); return this.hint(+k); }
     if (k === 'Enter' || k === ' ') { e.preventDefault(); return this.tap(this.state.focus); }
     const dirs = { ArrowRight: [1, 0], ArrowLeft: [-1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
@@ -208,18 +243,210 @@ export default class CatCoverGame extends Component {
       const s = along + off * 2.5;
       if (s < bestScore) { bestScore = s; best = i; }
     });
-    if (best >= 0) this.setState({ focus: best });
+    if (best >= 0) this.setState({ focus: best }, () => this.follow(best));
   }
 
+  /* lattice -> world, at one fixed scale for every house */
   layout(lv) {
-    const W = 560, HMAX = 610, pad = 60;
+    if (this._lay && this._lay.lv === lv) return this._lay;
     const cs = lv.nodes.map(n => n.c), rs = lv.nodes.map(n => n.r);
-    const c0 = Math.min(...cs), c1 = Math.max(...cs), r0 = Math.min(...rs), r1 = Math.max(...rs);
-    const cols = Math.max(1, c1 - c0), rows = Math.max(1, r1 - r0);
-    const sp = Math.min((W - 2 * pad) / cols, (HMAX - 2 * pad) / rows, 150);
-    const H = Math.max(300, Math.min(HMAX, rows * sp + 2 * pad));
-    const ox = (W - cols * sp) / 2 - c0 * sp, oy = (H - rows * sp) / 2 - r0 * sp;
-    return { W, H, sp, box: '0 0 ' + W + ' ' + H, pos: lv.nodes.map(n => ({ x: ox + n.c * sp, y: oy + n.r * sp })) };
+    const c0 = Math.min(...cs), r0 = Math.min(...rs);
+    const w = (Math.max(...cs) - c0) * SPACING, h = (Math.max(...rs) - r0) * SPACING;
+    this._lay = {
+      lv, sp: SPACING, cx: w / 2, cy: h / 2,
+      pos: lv.nodes.map(n => ({ x: (n.c - c0) * SPACING, y: (n.r - r0) * SPACING })),
+      /* content is the puzzle itself — what Fit frames, and what decides
+         whether a house overflows; world is the floor you can pan into, with
+         extra headroom at the top for the back wall */
+      content: { x: -CONTENT_PAD, y: -CONTENT_PAD, w: w + 2 * CONTENT_PAD, h: h + 2 * CONTENT_PAD },
+      world: { x: -WORLD_MARGIN, y: -WORLD_MARGIN - WALL_H, w: w + 2 * WORLD_MARGIN, h: h + 2 * WORLD_MARGIN + WALL_H },
+      floorY: -WORLD_MARGIN,
+    };
+    return this._lay;
+  }
+
+  /* ---- camera ---- */
+  camW() { return CAM_H * this.state.aspect; }
+  zBounds(L) {
+    const fit = Math.min(this.camW() / L.content.w, CAM_H / L.content.h);
+    return { fit, min: Math.min(fit, Z_PLAY), max: Z_MAX };
+  }
+  clampCam(c, L) {
+    const zb = this.zBounds(L), W = L.world;
+    const z = Math.max(zb.min, Math.min(zb.max, c.z));
+    const hw = this.camW() / (2 * z), hh = CAM_H / (2 * z);
+    return {
+      z,
+      x: W.w <= 2 * hw ? W.x + W.w / 2 : Math.max(W.x + hw, Math.min(W.x + W.w - hw, c.x)),
+      y: W.h <= 2 * hh ? W.y + W.h / 2 : Math.max(W.y + hh, Math.min(W.y + W.h - hh, c.y)),
+    };
+  }
+  reduced() { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }
+  setCam(to, L) { this.setState({ cam: this.clampCam(to, L) }); }
+  tween(to, ms, L) {
+    cancelAnimationFrame(this._raf);
+    const target = this.clampCam(to, L);
+    if (ms <= 0 || this.reduced()) return this.setState({ cam: target });
+    const from = { ...this.state.cam }, t0 = performance.now();
+    const step = now => {
+      const p = Math.min(1, (now - t0) / ms), e = 1 - Math.pow(1 - p, 3);
+      this.setState({ cam: {
+        x: from.x + (target.x - from.x) * e,
+        y: from.y + (target.y - from.y) * e,
+        z: from.z + (target.z - from.z) * e,
+      } });
+      if (p < 1) this._raf = requestAnimationFrame(step);
+    };
+    this._raf = requestAnimationFrame(step);
+  }
+  /* entering a house: an establishing shot of the whole place, then in to play zoom */
+  frame(i) {
+    const lv = this.state.levels[i]; if (!lv) return;
+    const L = this.layout(lv), zb = this.zBounds(L);
+    const play = { x: L.cx, y: L.cy, z: Z_PLAY };
+    cancelAnimationFrame(this._raf);
+    clearTimeout(this._shot);
+    if (zb.fit >= Z_PLAY || this.reduced()) return this.setCam(play, L);
+    this.setCam({ x: L.content.x + L.content.w / 2, y: L.content.y + L.content.h / 2, z: zb.fit }, L);
+    this._shot = setTimeout(() => this.tween(play, 700, L), 420);
+  }
+  fit() {
+    const lv = this.lv(); if (!lv) return;
+    const L = this.layout(lv), C = L.content;
+    clearTimeout(this._shot);
+    this.tween({ x: C.x + C.w / 2, y: C.y + C.h / 2, z: this.zBounds(L).fit }, 320, L);
+  }
+  zoomBy(k) {
+    const lv = this.lv(); if (!lv) return;
+    const L = this.layout(lv), c = this.state.cam;
+    clearTimeout(this._shot);
+    this.tween({ x: c.x, y: c.y, z: c.z * k }, 180, L);
+  }
+  /* nudge the camera just enough to bring a node back into the safe box */
+  follow(i) {
+    const lv = this.lv(); if (!lv) return;
+    const L = this.layout(lv), p = L.pos[i], c = this.state.cam;
+    const sx = (this.camW() / (2 * c.z)) * 0.7, sy = (CAM_H / (2 * c.z)) * 0.7;
+    const dx = p.x - c.x, dy = p.y - c.y;
+    let nx = c.x, ny = c.y;
+    if (dx > sx) nx = p.x - sx; else if (dx < -sx) nx = p.x + sx;
+    if (dy > sy) ny = p.y - sy; else if (dy < -sy) ny = p.y + sy;
+    if (nx !== c.x || ny !== c.y) this.tween({ x: nx, y: ny, z: c.z }, 240, L);
+  }
+
+  /* ---- pointer: drag to pan, wheel/pinch to zoom, short press to tap ---- */
+  svgRef = el => {
+    if (this._svg === el) return;
+    if (this._svg) this._svg.removeEventListener('wheel', this.onWheel);
+    if (this._ro) { this._ro.disconnect(); this._ro = null; }
+    this._svg = el;
+    if (!el) return;
+    el.addEventListener('wheel', this.onWheel, { passive: false });
+    if (!window.ResizeObserver) return;
+    this._ro = new ResizeObserver(() => {
+      const r = el.getBoundingClientRect();
+      if (!r.width || !r.height) return;
+      const aspect = r.width / r.height;
+      if (Math.abs(aspect - this.state.aspect) < 0.005 && Math.abs(r.width - this.state.boardW) < 2) return;
+      this.setState({ aspect, boardW: r.width }, () => {
+        const lv = this.lv();
+        if (lv) this.setCam(this.state.cam, this.layout(lv));
+      });
+    });
+    this._ro.observe(el);
+  };
+  toWorld(cx, cy) {
+    const svg = this._svg; if (!svg) return null;
+    const m = svg.getScreenCTM(); if (!m) return null;
+    const p = svg.createSVGPoint(); p.x = cx; p.y = cy;
+    return p.matrixTransform(m.inverse());
+  }
+  /* world units per client pixel — max(), because the viewBox is letterboxed
+     on whichever axis doesn't bind */
+  unitsPerPx(z) {
+    const r = this._svg.getBoundingClientRect();
+    return Math.max((this.camW() / z) / r.width, (CAM_H / z) / r.height);
+  }
+  /* camera that puts a world point under a client point at a given zoom */
+  camFor(wp, cx, cy, z) {
+    const r = this._svg.getBoundingClientRect(), u = this.unitsPerPx(z);
+    return { x: wp.x - (cx - (r.left + r.width / 2)) * u, y: wp.y - (cy - (r.top + r.height / 2)) * u, z };
+  }
+  onWheel = e => {
+    const lv = this.lv(); if (!lv) return;
+    e.preventDefault();
+    const L = this.layout(lv), zb = this.zBounds(L), c = this.state.cam;
+    const wp = this.toWorld(e.clientX, e.clientY); if (!wp) return;
+    const z = Math.max(zb.min, Math.min(zb.max, c.z * Math.exp(-e.deltaY * 0.0015)));
+    if (z === c.z) return;
+    cancelAnimationFrame(this._raf); clearTimeout(this._shot);
+    this.setCam(this.camFor(wp, e.clientX, e.clientY, z), L);
+  };
+  pinchSpan() {
+    const [a, b] = [...this._ptrs.values()];
+    return { d: Math.hypot(a.x - b.x, a.y - b.y), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
+  }
+  onDown = e => {
+    if (!this.lv()) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    this._ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    cancelAnimationFrame(this._raf); clearTimeout(this._shot);
+    if (this._ptrs.size === 1) {
+      this._drag = { x: e.clientX, y: e.clientY, t: performance.now(), moved: 0,
+        cam: { ...this.state.cam }, u: this.unitsPerPx(this.state.cam.z) };
+      this.setState({ grabbing: true });
+    } else if (this._ptrs.size === 2) {
+      this._drag = null;
+      const s = this.pinchSpan();
+      this._pinch = { d: s.d, z: this.state.cam.z, wp: this.toWorld(s.mx, s.my) };
+    }
+  };
+  onMove = e => {
+    if (!this._ptrs.has(e.pointerId)) return;
+    this._ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const lv = this.lv(); if (!lv) return;
+    const L = this.layout(lv);
+    if (this._pinch && this._ptrs.size >= 2) {
+      const s = this.pinchSpan(), zb = this.zBounds(L);
+      const z = Math.max(zb.min, Math.min(zb.max, this._pinch.z * (s.d / (this._pinch.d || 1))));
+      return this.setCam(this.camFor(this._pinch.wp, s.mx, s.my, z), L);
+    }
+    const d = this._drag; if (!d) return;
+    const dx = e.clientX - d.x, dy = e.clientY - d.y;
+    d.moved = Math.max(d.moved, Math.hypot(dx, dy));
+    this.setCam({ x: d.cam.x - dx * d.u, y: d.cam.y - dy * d.u, z: d.cam.z }, L);
+  };
+  onUp = e => {
+    this._ptrs.delete(e.pointerId);
+    if (this._ptrs.size < 2) this._pinch = null;
+    const d = this._drag;
+    this._drag = null;
+    this.setState({ grabbing: false });
+    if (d && d.moved < 6 && performance.now() - d.t < 400) this.pick(e.clientX, e.clientY);
+  };
+  /* ---- minimap: drag the frame around the whole house ---- */
+  onMapDown = e => {
+    e.stopPropagation();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    this._mapDrag = true;
+    this.jumpMap(e);
+  };
+  onMapMove = e => { if (this._mapDrag) { e.stopPropagation(); this.jumpMap(e); } };
+  onMapUp = e => { e.stopPropagation(); this._mapDrag = false; };
+  jumpMap(e) {
+    const lv = this.lv(); if (!lv || !this._map) return;
+    const el = e.currentTarget, m = el.getScreenCTM(); if (!m) return;
+    const p = el.createSVGPoint(); p.x = e.clientX; p.y = e.clientY;
+    const q = p.matrixTransform(m.inverse());
+    cancelAnimationFrame(this._raf); clearTimeout(this._shot);
+    this.setCam({ ...this._map.toWorld(q.x, q.y), z: this.state.cam.z }, this.layout(lv));
+  }
+
+  pick(cx, cy) {
+    const q = this.toWorld(cx, cy); if (!q || !this._pos) return;
+    let best = -1, bd = Infinity;
+    this._pos.forEach((n, i) => { const d = Math.hypot(n.x - q.x, n.y - q.y); if (d < bd) { bd = d; best = i; } });
+    if (best >= 0 && bd <= this._hit) this.tap(best);
   }
 
   cable(A, B) {
@@ -248,8 +475,9 @@ export default class CatCoverGame extends Component {
     const vals = {
       levelNo: st.idx + 1, stars: lv ? '✦'.repeat(lv.stars) : '',
       plaque: lv ? 'KNOCK IT ALL OVER!' : 'WAKING THE CATS…',
-      box: '0 0 420 300', boxW: 420, boxH: 300,
-      edges: [], things: [], nodes: [], proof: [],
+      box: '0 0 ' + this.camW() + ' ' + CAM_H, view: { x: 0, y: 0, w: this.camW(), h: CAM_H },
+      edges: [], sprites: [], proof: [], map: null,
+      floor: { x: 0, y: 0, w: this.camW(), h: CAM_H }, wallY: -1e5,
       used: st.placed.length, par: lv ? lv.k : 0, litCount: 0, edgeCount: lv ? lv.edges.length : 0,
       usedColor: '#FFF3D8', msg: st.msg, msgColor: '#C9B8E0',
       steps: [
@@ -270,6 +498,18 @@ export default class CatCoverGame extends Component {
         fill: i === st.idx ? '#FFD469' : st.results[i] === 'perfect' ? '#C877D8'
           : st.results[i] === 'over' ? '#E8A34A' : this.state.levels[i] ? 'rgba(255,255,255,.14)' : 'rgba(255,255,255,.06)',
       })),
+      /* the overlays are sized in screen px, so they have to shrink with the board */
+      ui: (() => {
+        const k = Math.max(0.52, Math.min(1, st.boardW / 620));
+        return { k, pad: Math.round(12 * k), gap: Math.round(6 * k), btn: Math.round(34 * k), font: Math.max(10, Math.round(14 * k)) };
+      })(),
+      tools: [
+        { k: 'out', t: '–', label: 'zoom out', go: () => this.zoomBy(0.8) },
+        { k: 'in', t: '+', label: 'zoom in', go: () => this.zoomBy(1.25) },
+        { k: 'fit', t: 'FIT', label: 'frame the whole house', go: () => this.fit() },
+        { k: 'exp', t: st.expanded ? '↘↖' : '↖↘', label: st.expanded ? 'shrink the board' : 'expand the board',
+          go: () => this.setState(s => ({ expanded: !s.expanded })) },
+      ],
       showShare: st.results.filter(Boolean).length === 7,
       shareText: this.share(), copyLabel: st.copied ? 'COPIED!' : 'COPY REPORT',
       banner: '', bannerBg: 'rgba(255,255,255,.08)', bannerInk: '#F4E4C4',
@@ -279,31 +519,34 @@ export default class CatCoverGame extends Component {
     if (!lv) return vals;
 
     const L = this.layout(lv), pos = L.pos, pset = new Set(st.placed);
-    vals.box = L.box; vals.boxW = L.W; vals.boxH = L.H;
     /* the sticker cats stand above their node point, so keep the tap target generous */
     this._pos = pos; this._hit = Math.max(26, L.sp * 0.46);
-    vals.pickAt = ev => {
-      const svg = ev.currentTarget.ownerSVGElement || ev.currentTarget;
-      const m = svg.getScreenCTM(); if (!m) return;
-      const p = svg.createSVGPoint(); p.x = ev.clientX; p.y = ev.clientY;
-      const q = p.matrixTransform(m.inverse());
-      let best = -1, bd = Infinity;
-      this._pos.forEach((n, i) => { const d = Math.hypot(n.x - q.x, n.y - q.y); if (d < bd) { bd = d; best = i; } });
-      if (best >= 0 && bd <= this._hit) this.tap(best);
-    };
+
+    /* the camera frame, as a viewBox */
+    const cam = st.cam, vw = this.camW() / cam.z, vh = CAM_H / cam.z;
+    const view = { x: cam.x - vw / 2, y: cam.y - vh / 2, w: vw, h: vh };
+    vals.view = view;
+    vals.box = view.x + ' ' + view.y + ' ' + vw + ' ' + vh;
+    /* floor is drawn over the frame (the pattern lives in world space, so it
+       stays put as you pan); the back wall sits above the world's top edge */
+    vals.floor = { x: view.x - vw * 0.1, y: view.y - vh * 0.1, w: vw * 1.2, h: vh * 1.2 };
+    vals.wallY = L.floorY;
+    /* anything outside the frame grown by 30% each way isn't drawn at all */
+    const seen = (x0, y0, x1, y1) =>
+      x1 > view.x - vw * 0.3 && x0 < view.x + vw * 1.3 && y1 > view.y - vh * 0.3 && y0 < view.y + vh * 1.3;
 
     const litE = this.litSet(lv, st.placed);
     vals.litCount = litE.size;
     vals.usedColor = st.placed.length > lv.k ? '#FF8FA8' : st.placed.length === lv.k ? '#8CE8B0' : '#FFF3D8';
 
-    const catS = Math.max(0.6, Math.min(1.4, L.sp / 110));
-    const objS = Math.max(0.8, Math.min(1.5, L.sp / 95));
+    const catS = CAT_S, objS = THING_S;
 
     lv.edges.forEach(([u, v], i) => {
       const on = litE.has(i);
       const ou = pset.has(u) ? st.placed.indexOf(u) : -1, ov = pset.has(v) ? st.placed.indexOf(v) : -1;
       const flip = ov > ou;
       const A = pos[flip ? v : u], B = pos[flip ? u : v];
+      if (!seen(Math.min(A.x, B.x) - 60, Math.min(A.y, B.y) - 60, Math.max(A.x, B.x) + 60, Math.max(A.y, B.y) + 60)) return;
       const c = this.cable(A, B);
       vals.edges.push({
         key: i, d: c.d, off: on ? 0 : 1, on,
@@ -313,8 +556,9 @@ export default class CatCoverGame extends Component {
         flow: (5 * catS).toFixed(1) + ' ' + (16 * catS).toFixed(1),
       });
       const t = THINGS[(u * 7 + v * 3 + i) % THINGS.length];
-      vals.things.push({
-        key: i, x: c.mx, y: c.my, s: objS, dustO: on ? 1 : 0,
+      vals.sprites.push({
+        thing: true, key: 't' + i, base: c.my + THING_FOOT * objS,
+        x: c.mx, y: c.my, s: objS, dustO: on ? 1 : 0,
         label: t.label, idle: t.idle, wobble: t.wobble, hit: t.hit, broken: t.broken,
         /* untouched things teeter; a smashed one plays idle -> wobble -> hit ->
            broken once and holds the wreckage */
@@ -334,15 +578,18 @@ export default class CatCoverGame extends Component {
         return { key: i, d: this.cable(pos[u], pos[v]).d };
       });
 
-    vals.nodes = lv.nodes.map((_, i) => {
+    lv.nodes.forEach((_, i) => {
+      const p = pos[i];
+      if (!seen(p.x - 40, p.y + CAT_TOP * catS, p.x + 40, p.y + 30)) return;
       const on = pset.has(i);
       /* 5 is coprime with the breed count, so neighbouring cats differ; the
          level index shifts the whole cast so each house has its own line-up */
       const b = BREEDS[(i * 5 + st.idx * 2) % BREEDS.length];
       const pulsing = hint && hint.kind === 'leaf' && (i === hint.leaf || i === hint.forced);
       const revealed = hint && hint.kind === 'reveal' && i === hint.node;
-      return {
-        i, x: pos[i].x, y: pos[i].y, s: catS,
+      vals.sprites.push({
+        thing: false, key: 'n' + i, base: p.y + CAT_FOOT * catS,
+        i, x: p.x, y: p.y, s: catS,
         name: b.name, sleep: b.sleep, wakeA: b.wakeA, wakeB: b.wakeB,
         on: on ? 1 : 0, awake: on ? 1 : 0, asleep: on ? 0 : 1,
         haloO: on ? 0.2 : 0, ringO: on ? 1 : 0,
@@ -354,8 +601,31 @@ export default class CatCoverGame extends Component {
         pulseR: 26, pulseO: pulsing || revealed ? 1 : 0,
         anim: pulsing || revealed ? 'cc-pulse 1.15s ease-in-out infinite' : 'none',
         focusO: st.kbd && i === st.focus ? 0.9 : 0,
-      };
+      });
     });
+    /* painter's order: whoever stands further back is drawn first, so a cat in
+       front overlaps the cat and the smashables behind it */
+    vals.sprites.sort((a, b) => a.base - b.base);
+
+    /* the minimap only earns its space when the house doesn't fit in the frame */
+    const C = L.content;
+    const covered = view.x <= C.x + 1 && view.y <= C.y + 1
+      && view.x + view.w >= C.x + C.w - 1 && view.y + view.h >= C.y + C.h - 1;
+    if (this.zBounds(L).fit < Z_PLAY && !covered) {
+      const W = L.content, k = Math.min(MAP_W / W.w, MAP_H / W.h);
+      const px = q => ({ x: (q.x - W.x) * k, y: (q.y - W.y) * k });
+      vals.map = {
+        w: W.w * k, h: W.h * k,
+        edges: lv.edges.map(([u, v], i) => {
+          const a = px(pos[u]), b2 = px(pos[v]);
+          return { key: i, x1: a.x, y1: a.y, x2: b2.x, y2: b2.y, on: litE.has(i) };
+        }),
+        nodes: pos.map((q, i) => ({ key: i, ...px(q), on: pset.has(i) })),
+        view: { x: (view.x - W.x) * k, y: (view.y - W.y) * k, w: view.w * k, h: view.h * k },
+        toWorld: (mx, my) => ({ x: W.x + mx / k, y: W.y + my / k }),
+      };
+    }
+    this._map = vals.map;
 
     if (litE.size === lv.edges.length) {
       const perfect = st.placed.length <= lv.k;
@@ -380,7 +650,7 @@ export default class CatCoverGame extends Component {
       <div style={{ minHeight: '100vh', background: 'radial-gradient(120% 90% at 50% 0%, #2A1B3D 0%, #170F22 55%, #100A18 100%)', color: '#F4E4C4', padding: '18px 14px 30px', boxSizing: 'border-box' }}>
         <div style={{ maxWidth: 1240, margin: '0 auto', display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', gap: 16 }}>
 
-          <aside style={{ flex: '1 1 250px', minWidth: 250, display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <aside style={{ flex: '1 1 250px', minWidth: 250, display: this.state.expanded ? 'none' : 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 0.84, paddingTop: 2 }}>
               <span style={{ fontFamily: luckiest, fontSize: 58, letterSpacing: '.01em', color: '#F7B32B', WebkitTextStroke: '7px #2A1524', paintOrder: 'stroke fill', textShadow: '0 6px 0 #2A1524' }}>CAT</span>
               <span style={{ fontFamily: luckiest, fontSize: 46, letterSpacing: '.02em', color: '#EADDF7', WebkitTextStroke: '7px #2A1524', paintOrder: 'stroke fill', textShadow: '0 6px 0 #2A1524' }}>COVER</span>
@@ -405,15 +675,58 @@ export default class CatCoverGame extends Component {
             </div>
           </aside>
 
-          <main style={{ flex: '5 1 460px', minWidth: 300, maxWidth: 780, display: 'flex', flexDirection: 'column', gap: 11 }}>
+          <main style={{ flex: '5 1 460px', minWidth: 300, maxWidth: this.state.expanded ? 'none' : 780, display: 'flex', flexDirection: 'column', gap: 11 }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0 }}>
               <div style={{ background: '#6E3FA3', border: '3px solid #2A1524', borderRadius: 10, boxShadow: '0 4px 0 #2A1524', padding: '3px 22px', fontFamily: luckiest, fontSize: 17, letterSpacing: '.05em', color: '#FFD469', position: 'relative', zIndex: 2 }}>HOUSE {v.levelNo} <span style={{ color: '#F06BFF' }}>{v.stars}</span></div>
               <div style={{ marginTop: -6, width: '92%', background: 'linear-gradient(#F6E8CA, #E8D3A6)', border: '3px solid #2A1524', borderRadius: '3px 3px 10px 10px', boxShadow: '0 5px 0 #2A1524', padding: '9px 12px 6px', textAlign: 'center', fontFamily: luckiest, fontSize: 20, letterSpacing: '.02em', color: '#3E2718' }}>{v.plaque}</div>
             </div>
 
-            <div style={{ background: 'repeating-linear-gradient(96deg, #6B4730 0 46px, #664129 46px 48px, #6E4A32 48px 94px, #5E3B25 94px 96px)', border: '6px solid #34200F', borderRadius: 18, boxShadow: '0 8px 0 #1E1208, inset 0 0 70px rgba(0,0,0,.55)', padding: 6, position: 'relative' }}>
-              <div style={{ position: 'absolute', inset: 6, borderRadius: 12, pointerEvents: 'none', boxShadow: 'inset 0 0 60px rgba(0,0,0,.5)' }}></div>
-              <svg viewBox={v.box} width="100%" role="application" tabIndex={0} aria-label="cat cover grid" style={{ display: 'block', touchAction: 'manipulation', outline: 'none', borderRadius: 12 }}>
+            <div style={{ background: '#3A2416', border: '6px solid #34200F', borderRadius: 18, boxShadow: '0 8px 0 #1E1208, inset 0 0 70px rgba(0,0,0,.55)', padding: 6, position: 'relative', aspectRatio: CAM_A, maxHeight: '76vh', boxSizing: 'border-box' }}>
+              <div style={{ position: 'absolute', inset: 6, borderRadius: 12, pointerEvents: 'none', zIndex: 3, boxShadow: 'inset 0 0 70px rgba(20,8,2,.72), inset 0 0 22px rgba(20,8,2,.5)' }}></div>
+              <svg ref={this.svgRef} viewBox={v.box} width="100%" height="100%" role="application" tabIndex={0} aria-label="cat cover grid"
+                onPointerDown={this.onDown} onPointerMove={this.onMove} onPointerUp={this.onUp} onPointerCancel={this.onUp}
+                style={{ display: 'block', touchAction: 'none', outline: 'none', borderRadius: 12, cursor: this.state.grabbing ? 'grabbing' : 'grab' }}>
+                <defs>
+                  <pattern id="cc-planks" width={96} height={430} patternUnits="userSpaceOnUse" patternTransform="rotate(6)">
+                    <rect width={96} height={430} fill="#6B4730" />
+                    <rect x={46} width={2} height={430} fill="#5A3A24" />
+                    <rect x={48} width={46} height={430} fill="#6E4A32" />
+                    <rect x={94} width={2} height={430} fill="#563623" />
+                    <rect y={150} width={46} height={2} fill="#553622" opacity={.75} />
+                    <rect x={48} y={318} width={46} height={2} fill="#553622" opacity={.75} />
+                    <rect x={20} width={7} height={430} fill="#71503A" opacity={.5} />
+                    <rect x={66} width={5} height={430} fill="#654327" opacity={.5} />
+                  </pattern>
+                  <radialGradient id="cc-pool" cx="50%" cy="42%" r="62%">
+                    <stop offset="0%" stopColor="#FFD9A0" stopOpacity={.30} />
+                    <stop offset="55%" stopColor="#FFB870" stopOpacity={.10} />
+                    <stop offset="100%" stopColor="#1A0E06" stopOpacity={.34} />
+                  </radialGradient>
+                  <radialGradient id="cc-contact">
+                    <stop offset="0%" stopColor="#12060B" stopOpacity={.5} />
+                    <stop offset="60%" stopColor="#12060B" stopOpacity={.28} />
+                    <stop offset="100%" stopColor="#12060B" stopOpacity={0} />
+                  </radialGradient>
+                  <pattern id="cc-paper" width={54} height={54} patternUnits="userSpaceOnUse">
+                    <rect width={54} height={54} fill="#4A2E52" />
+                    <rect x={24} width={6} height={54} fill="#553662" opacity={.85} />
+                    <circle cx={12} cy={14} r={3} fill="#6A4478" opacity={.7} />
+                    <circle cx={40} cy={38} r={3} fill="#6A4478" opacity={.7} />
+                  </pattern>
+                </defs>
+
+                {/* the room: floor pans with the world, wall closes it off at the back */}
+                <rect x={v.floor.x} y={v.floor.y} width={v.floor.w} height={v.floor.h} fill="url(#cc-planks)" />
+                {v.wallY > v.floor.y && (
+                  <g>
+                    <rect x={v.floor.x} y={v.floor.y} width={v.floor.w} height={v.wallY - v.floor.y} fill="url(#cc-paper)" />
+                    <rect x={v.floor.x} y={v.wallY - 26} width={v.floor.w} height={26} fill="#EBD6AE" />
+                    <rect x={v.floor.x} y={v.wallY - 26} width={v.floor.w} height={5} fill="#FFF3D8" />
+                    <rect x={v.floor.x} y={v.wallY - 4} width={v.floor.w} height={4} fill="#2A1524" opacity={.55} />
+                  </g>
+                )}
+                <rect x={v.floor.x} y={v.floor.y} width={v.floor.w} height={v.floor.h} fill="url(#cc-pool)" />
+
                 {v.edges.map(e => (
                   <g key={e.key}>
                     <path d={e.d} fill="none" stroke="#241409" strokeWidth={e.w1} strokeLinecap="round" opacity={.92} />
@@ -431,9 +744,11 @@ export default class CatCoverGame extends Component {
                   <path key={m.key} d={m.d} fill="none" stroke="#FFD469" strokeWidth={4.5} strokeLinecap="round" strokeDasharray="9 8" style={{ animation: 'cc-dash 900ms linear infinite' }} />
                 ))}
 
-                {v.things.map(o => (
+                {/* cats and smashables share one depth-sorted pass, so whoever
+                    stands in front overlaps whoever stands behind */}
+                {v.sprites.map(o => (o.thing ? (
                   <g key={o.key} transform={'translate(' + o.x + ' ' + o.y + ') scale(' + o.s + ')'}>
-                    <ellipse cx={0} cy={11} rx={15} ry={4.5} fill="#000000" opacity={.28} />
+                    <ellipse cx={0} cy={11} rx={17} ry={6} fill="url(#cc-contact)" />
                     <g style={{ animation: o.body, transformOrigin: '0px ' + THING_FOOT + 'px' }}>
                       <image href={o.idle} x={-THING_D / 2} y={THING_TOP} width={THING_D} height={THING_D} opacity={o.idleO} style={{ animation: o.f0 }}>
                         <title>{o.label}</title>
@@ -448,39 +763,59 @@ export default class CatCoverGame extends Component {
                       <path d="M 0 -18 l 2 4 l 4 1 l -4 1.6 l -2 4 l -2 -4 l -4 -1.6 l 4 -1 Z" fill="#FFEFAF" style={{ animation: 'cc-spark 1.1s ease-in-out infinite' }} />
                     </g>
                   </g>
-                ))}
-
-                {v.nodes.map(n => (
-                  <g key={n.i} transform={'translate(' + n.x + ' ' + n.y + ') scale(' + n.s + ')'}>
-                    <circle cx={0} cy={-8} r={n.pulseR} fill="none" stroke="#FFD469" strokeWidth={3} opacity={n.pulseO} style={{ animation: n.anim }} />
-                    <ellipse cx={0} cy={18} rx={19} ry={5.5} fill="#000000" opacity={.33} />
-                    <circle cx={0} cy={-2} r={27} fill="#F06BFF" opacity={n.haloO} style={{ animation: n.glow }} />
-                    <ellipse cx={0} cy={17} rx={22} ry={7} fill="none" stroke="#F06BFF" strokeWidth={3.5} opacity={n.ringO} />
-                    <circle id={'cc-bloom-' + n.i} cx={0} cy={0} r={8} fill="none" stroke="#FFEFFF" strokeWidth={3} opacity={0} />
-                    <g style={{ animation: n.bob, transformOrigin: '0px ' + CAT_FOOT + 'px' }}>
-                      <image href={n.sleep} x={-CAT_D / 2} y={CAT_TOP} width={CAT_D} height={CAT_D} opacity={n.asleep}
+                ) : (
+                  <g key={o.key} transform={'translate(' + o.x + ' ' + o.y + ') scale(' + o.s + ')'}>
+                    <circle cx={0} cy={-8} r={o.pulseR} fill="none" stroke="#FFD469" strokeWidth={3} opacity={o.pulseO} style={{ animation: o.anim }} />
+                    <ellipse cx={0} cy={18} rx={22} ry={7.5} fill="url(#cc-contact)" />
+                    <circle cx={0} cy={-2} r={27} fill="#F06BFF" opacity={o.haloO} style={{ animation: o.glow }} />
+                    <ellipse cx={0} cy={17} rx={22} ry={7} fill="none" stroke="#F06BFF" strokeWidth={3.5} opacity={o.ringO} />
+                    <circle id={'cc-bloom-' + o.i} cx={0} cy={0} r={8} fill="none" stroke="#FFEFFF" strokeWidth={3} opacity={0} />
+                    <g style={{ animation: o.bob, transformOrigin: '0px ' + CAT_FOOT + 'px' }}>
+                      <image href={o.sleep} x={-CAT_D / 2} y={CAT_TOP} width={CAT_D} height={CAT_D} opacity={o.asleep}
                         style={{ transition: 'opacity 160ms ease-out' }}>
-                        <title>{n.name} — dozing</title>
+                        <title>{o.name} — dozing</title>
                       </image>
-                      <image href={n.wakeA} x={-CAT_D / 2} y={CAT_TOP} width={CAT_D} height={CAT_D} opacity={0} style={{ animation: n.frameA }}>
-                        <title>{n.name} — on the loose</title>
+                      <image href={o.wakeA} x={-CAT_D / 2} y={CAT_TOP} width={CAT_D} height={CAT_D} opacity={0} style={{ animation: o.frameA }}>
+                        <title>{o.name} — on the loose</title>
                       </image>
-                      <image href={n.wakeB} x={-CAT_D / 2} y={CAT_TOP} width={CAT_D} height={CAT_D} opacity={0} style={{ animation: n.frameB }} />
+                      <image href={o.wakeB} x={-CAT_D / 2} y={CAT_TOP} width={CAT_D} height={CAT_D} opacity={0} style={{ animation: o.frameB }} />
                     </g>
-                    <g opacity={n.asleep} style={{ transition: 'opacity 160ms ease-out' }}>
+                    <g opacity={o.asleep} style={{ transition: 'opacity 160ms ease-out' }}>
                       <text x={11} y={-13} fontFamily="'Luckiest Guy', cursive" fontSize={8} fill="#9ED2FF" stroke="#1B2A4A" strokeWidth={.9} paintOrder="stroke fill" style={{ animation: 'cc-zzz 3.3s ease-out infinite' }}>z</text>
                       <text x={15} y={-19} fontFamily="'Luckiest Guy', cursive" fontSize={10} fill="#9ED2FF" stroke="#1B2A4A" strokeWidth={.9} paintOrder="stroke fill" style={{ animation: 'cc-zzz 3.3s 1.1s ease-out infinite' }}>z</text>
                       <text x={19} y={-26} fontFamily="'Luckiest Guy', cursive" fontSize={12} fill="#9ED2FF" stroke="#1B2A4A" strokeWidth={.9} paintOrder="stroke fill" style={{ animation: 'cc-zzz 3.3s 2.2s ease-out infinite' }}>z</text>
                     </g>
-                    <g opacity={n.on}>
+                    <g opacity={o.on}>
                       <path d="M -26 -18 l 3.6 1.4 l 1.4 3.6 l 1.4 -3.6 l 3.6 -1.4 l -3.6 -1.4 l -1.4 -3.6 l -1.4 3.6 Z" fill="#FFD469" style={{ animation: 'cc-spark 1.2s ease-in-out infinite' }} />
                       <path d="M 19 -30 l 3 1.2 l 1.2 3 l 1.2 -3 l 3 -1.2 l -3 -1.2 l -1.2 -3 l -1.2 3 Z" fill="#F06BFF" style={{ animation: 'cc-spark 1.5s .3s ease-in-out infinite' }} />
                     </g>
-                    <rect x={-29} y={-34} width={58} height={56} rx={15} fill="none" stroke="#FFD469" strokeWidth={3} strokeDasharray="7 6" opacity={n.focusO} />
+                    <rect x={-29} y={-34} width={58} height={56} rx={15} fill="none" stroke="#FFD469" strokeWidth={3} strokeDasharray="7 6" opacity={o.focusO} />
                   </g>
-                ))}
-                <rect x={0} y={0} width={v.boxW} height={v.boxH} fill="transparent" onClick={v.pickAt} style={{ cursor: 'pointer' }} />
+                )))}
               </svg>
+
+              <div style={{ position: 'absolute', right: v.ui.pad, top: v.ui.pad, zIndex: 4, display: 'flex', gap: v.ui.gap }}>
+                {v.tools.map(t => (
+                  <button key={t.k} type="button" onClick={t.go} aria-label={t.label} title={t.label}
+                    style={{ minWidth: v.ui.btn + 2, height: v.ui.btn, padding: '0 ' + Math.round(8 * v.ui.k) + 'px', background: '#F4E4C4', border: '3px solid #2A1524', borderRadius: 9, boxShadow: '0 3px 0 #2A1524', color: '#3E2718', fontFamily: luckiest, fontSize: v.ui.font, lineHeight: 1, cursor: 'pointer' }}>{t.t}</button>
+                ))}
+              </div>
+
+              {v.map && (
+                <svg width={(v.map.w + 12) * v.ui.k} height={(v.map.h + 12) * v.ui.k} viewBox={'-6 -6 ' + (v.map.w + 12) + ' ' + (v.map.h + 12)}
+                  role="img" aria-label="house overview"
+                  onPointerDown={this.onMapDown} onPointerMove={this.onMapMove} onPointerUp={this.onMapUp} onPointerCancel={this.onMapUp}
+                  style={{ position: 'absolute', right: v.ui.pad, bottom: v.ui.pad, zIndex: 4, background: 'rgba(26,12,8,.82)', border: '3px solid #2A1524', borderRadius: 10, boxShadow: '0 3px 0 #2A1524', cursor: 'pointer', touchAction: 'none' }}>
+                  {v.map.edges.map(e => (
+                    <line key={e.key} x1={e.x1} y1={e.y1} x2={e.x2} y2={e.y2} stroke={e.on ? '#C64BE8' : '#8A7A6A'} strokeWidth={e.on ? 2.6 : 1.6} strokeLinecap="round" />
+                  ))}
+                  {v.map.nodes.map(n => (
+                    <circle key={n.key} cx={n.x} cy={n.y} r={n.on ? 3.4 : 2.3} fill={n.on ? '#FFD469' : '#F4E4C4'} opacity={n.on ? 1 : .5} />
+                  ))}
+                  <rect x={v.map.view.x} y={v.map.view.y} width={v.map.view.w} height={v.map.view.h} rx={2}
+                    fill="rgba(255,212,105,.13)" stroke="#FFD469" strokeWidth={1.8} />
+                </svg>
+              )}
             </div>
 
             <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
@@ -514,7 +849,7 @@ export default class CatCoverGame extends Component {
             </div>
           </main>
 
-          <aside style={{ flex: '1 1 250px', minWidth: 250, display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <aside style={{ flex: '1 1 250px', minWidth: 250, display: this.state.expanded ? 'none' : 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{ alignSelf: 'center', background: '#6E3FA3', border: '3px solid #2A1524', borderRadius: 9, boxShadow: '0 4px 0 #2A1524', padding: '4px 18px', fontFamily: luckiest, fontSize: 15, letterSpacing: '.05em', color: '#FFD469', position: 'relative', zIndex: 2 }}>HOW IT WORKS</div>
             <div style={{ marginTop: -20, background: 'linear-gradient(#F6E8CA, #EBD8AE)', border: '3px solid #2A1524', borderRadius: 14, boxShadow: '0 5px 0 #2A1524, inset 0 0 30px rgba(150,110,60,.22)', padding: '22px 15px 14px', display: 'flex', flexDirection: 'column', gap: 12 }}>
               {v.steps.map(s => (
@@ -549,7 +884,7 @@ export default class CatCoverGame extends Component {
               </div>
             )}
 
-            <div style={{ fontSize: 11, fontWeight: 800, lineHeight: 1.7, letterSpacing: '.04em', color: '#8E7AAE' }}>TAP A CAT TO UNLEASH IT · TAP AGAIN TO CALM IT · ARROWS + ENTER · 1 2 3 HINTS · R TIDY UP</div>
+            <div style={{ fontSize: 11, fontWeight: 800, lineHeight: 1.7, letterSpacing: '.04em', color: '#8E7AAE' }}>TAP A CAT TO UNLEASH IT · TAP AGAIN TO CALM IT · DRAG TO PAN · SCROLL OR + − TO ZOOM · F FRAME THE HOUSE · E EXPAND · ARROWS + ENTER · 1 2 3 HINTS · R TIDY UP</div>
           </aside>
         </div>
       </div>
