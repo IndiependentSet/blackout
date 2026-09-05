@@ -14,6 +14,10 @@ const BRIEF = [
   { n: 2, head: 'DEPLOY ONTO A PAD.', body: 'A cat covers every path touching its pad — vases, lamps, fishbowls, all of it.' },
   { n: 3, head: 'KEEP THE HEADCOUNT DOWN.', body: 'Hit the budget exactly and the site closes purr-fect. One cat over and accounts notice.' },
 ];
+/* the work-order diagram uses the same sticker art as the game board, not a
+   hand-drawn stand-in, so the "how it works" illustration matches play */
+const INTRO_CAT = BREEDS.find(b => b.name === 'TROUBLE') || BREEDS[0];
+const INTRO_THING = THINGS.find(t => t.name === 'mug') || THINGS[0];
 
 /* how big a sticker cat is drawn, and where its feet land, in node units */
 const CAT_D = 56;
@@ -722,33 +726,19 @@ export default class CatCoverGame extends Component {
                     <path d="M -10 0 L 22 0" stroke="#FFF6E4" strokeWidth={4} strokeLinecap="round" />
                     <path d="M 14 -9 L 26 0 L 14 9 Z" fill="#FFF6E4" stroke="#2A1524" strokeWidth={2.4} strokeLinejoin="round" />
                   </g>
-                  <g transform="translate(228 108)">
-                    <ellipse cx={0} cy={26} rx={26} ry={8} fill="#000" opacity={.3} />
+                  <g transform="translate(228 118)">
+                    <ellipse cx={0} cy={CAT_FOOT + 8} rx={26} ry={8} fill="#000" opacity={.3} />
                     <circle cx={0} cy={10} r={26} fill="#F06BFF" opacity={.18} />
-                    <ellipse cx={0} cy={24} rx={22} ry={7} fill="none" stroke="#F06BFF" strokeWidth={3.4} />
-                    <g transform="scale(1.05)">
-                      <path d="M 15 12 Q 26 12 25 2" fill="none" stroke="#C4661F" strokeWidth={5.5} strokeLinecap="round" />
-                      <path d="M -14 16 Q -16 4 -6 4 L 6 4 Q 16 4 14 16 Z" fill="#E8873A" stroke="#2A1524" strokeWidth={2.4} strokeLinejoin="round" />
-                      <path d="M -8 5 L -10.6 16 M 8 5 L 10.6 16" stroke="#F7B32B" strokeWidth={3} strokeLinecap="round" />
-                      <path d="M -12.5 -6 L -14.5 -19 L -2.5 -11.5 Z" fill="#E8873A" stroke="#2A1524" strokeWidth={2.2} strokeLinejoin="round" />
-                      <path d="M 12.5 -6 L 14.5 -19 L 2.5 -11.5 Z" fill="#E8873A" stroke="#2A1524" strokeWidth={2.2} strokeLinejoin="round" />
-                      <ellipse cx={0} cy={-1} rx={14.5} ry={12.6} fill="#E8873A" stroke="#2A1524" strokeWidth={2.4} />
-                      <ellipse cx={-5.6} cy={-1} rx={4.2} ry={4.6} fill="#FFFDF6" stroke="#2A1524" strokeWidth={1.6} />
-                      <ellipse cx={5.6} cy={-1} rx={4.2} ry={4.6} fill="#FFFDF6" stroke="#2A1524" strokeWidth={1.6} />
-                      <circle cx={-5.2} cy={-0.6} r={2.4} fill="#5BD9A6" />
-                      <circle cx={6} cy={-0.6} r={2.4} fill="#5BD9A6" />
-                      <path d="M -2.4 3.6 L 2.4 3.6 L 0 6.2 Z" fill="#E27B9B" stroke="#2A1524" strokeWidth={1.2} strokeLinejoin="round" />
-                      <path d="M -13 -8 Q -13 -21 0 -21 Q 13 -21 13 -8 Z" fill="#F7B32B" stroke="#2A1524" strokeWidth={2.4} strokeLinejoin="round" />
-                      <path d="M -18 -7.4 L 18 -7.4" stroke="#2A1524" strokeWidth={4.6} strokeLinecap="round" />
-                      <path d="M -18 -8.2 L 18 -8.2" stroke="#FFD469" strokeWidth={2.8} strokeLinecap="round" />
-                    </g>
+                    <ellipse cx={0} cy={CAT_FOOT + 6} rx={22} ry={7} fill="none" stroke="#F06BFF" strokeWidth={3.4} />
+                    <image href={INTRO_CAT.wakeA} x={-CAT_D / 2} y={CAT_TOP} width={CAT_D} height={CAT_D}>
+                      <title>{INTRO_CAT.name} — on site</title>
+                    </image>
                   </g>
-                  <g transform="translate(228 172)">
-                    <ellipse cx={0} cy={6} rx={16} ry={5} fill="#000" opacity={.3} />
-                    <g transform="rotate(76 0 4) scale(1.2)">
-                      <path d="M -8 -8 L 8 -8 L 6.4 10 L -6.4 10 Z" fill="#F6F1E7" stroke="#2A1524" strokeWidth={2.2} strokeLinejoin="round" />
-                      <path d="M -7.2 -4.4 L 7.2 -4.4" stroke="#C64BE8" strokeWidth={2.6} strokeLinecap="round" />
-                    </g>
+                  <g transform="translate(228 180)">
+                    <ellipse cx={0} cy={THING_FOOT + 2} rx={16} ry={5} fill="#000" opacity={.3} />
+                    <image href={INTRO_THING.broken} x={-THING_D / 2} y={THING_TOP} width={THING_D} height={THING_D}>
+                      <title>{INTRO_THING.label} — smashed</title>
+                    </image>
                     <circle cx={-16} cy={0} r={2.6} fill="#FFE9C4" opacity={.8} />
                     <circle cx={15} cy={-3} r={2.2} fill="#FFE9C4" opacity={.6} />
                   </g>
