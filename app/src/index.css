@@ -24,6 +24,15 @@ button { font-family: inherit; }
 @keyframes cc-spark { 0%, 100% { opacity: .35; transform: scale(.8); } 50% { opacity: 1; transform: scale(1.25); } }
 @keyframes cc-glow { 0%, 100% { opacity: .5; } 50% { opacity: .95; } }
 
+/* an empty deployment pad's dashed ring slowly turns; a hired cat drops in */
+@keyframes cc-slotspin { to { stroke-dashoffset: -26; } }
+@keyframes cc-drop {
+  0% { transform: translateY(-34px) scale(.6); opacity: 0; }
+  55% { transform: translateY(3px) scale(1.1); opacity: 1; }
+  78% { transform: translateY(-2px) scale(.97); }
+  100% { transform: translateY(0) scale(1); }
+}
+
 /* sticker cats: dozing cats breathe, woken cats hop between their two poses */
 @keyframes cc-snooze { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(1.045); } }
 @keyframes cc-pounce {

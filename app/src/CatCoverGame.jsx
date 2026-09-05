@@ -7,6 +7,14 @@ const SOUND_ON = true;
 const CABLE_SAG = 0.1;
 const DAY_EPOCH = Date.UTC(2026, 3, 15);
 
+/* CATASTROPHE INC.: the "houses" are demolition sites on the weekly job sheet */
+const SITES = ['THE STUDIO FLAT', 'GRANDMA’S PARLOUR', 'THE OPEN-PLAN LOFT', 'SUBURBAN SEMI', 'THE MANOR ANNEXE', 'CORNER PENTHOUSE', 'THE OLD RECTORY'];
+const BRIEF = [
+  { n: 1, head: 'READ THE FLOOR PLAN.', body: 'Dashed paths run between pads. Each one carries a fixture the client wants gone.' },
+  { n: 2, head: 'DEPLOY ONTO A PAD.', body: 'A cat covers every path touching its pad — vases, lamps, fishbowls, all of it.' },
+  { n: 3, head: 'KEEP THE HEADCOUNT DOWN.', body: 'Hit the budget exactly and the site closes purr-fect. One cat over and accounts notice.' },
+];
+
 /* how big a sticker cat is drawn, and where its feet land, in node units */
 const CAT_D = 56;
 const CAT_FOOT = 18;
@@ -36,6 +44,7 @@ const MAP_W = 152, MAP_H = 118;   // minimap, shown only when a house overflows
 
 export default class CatCoverGame extends Component {
   state = {
+    screen: 'intro',
     levels: [null, null, null, null, null, null, null],
     idx: 0,
     placed: [],
@@ -175,7 +184,7 @@ export default class CatCoverGame extends Component {
     }
     if (this.solved()) return;
     if (placed.length >= lv.k + 1) {
-      this.setState({ msg: 'TOO MANY CATS — YOU WASTED FUR', focus: i });
+      this.setState({ msg: 'PAYROLL SAYS NO — RECALL SOMEONE', focus: i });
       this.chirp(1, false);
       return;
     }
@@ -204,23 +213,27 @@ export default class CatCoverGame extends Component {
       const h = E.hintLeaf(lv, p);
       this.setState({
         hint: h ? { kind: 'leaf', leaf: h.leaf, forced: h.forced } : null,
-        msg: h ? 'ONE THING ONLY — ITS NEIGHBOUR MUST GO' : 'NO ONE-THING CAT LEFT',
+        msg: h ? 'ONE FIXTURE ONLY — ITS NEIGHBOUR IS HIRED' : 'NO DEAD-END PADS LEFT',
       });
     } else if (tier === 2) {
       const m = E.hintMatching(lv);
-      this.setState({ hint: { kind: 'proof', edges: m }, msg: 'YOU’LL NEED ' + m.length + ' CATS OR MORE' });
+      this.setState({ hint: { kind: 'proof', edges: m }, msg: 'ESTIMATE: ' + m.length + ' CATS MINIMUM' });
     } else {
       const v = E.hintReveal(lv, p);
       this.setState({
         hint: v == null ? null : { kind: 'reveal', node: v },
-        msg: v == null ? 'EVERY CULPRIT IS ALREADY OUT' : 'THIS CAT IS IN THE ANSWER',
+        msg: v == null ? 'THE WHOLE CREW IS ALREADY ON SITE' : 'THIS PAD IS IN THE ANSWER',
       });
     }
   }
 
   onKey(e) {
-    const lv = this.lv(); if (!lv) return;
     const k = e.key;
+    if (this.state.screen === 'intro') {
+      if (k === 'Enter' || k === ' ') { e.preventDefault(); this.setState({ screen: 'game' }); }
+      return;
+    }
+    const lv = this.lv(); if (!lv) return;
     if (!this.state.kbd) this.setState({ kbd: true });
     if (k === 'r' || k === 'R') { e.preventDefault(); return this.reset(); }
     if (k === 'n' || k === 'N') { e.preventDefault(); return this.next(); }
@@ -460,7 +473,7 @@ export default class CatCoverGame extends Component {
     const r = this.state.results;
     const glyphs = r.map(x => (x === 'perfect' ? '🐾' : '⬜')).join('');
     const n = r.filter(x => x === 'perfect').length;
-    return 'CAT COVER #' + this.day() + '\n' + glyphs + '  ' + n + '/7 purr-fect';
+    return 'CATASTROPHE INC. #' + this.day() + '\n' + glyphs + '  ' + n + '/7 on budget';
   }
   copyShare() {
     const t = this.share();
@@ -474,21 +487,21 @@ export default class CatCoverGame extends Component {
     const active = t => hint && ((t === 1 && hint.kind === 'leaf') || (t === 2 && hint.kind === 'proof') || (t === 3 && hint.kind === 'reveal'));
     const vals = {
       levelNo: st.idx + 1, stars: lv ? '✦'.repeat(lv.stars) : '',
-      plaque: lv ? 'KNOCK IT ALL OVER!' : 'WAKING THE CATS…',
+      plaque: lv ? SITES[st.idx] : 'DISPATCHING CREW…',
       box: '0 0 ' + this.camW() + ' ' + CAM_H, view: { x: 0, y: 0, w: this.camW(), h: CAM_H },
       edges: [], sprites: [], proof: [], map: null,
       floor: { x: 0, y: 0, w: this.camW(), h: CAM_H }, wallY: -1e5,
       used: st.placed.length, par: lv ? lv.k : 0, litCount: 0, edgeCount: lv ? lv.edges.length : 0,
       usedColor: '#FFF3D8', msg: st.msg, msgColor: '#C9B8E0',
       steps: [
-        { n: 1, head: 'CATS CAUSE CHAOS.', body: 'Each cat knocks over everything it is connected to.' },
-        { n: 2, head: 'COVER EVERY PATH.', body: 'Put a cat on at least one end of every path.' },
-        { n: 3, head: 'USE AS FEW AS POSSIBLE.', body: 'Match par and the chaos is purr-fect.' },
+        { n: 1, head: 'PADS ARE EMPTY.', body: 'Nothing happens until you put a cat on one.' },
+        { n: 2, head: 'COVER EVERY PATH.', body: 'A path needs a cat on at least one of its two pads.' },
+        { n: 3, head: 'BILL BY THE HEAD.', body: 'Match the budget and the invoice reads purr-fect.' },
       ],
-      overLabel: lv ? (lv.k + 1) + ' CATS USED' : '—',
-      parLabel: lv ? lv.k + ' CATS USED' : '—',
+      overLabel: lv ? (lv.k + 1) + ' CATS' : '—',
+      parLabel: lv ? lv.k + ' CATS' : '—',
       hints: [1, 2, 3].map(t => ({
-        tier: t, label: ['FORCED', 'PROOF', 'REVEAL'][t - 1],
+        tier: t, label: ['SURVEY', 'ESTIMATE', 'INSIDER'][t - 1],
         bg: active(t) ? '#FFD469' : '#F4E4C4', ink: '#3E2718',
       })),
       pips: [0, 1, 2, 3, 4, 5, 6].map(i => ({
@@ -506,16 +519,16 @@ export default class CatCoverGame extends Component {
       tools: [
         { k: 'out', t: '–', label: 'zoom out', go: () => this.zoomBy(0.8) },
         { k: 'in', t: '+', label: 'zoom in', go: () => this.zoomBy(1.25) },
-        { k: 'fit', t: 'FIT', label: 'frame the whole house', go: () => this.fit() },
+        { k: 'fit', t: 'FIT', label: 'frame the whole site', go: () => this.fit() },
         { k: 'exp', t: st.expanded ? '↘↖' : '↖↘', label: st.expanded ? 'shrink the board' : 'expand the board',
           go: () => this.setState(s => ({ expanded: !s.expanded })) },
       ],
       showShare: st.results.filter(Boolean).length === 7,
-      shareText: this.share(), copyLabel: st.copied ? 'COPIED!' : 'COPY REPORT',
+      shareText: this.share(), copyLabel: st.copied ? 'COPIED!' : 'COPY INVOICE',
       banner: '', bannerBg: 'rgba(255,255,255,.08)', bannerInk: '#F4E4C4',
       nextBg: 'rgba(255,255,255,.22)', nextLabel: 'NEXT', nextO: 0.45,
     };
-    vals.msgColor = st.msg && st.msg.indexOf('TOO MANY') === 0 ? '#FF8FA8' : '#FFD469';
+    vals.msgColor = st.msg && st.msg.indexOf('PAYROLL') === 0 ? '#FF8FA8' : '#FFD469';
     if (!lv) return vals;
 
     const L = this.layout(lv), pos = L.pos, pset = new Set(st.placed);
@@ -590,12 +603,15 @@ export default class CatCoverGame extends Component {
       vals.sprites.push({
         thing: false, key: 'n' + i, base: p.y + CAT_FOOT * catS,
         i, x: p.x, y: p.y, s: catS,
-        name: b.name, sleep: b.sleep, wakeA: b.wakeA, wakeB: b.wakeB,
-        on: on ? 1 : 0, awake: on ? 1 : 0, asleep: on ? 0 : 1,
+        name: b.name, wakeA: b.wakeA, wakeB: b.wakeB,
+        on: on ? 1 : 0,
+        /* an empty pad shows a slowly-turning dashed ring + paw stencil; once a
+           cat is hired the pad fades out under it */
+        slotO: on ? 0 : 0.9,
+        slotAnim: on ? 'none' : 'cc-slotspin 3.6s linear infinite',
         haloO: on ? 0.2 : 0, ringO: on ? 1 : 0,
         glow: on ? 'cc-glow 1.8s ease-in-out infinite' : 'none',
-        /* dozing cats breathe; woken cats hop between their two poses */
-        bob: on ? 'cc-pounce .7s ease-in-out infinite' : 'cc-snooze 3.4s ease-in-out infinite',
+        bob: on ? 'cc-pounce .7s ease-in-out infinite' : 'none',
         frameA: on ? 'cc-frame-a .7s steps(1, end) infinite' : 'none',
         frameB: on ? 'cc-frame-b .7s steps(1, end) infinite' : 'none',
         pulseR: 26, pulseO: pulsing || revealed ? 1 : 0,
@@ -629,20 +645,131 @@ export default class CatCoverGame extends Component {
 
     if (litE.size === lv.edges.length) {
       const perfect = st.placed.length <= lv.k;
-      vals.banner = perfect ? 'PURR-FECT CHAOS! ' + lv.k + '/' + lv.k : 'GOOD — BUT ' + st.placed.length + '/' + lv.k;
+      vals.banner = perfect ? 'SITE CLEARED — ON BUDGET ' + lv.k + '/' + lv.k : 'CLEARED — BUT ' + st.placed.length + '/' + lv.k + ' CATS';
       vals.bannerBg = perfect ? '#C877D8' : '#E8A34A';
       vals.bannerInk = '#2A1524';
       vals.nextBg = '#F4E4C4';
       vals.nextO = st.idx < 6 ? 1 : 0.45;
-      vals.nextLabel = st.idx < 6 ? 'NEXT HOUSE' : 'ALL DONE';
+      vals.nextLabel = st.idx < 6 ? 'NEXT SITE' : 'WEEK DONE';
     } else {
-      vals.banner = 'HOUSE ' + (st.idx + 1) + '/7 · PAR ' + lv.k + ' CATS';
-      if (!st.msg && st.placed.length && st.placed.length >= lv.k) vals.msg = 'SOMETHING SURVIVED…';
+      vals.banner = 'SITE ' + (st.idx + 1) + '/7 · BUDGET ' + lv.k + ' CATS';
+      if (!st.msg && st.placed.length && st.placed.length >= lv.k) vals.msg = 'SOMETHING IS STILL STANDING…';
     }
     return vals;
   }
 
+  /* ---- the work order: shown before play, and again via RE-READ WORK ORDER ---- */
+  renderIntro() {
+    const luckiest = "'Luckiest Guy', cursive";
+    return (
+      <div style={{ minHeight: '100vh', boxSizing: 'border-box', padding: '26px 16px 40px', color: '#F4E4C4', background: 'radial-gradient(120% 90% at 50% 0%, #2A1B3D 0%, #170F22 55%, #100A18 100%)' }}>
+        <div style={{ maxWidth: 1080, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 22 }}>
+
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 18, borderBottom: '4px dashed rgba(247,179,43,.35)', paddingBottom: 18 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 0.82 }}>
+              <span style={{ fontFamily: luckiest, fontSize: 15, letterSpacing: '.34em', color: '#C877D8', marginBottom: 8 }}>STRUCTURAL DEMOLITION</span>
+              <span style={{ fontFamily: luckiest, fontSize: 74, color: '#F7B32B', WebkitTextStroke: '8px #2A1524', paintOrder: 'stroke fill', textShadow: '0 7px 0 #2A1524' }}>CATASTROPHE</span>
+              <span style={{ fontFamily: luckiest, fontSize: 50, letterSpacing: '.04em', color: '#EADDF7', WebkitTextStroke: '8px #2A1524', paintOrder: 'stroke fill', textShadow: '0 7px 0 #2A1524' }}>INC.</span>
+            </div>
+            <div style={{ flex: '1 1 220px', minWidth: 200, display: 'flex', flexDirection: 'column', gap: 6, paddingBottom: 8 }}>
+              <span style={{ fontSize: 13, fontWeight: 900, letterSpacing: '.16em', color: '#8E7AAE' }}>FELINE DIVISION · EST. 2019</span>
+              <span style={{ fontSize: 17, fontWeight: 800, lineHeight: 1.4, color: '#F4E4C4', textWrap: 'pretty' }}>We don't own a wrecking ball. We own <span style={{ color: '#F06BFF', fontWeight: 900 }}>cats</span>.</span>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 18, alignItems: 'stretch' }}>
+            <div style={{ flex: '3 1 420px', minWidth: 300, display: 'flex', flexDirection: 'column' }}>
+              <div style={{ alignSelf: 'flex-start', background: '#6E3FA3', border: '3px solid #2A1524', borderRadius: '9px 9px 0 0', boxShadow: '0 4px 0 #2A1524', padding: '5px 20px', fontFamily: luckiest, fontSize: 15, letterSpacing: '.06em', color: '#FFD469', position: 'relative', zIndex: 2 }}>WORK ORDER #{this.day()}</div>
+              <div style={{ background: 'linear-gradient(#F6E8CA, #EBD8AE)', border: '3px solid #2A1524', borderRadius: '4px 16px 8px 16px', boxShadow: '0 6px 0 #2A1524, inset 0 0 36px rgba(150,110,60,.24)', padding: '20px 20px 18px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div style={{ fontFamily: luckiest, fontSize: 25, lineHeight: 1.18, color: '#3E2718', textWrap: 'pretty' }}>THE CLIENT WANTS THE INSIDE OF THIS HOUSE <span style={{ color: '#8A3FC0' }}>GONE BY FRIDAY.</span></div>
+                <div style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.5, color: '#5A3E27', textWrap: 'pretty' }}>Every fixture on site sits on a path between two <span style={{ fontWeight: 900, color: '#8A3FC0' }}>deployment pads</span>. Drop a cat on either end of a path and that fixture is scrap. Cats bill by the head, so hire the fewest that still flattens the lot.</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
+                  {BRIEF.map(s => (
+                    <div key={s.n} style={{ display: 'flex', gap: 11, alignItems: 'flex-start' }}>
+                      <span style={{ flex: 'none', width: 26, height: 26, borderRadius: 7, background: '#6E3FA3', border: '2.5px solid #2A1524', color: '#FFD469', fontFamily: luckiest, fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{s.n}</span>
+                      <div>
+                        <div style={{ fontFamily: luckiest, fontSize: 16, color: '#3E2718', lineHeight: 1.2 }}>{s.head}</div>
+                        <div style={{ fontSize: 13.5, fontWeight: 700, color: '#6A4A30', lineHeight: 1.4 }}>{s.body}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ borderTop: '3px dashed rgba(62,39,24,.3)', paddingTop: 13, display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
+                  <span style={{ fontFamily: luckiest, fontSize: 15, color: '#8A3FC0' }}>7 SITES · ONE WORKING WEEK</span>
+                  <span style={{ fontSize: 12.5, fontWeight: 800, color: '#7A5638' }}>Come in on budget and the invoice reads PURR-FECT.</span>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ flex: '2 1 300px', minWidth: 260, display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div style={{ flex: 1, background: 'repeating-linear-gradient(96deg, #6B4730 0 46px, #664129 46px 48px, #6E4A32 48px 94px, #5E3B25 94px 96px)', border: '5px solid #34200F', borderRadius: 16, boxShadow: '0 7px 0 #1E1208, inset 0 0 60px rgba(0,0,0,.55)', padding: 12 }}>
+                <svg viewBox="0 0 300 210" width="100%" aria-label="how a deployment works" style={{ display: 'block' }}>
+                  <text x={14} y={22} fontFamily="Luckiest Guy, cursive" fontSize={13} fill="#FFD469" letterSpacing={2}>EMPTY PAD</text>
+                  <text x={176} y={22} fontFamily="Luckiest Guy, cursive" fontSize={13} fill="#F06BFF" letterSpacing={2}>CAT ON IT</text>
+                  <g transform="translate(62 110)">
+                    <ellipse cx={0} cy={20} rx={28} ry={9} fill="#000" opacity={.3} />
+                    <circle cx={0} cy={8} r={26} fill="rgba(0,0,0,.35)" stroke="#FFD469" strokeWidth={3} strokeDasharray="9 8" opacity={.85} />
+                    <g fill="#FFD469" opacity={.6} transform="translate(0 8) scale(1.25)">
+                      <ellipse cx={0} cy={3} rx={6.4} ry={5} />
+                      <circle cx={-6} cy={-5} r={2.5} />
+                      <circle cx={-2} cy={-8.4} r={2.5} />
+                      <circle cx={2} cy={-8.4} r={2.5} />
+                      <circle cx={6} cy={-5} r={2.5} />
+                    </g>
+                  </g>
+                  <g transform="translate(126 116)">
+                    <path d="M -10 0 L 22 0" stroke="#2A1524" strokeWidth={9} strokeLinecap="round" />
+                    <path d="M -10 0 L 22 0" stroke="#FFF6E4" strokeWidth={4} strokeLinecap="round" />
+                    <path d="M 14 -9 L 26 0 L 14 9 Z" fill="#FFF6E4" stroke="#2A1524" strokeWidth={2.4} strokeLinejoin="round" />
+                  </g>
+                  <g transform="translate(228 108)">
+                    <ellipse cx={0} cy={26} rx={26} ry={8} fill="#000" opacity={.3} />
+                    <circle cx={0} cy={10} r={26} fill="#F06BFF" opacity={.18} />
+                    <ellipse cx={0} cy={24} rx={22} ry={7} fill="none" stroke="#F06BFF" strokeWidth={3.4} />
+                    <g transform="scale(1.05)">
+                      <path d="M 15 12 Q 26 12 25 2" fill="none" stroke="#C4661F" strokeWidth={5.5} strokeLinecap="round" />
+                      <path d="M -14 16 Q -16 4 -6 4 L 6 4 Q 16 4 14 16 Z" fill="#E8873A" stroke="#2A1524" strokeWidth={2.4} strokeLinejoin="round" />
+                      <path d="M -8 5 L -10.6 16 M 8 5 L 10.6 16" stroke="#F7B32B" strokeWidth={3} strokeLinecap="round" />
+                      <path d="M -12.5 -6 L -14.5 -19 L -2.5 -11.5 Z" fill="#E8873A" stroke="#2A1524" strokeWidth={2.2} strokeLinejoin="round" />
+                      <path d="M 12.5 -6 L 14.5 -19 L 2.5 -11.5 Z" fill="#E8873A" stroke="#2A1524" strokeWidth={2.2} strokeLinejoin="round" />
+                      <ellipse cx={0} cy={-1} rx={14.5} ry={12.6} fill="#E8873A" stroke="#2A1524" strokeWidth={2.4} />
+                      <ellipse cx={-5.6} cy={-1} rx={4.2} ry={4.6} fill="#FFFDF6" stroke="#2A1524" strokeWidth={1.6} />
+                      <ellipse cx={5.6} cy={-1} rx={4.2} ry={4.6} fill="#FFFDF6" stroke="#2A1524" strokeWidth={1.6} />
+                      <circle cx={-5.2} cy={-0.6} r={2.4} fill="#5BD9A6" />
+                      <circle cx={6} cy={-0.6} r={2.4} fill="#5BD9A6" />
+                      <path d="M -2.4 3.6 L 2.4 3.6 L 0 6.2 Z" fill="#E27B9B" stroke="#2A1524" strokeWidth={1.2} strokeLinejoin="round" />
+                      <path d="M -13 -8 Q -13 -21 0 -21 Q 13 -21 13 -8 Z" fill="#F7B32B" stroke="#2A1524" strokeWidth={2.4} strokeLinejoin="round" />
+                      <path d="M -18 -7.4 L 18 -7.4" stroke="#2A1524" strokeWidth={4.6} strokeLinecap="round" />
+                      <path d="M -18 -8.2 L 18 -8.2" stroke="#FFD469" strokeWidth={2.8} strokeLinecap="round" />
+                    </g>
+                  </g>
+                  <g transform="translate(228 172)">
+                    <ellipse cx={0} cy={6} rx={16} ry={5} fill="#000" opacity={.3} />
+                    <g transform="rotate(76 0 4) scale(1.2)">
+                      <path d="M -8 -8 L 8 -8 L 6.4 10 L -6.4 10 Z" fill="#F6F1E7" stroke="#2A1524" strokeWidth={2.2} strokeLinejoin="round" />
+                      <path d="M -7.2 -4.4 L 7.2 -4.4" stroke="#C64BE8" strokeWidth={2.6} strokeLinecap="round" />
+                    </g>
+                    <circle cx={-16} cy={0} r={2.6} fill="#FFE9C4" opacity={.8} />
+                    <circle cx={15} cy={-3} r={2.2} fill="#FFE9C4" opacity={.6} />
+                  </g>
+                </svg>
+              </div>
+              <div style={{ background: 'rgba(255,255,255,.06)', border: '3px solid #2A1524', borderRadius: 14, padding: '12px 14px', fontSize: 12.5, fontWeight: 800, lineHeight: 1.6, color: '#C9B8E0' }}>CATASTROPHE INC. is not liable for curtains, ankles, or emotional damage. Cats are non-refundable and cannot be reasoned with.</div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
+            <button type="button" onClick={() => this.setState({ screen: 'game' })}
+              style={{ minHeight: 68, padding: '0 34px', background: '#FFD469', border: '4px solid #2A1524', borderRadius: 16, boxShadow: '0 6px 0 #2A1524', color: '#3E2718', fontFamily: luckiest, fontSize: 26, letterSpacing: '.05em', cursor: 'pointer' }}>CLOCK IN</button>
+            <span style={{ fontSize: 12.5, fontWeight: 900, letterSpacing: '.1em', color: '#8E7AAE' }}>OR PRESS ENTER · SITE {this.state.idx + 1} IS WAITING</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   render() {
+    if (this.state.screen === 'intro') return this.renderIntro();
     const v = this.renderVals();
     const luckiest = "'Luckiest Guy', cursive";
     return (
@@ -652,32 +779,35 @@ export default class CatCoverGame extends Component {
 
           <aside style={{ flex: '1 1 250px', minWidth: 250, display: this.state.expanded ? 'none' : 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 0.84, paddingTop: 2 }}>
-              <span style={{ fontFamily: luckiest, fontSize: 58, letterSpacing: '.01em', color: '#F7B32B', WebkitTextStroke: '7px #2A1524', paintOrder: 'stroke fill', textShadow: '0 6px 0 #2A1524' }}>CAT</span>
-              <span style={{ fontFamily: luckiest, fontSize: 46, letterSpacing: '.02em', color: '#EADDF7', WebkitTextStroke: '7px #2A1524', paintOrder: 'stroke fill', textShadow: '0 6px 0 #2A1524' }}>COVER</span>
+              <span style={{ fontFamily: luckiest, fontSize: 40, letterSpacing: '.01em', color: '#F7B32B', WebkitTextStroke: '6px #2A1524', paintOrder: 'stroke fill', textShadow: '0 5px 0 #2A1524' }}>CATASTROPHE</span>
+              <span style={{ fontFamily: luckiest, fontSize: 34, letterSpacing: '.04em', color: '#EADDF7', WebkitTextStroke: '6px #2A1524', paintOrder: 'stroke fill', textShadow: '0 5px 0 #2A1524' }}>INC.</span>
             </div>
 
             <div style={{ background: 'linear-gradient(#F6E8CA, #EBD8AE)', border: '3px solid #2A1524', borderRadius: '4px 14px 6px 16px', boxShadow: '0 5px 0 #2A1524, inset 0 0 26px rgba(150,110,60,.25)', padding: '13px 15px', transform: 'rotate(-1.2deg)' }}>
-              <div style={{ fontFamily: luckiest, fontSize: 19, lineHeight: 1.22, color: '#3E2718', textWrap: 'pretty' }}>SELECT THE LEAST NUMBER OF CATS REQUIRED TO <span style={{ color: '#8A3FC0' }}>RUIN THE HOUSE.</span></div>
+              <div style={{ fontFamily: luckiest, fontSize: 18, lineHeight: 1.22, color: '#3E2718', textWrap: 'pretty' }}>HIRE THE FEWEST CATS THAT STILL <span style={{ color: '#8A3FC0' }}>FLATTEN THE LOT.</span></div>
             </div>
 
             <div style={{ background: 'linear-gradient(#FFF7E6, #F2E3C2)', border: '3px solid #2A1524', borderRadius: '16px 16px 16px 4px', boxShadow: '0 5px 0 #2A1524', padding: '12px 14px', fontSize: 14, fontWeight: 700, lineHeight: 1.45, color: '#4A3120' }}>
-              These cats are connected by destructive paths. Put a cat on one end of each path and <span style={{ color: '#8A3FC0', fontWeight: 900 }}>EVERYTHING</span> falls!
+              Tap an empty <span style={{ color: '#8A3FC0', fontWeight: 900 }}>pad</span> to deploy a cat. Every fixture on a path it touches goes down.
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div style={{ alignSelf: 'flex-start', background: '#6E3FA3', border: '3px solid #2A1524', borderRadius: 8, boxShadow: '0 4px 0 #2A1524', padding: '4px 14px', fontFamily: luckiest, fontSize: 14, letterSpacing: '.06em', color: '#FFD469' }}>HOUSES</div>
+              <div style={{ alignSelf: 'flex-start', background: '#6E3FA3', border: '3px solid #2A1524', borderRadius: 8, boxShadow: '0 4px 0 #2A1524', padding: '4px 14px', fontFamily: luckiest, fontSize: 14, letterSpacing: '.06em', color: '#FFD469' }}>SITES</div>
               <div style={{ display: 'flex', gap: 6 }}>
                 {v.pips.map(p => (
-                  <button key={p.i} type="button" onClick={() => this.go(p.i)} aria-label={'house ' + (p.i + 1)}
+                  <button key={p.i} type="button" onClick={() => this.go(p.i)} aria-label={'site ' + (p.i + 1)}
                     style={{ flex: 1, minHeight: 40, background: p.fill, border: '3px solid #2A1524', borderRadius: 10, padding: 0, cursor: 'pointer', color: p.ink, fontFamily: luckiest, fontSize: 15, boxShadow: '0 ' + p.lift + 'px 0 #2A1524', transform: 'translateY(' + p.dy + 'px)' }}>{p.n}</button>
                 ))}
               </div>
             </div>
+
+            <button type="button" onClick={() => this.setState({ screen: 'intro' })}
+              style={{ alignSelf: 'flex-start', minHeight: 44, padding: '0 15px', background: 'rgba(255,255,255,.08)', border: '3px solid #2A1524', borderRadius: 12, color: '#C9B8E0', fontSize: 12, fontWeight: 900, letterSpacing: '.1em', cursor: 'pointer' }}>RE-READ WORK ORDER</button>
           </aside>
 
           <main style={{ flex: '5 1 460px', minWidth: 300, maxWidth: this.state.expanded ? 'none' : 780, display: 'flex', flexDirection: 'column', gap: 11 }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0 }}>
-              <div style={{ background: '#6E3FA3', border: '3px solid #2A1524', borderRadius: 10, boxShadow: '0 4px 0 #2A1524', padding: '3px 22px', fontFamily: luckiest, fontSize: 17, letterSpacing: '.05em', color: '#FFD469', position: 'relative', zIndex: 2 }}>HOUSE {v.levelNo} <span style={{ color: '#F06BFF' }}>{v.stars}</span></div>
+              <div style={{ background: '#6E3FA3', border: '3px solid #2A1524', borderRadius: 10, boxShadow: '0 4px 0 #2A1524', padding: '3px 22px', fontFamily: luckiest, fontSize: 17, letterSpacing: '.05em', color: '#FFD469', position: 'relative', zIndex: 2 }}>SITE {v.levelNo} <span style={{ color: '#F06BFF' }}>{v.stars}</span></div>
               <div style={{ marginTop: -6, width: '92%', background: 'linear-gradient(#F6E8CA, #E8D3A6)', border: '3px solid #2A1524', borderRadius: '3px 3px 10px 10px', boxShadow: '0 5px 0 #2A1524', padding: '9px 12px 6px', textAlign: 'center', fontFamily: luckiest, fontSize: 20, letterSpacing: '.02em', color: '#3E2718' }}>{v.plaque}</div>
             </div>
 
@@ -767,24 +897,30 @@ export default class CatCoverGame extends Component {
                   <g key={o.key} transform={'translate(' + o.x + ' ' + o.y + ') scale(' + o.s + ')'}>
                     <circle cx={0} cy={-8} r={o.pulseR} fill="none" stroke="#FFD469" strokeWidth={3} opacity={o.pulseO} style={{ animation: o.anim }} />
                     <ellipse cx={0} cy={18} rx={22} ry={7.5} fill="url(#cc-contact)" />
+                    {/* empty deployment pad: a slowly-turning dashed ring with a paw
+                        stencil, fades out once a cat is hired */}
+                    <circle cx={0} cy={4} r={20} fill="rgba(0,0,0,.4)" stroke="#FFD469" strokeWidth={2.6} strokeDasharray="9 8"
+                      opacity={o.slotO} style={{ animation: o.slotAnim, transformOrigin: '0px 4px', transition: 'opacity 160ms ease-out' }} />
+                    <g opacity={o.slotO} fill="#FFD469" transform="translate(0 4)" style={{ transition: 'opacity 160ms ease-out' }}>
+                      <ellipse cx={0} cy={3} rx={5.6} ry={4.4} />
+                      <circle cx={-5.2} cy={-4.4} r={2.2} />
+                      <circle cx={-1.8} cy={-7.4} r={2.2} />
+                      <circle cx={1.8} cy={-7.4} r={2.2} />
+                      <circle cx={5.2} cy={-4.4} r={2.2} />
+                    </g>
                     <circle cx={0} cy={-2} r={27} fill="#F06BFF" opacity={o.haloO} style={{ animation: o.glow }} />
                     <ellipse cx={0} cy={17} rx={22} ry={7} fill="none" stroke="#F06BFF" strokeWidth={3.5} opacity={o.ringO} />
                     <circle id={'cc-bloom-' + o.i} cx={0} cy={0} r={8} fill="none" stroke="#FFEFFF" strokeWidth={3} opacity={0} />
-                    <g style={{ animation: o.bob, transformOrigin: '0px ' + CAT_FOOT + 'px' }}>
-                      <image href={o.sleep} x={-CAT_D / 2} y={CAT_TOP} width={CAT_D} height={CAT_D} opacity={o.asleep}
-                        style={{ transition: 'opacity 160ms ease-out' }}>
-                        <title>{o.name} — dozing</title>
-                      </image>
-                      <image href={o.wakeA} x={-CAT_D / 2} y={CAT_TOP} width={CAT_D} height={CAT_D} opacity={0} style={{ animation: o.frameA }}>
-                        <title>{o.name} — on the loose</title>
-                      </image>
-                      <image href={o.wakeB} x={-CAT_D / 2} y={CAT_TOP} width={CAT_D} height={CAT_D} opacity={0} style={{ animation: o.frameB }} />
-                    </g>
-                    <g opacity={o.asleep} style={{ transition: 'opacity 160ms ease-out' }}>
-                      <text x={11} y={-13} fontFamily="'Luckiest Guy', cursive" fontSize={8} fill="#9ED2FF" stroke="#1B2A4A" strokeWidth={.9} paintOrder="stroke fill" style={{ animation: 'cc-zzz 3.3s ease-out infinite' }}>z</text>
-                      <text x={15} y={-19} fontFamily="'Luckiest Guy', cursive" fontSize={10} fill="#9ED2FF" stroke="#1B2A4A" strokeWidth={.9} paintOrder="stroke fill" style={{ animation: 'cc-zzz 3.3s 1.1s ease-out infinite' }}>z</text>
-                      <text x={19} y={-26} fontFamily="'Luckiest Guy', cursive" fontSize={12} fill="#9ED2FF" stroke="#1B2A4A" strokeWidth={.9} paintOrder="stroke fill" style={{ animation: 'cc-zzz 3.3s 2.2s ease-out infinite' }}>z</text>
-                    </g>
+                    {!!o.on && (
+                      <g style={{ animation: 'cc-drop 480ms cubic-bezier(.2,1.2,.3,1) both', transformOrigin: '0px ' + CAT_FOOT + 'px' }}>
+                        <g style={{ animation: o.bob, transformOrigin: '0px ' + CAT_FOOT + 'px' }}>
+                          <image href={o.wakeA} x={-CAT_D / 2} y={CAT_TOP} width={CAT_D} height={CAT_D} opacity={0} style={{ animation: o.frameA }}>
+                            <title>{o.name} — on site</title>
+                          </image>
+                          <image href={o.wakeB} x={-CAT_D / 2} y={CAT_TOP} width={CAT_D} height={CAT_D} opacity={0} style={{ animation: o.frameB }} />
+                        </g>
+                      </g>
+                    )}
                     <g opacity={o.on}>
                       <path d="M -26 -18 l 3.6 1.4 l 1.4 3.6 l 1.4 -3.6 l 3.6 -1.4 l -3.6 -1.4 l -1.4 -3.6 l -1.4 3.6 Z" fill="#FFD469" style={{ animation: 'cc-spark 1.2s ease-in-out infinite' }} />
                       <path d="M 19 -30 l 3 1.2 l 1.2 3 l 1.2 -3 l 3 -1.2 l -3 -1.2 l -1.2 -3 l -1.2 3 Z" fill="#F06BFF" style={{ animation: 'cc-spark 1.5s .3s ease-in-out infinite' }} />
@@ -821,9 +957,9 @@ export default class CatCoverGame extends Component {
             <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
               <div style={{ flex: '1 1 190px', display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,.06)', border: '3px solid #2A1524', borderRadius: 13, padding: '8px 13px' }}>
                 <span style={{ fontFamily: luckiest, fontSize: 22, color: v.usedColor }}>{v.used}/{v.par}</span>
-                <span style={{ fontSize: 13, fontWeight: 800, color: '#C9B8E0' }}>cats</span>
+                <span style={{ fontSize: 13, fontWeight: 800, color: '#C9B8E0' }}>cats hired</span>
                 <span style={{ marginLeft: 'auto', fontFamily: luckiest, fontSize: 22, color: '#F06BFF' }}>{v.litCount}/{v.edgeCount}</span>
-                <span style={{ fontSize: 13, fontWeight: 800, color: '#C9B8E0' }}>smashed</span>
+                <span style={{ fontSize: 13, fontWeight: 800, color: '#C9B8E0' }}>wrecked</span>
               </div>
               <div style={{ flex: '1 1 170px', minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', textAlign: 'right', fontSize: 13, fontWeight: 900, letterSpacing: '.02em', color: v.msgColor }}>{v.msg}</div>
             </div>
@@ -832,7 +968,7 @@ export default class CatCoverGame extends Component {
               {v.hints.map(h => (
                 <button key={h.tier} type="button" onClick={() => this.hint(h.tier)}
                   style={{ flex: 1, minHeight: 52, background: h.bg, border: '3px solid #2A1524', borderRadius: 13, color: h.ink, fontSize: 13, fontWeight: 900, letterSpacing: '.04em', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 0 #2A1524' }}>
-                  <span style={{ opacity: .6, fontSize: 9, fontWeight: 800, letterSpacing: '.12em' }}>HINT {h.tier}</span>
+                  <span style={{ opacity: .6, fontSize: 9, fontWeight: 800, letterSpacing: '.12em' }}>CONSULT {h.tier}</span>
                   <span>{h.label}</span>
                 </button>
               ))}
@@ -840,7 +976,7 @@ export default class CatCoverGame extends Component {
 
             <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
               <button type="button" onClick={() => this.reset()}
-                style={{ minHeight: 56, padding: '0 18px', background: '#F4E4C4', border: '3px solid #2A1524', borderRadius: 14, color: '#3E2718', fontFamily: luckiest, fontSize: 15, letterSpacing: '.04em', cursor: 'pointer', boxShadow: '0 4px 0 #2A1524' }}>TIDY UP</button>
+                style={{ minHeight: 56, padding: '0 18px', background: '#F4E4C4', border: '3px solid #2A1524', borderRadius: 14, color: '#3E2718', fontFamily: luckiest, fontSize: 15, letterSpacing: '.04em', cursor: 'pointer', boxShadow: '0 4px 0 #2A1524' }}>RECALL CREW</button>
               <div style={{ flex: 1, minHeight: 56, background: v.bannerBg, border: '3px solid #2A1524', borderRadius: 14, boxShadow: '0 4px 0 #2A1524', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 7px 0 15px', gap: 8 }}>
                 <span style={{ fontFamily: luckiest, fontSize: 15, letterSpacing: '.02em', color: v.bannerInk }}>{v.banner}</span>
                 <button type="button" onClick={() => this.next()}
@@ -850,7 +986,7 @@ export default class CatCoverGame extends Component {
           </main>
 
           <aside style={{ flex: '1 1 250px', minWidth: 250, display: this.state.expanded ? 'none' : 'flex', flexDirection: 'column', gap: 14 }}>
-            <div style={{ alignSelf: 'center', background: '#6E3FA3', border: '3px solid #2A1524', borderRadius: 9, boxShadow: '0 4px 0 #2A1524', padding: '4px 18px', fontFamily: luckiest, fontSize: 15, letterSpacing: '.05em', color: '#FFD469', position: 'relative', zIndex: 2 }}>HOW IT WORKS</div>
+            <div style={{ alignSelf: 'center', background: '#6E3FA3', border: '3px solid #2A1524', borderRadius: 9, boxShadow: '0 4px 0 #2A1524', padding: '4px 18px', fontFamily: luckiest, fontSize: 15, letterSpacing: '.05em', color: '#FFD469', position: 'relative', zIndex: 2 }}>SITE PROCEDURE</div>
             <div style={{ marginTop: -20, background: 'linear-gradient(#F6E8CA, #EBD8AE)', border: '3px solid #2A1524', borderRadius: 14, boxShadow: '0 5px 0 #2A1524, inset 0 0 30px rgba(150,110,60,.22)', padding: '22px 15px 14px', display: 'flex', flexDirection: 'column', gap: 12 }}>
               {v.steps.map(s => (
                 <div key={s.n} style={{ display: 'flex', gap: 9 }}>
@@ -863,28 +999,28 @@ export default class CatCoverGame extends Component {
               ))}
             </div>
 
-            <div style={{ alignSelf: 'center', background: '#C877D8', border: '3px solid #2A1524', borderRadius: 9, boxShadow: '0 4px 0 #2A1524', padding: '4px 18px', fontFamily: luckiest, fontSize: 15, letterSpacing: '.05em', color: '#3E1B4A', position: 'relative', zIndex: 2 }}>SCORING</div>
+            <div style={{ alignSelf: 'center', background: '#C877D8', border: '3px solid #2A1524', borderRadius: 9, boxShadow: '0 4px 0 #2A1524', padding: '4px 18px', fontFamily: luckiest, fontSize: 15, letterSpacing: '.05em', color: '#3E1B4A', position: 'relative', zIndex: 2 }}>THE INVOICE</div>
             <div style={{ marginTop: -20, background: 'linear-gradient(#F6E8CA, #EBD8AE)', border: '3px solid #2A1524', borderRadius: 14, boxShadow: '0 5px 0 #2A1524', padding: '22px 12px 12px', display: 'flex', gap: 8 }}>
               <div style={{ flex: 1, background: '#FFF7E6', border: '2.5px solid #2A1524', borderRadius: 10, padding: '9px 10px' }}>
                 <div style={{ fontFamily: luckiest, fontSize: 13, color: '#3E2718' }}>{v.overLabel}</div>
-                <div style={{ fontSize: 11.5, fontWeight: 800, color: '#7A5638', lineHeight: 1.3 }}>GOOD, BUT YOU CAN DO BETTER!</div>
+                <div style={{ fontSize: 11.5, fontWeight: 800, color: '#7A5638', lineHeight: 1.3 }}>OVER BUDGET — ACCOUNTS WILL CALL.</div>
               </div>
               <div style={{ flex: 1, background: '#EBD4F5', border: '2.5px solid #2A1524', borderRadius: 10, padding: '9px 10px' }}>
                 <div style={{ fontFamily: luckiest, fontSize: 13, color: '#3E1B4A' }}>{v.parLabel}</div>
-                <div style={{ fontSize: 11.5, fontWeight: 800, color: '#6E3FA3', lineHeight: 1.3 }}>PURR-FECT CHAOS!</div>
+                <div style={{ fontSize: 11.5, fontWeight: 800, color: '#6E3FA3', lineHeight: 1.3 }}>ON BUDGET — PURR-FECT.</div>
               </div>
             </div>
 
             {v.showShare && (
               <div style={{ background: 'linear-gradient(#F6E8CA, #EBD8AE)', border: '3px solid #2A1524', borderRadius: 14, boxShadow: '0 5px 0 #2A1524', padding: 13, display: 'flex', flexDirection: 'column', gap: 9 }}>
-                <div style={{ fontFamily: luckiest, fontSize: 13, letterSpacing: '.08em', color: '#8A3FC0' }}>DAMAGE REPORT</div>
+                <div style={{ fontFamily: luckiest, fontSize: 13, letterSpacing: '.08em', color: '#8A3FC0' }}>WEEKLY INVOICE</div>
                 <div style={{ fontSize: 15, fontWeight: 800, lineHeight: 1.55, color: '#3E2718', whiteSpace: 'pre-wrap' }}>{v.shareText}</div>
                 <button type="button" onClick={() => this.copyShare()}
                   style={{ minHeight: 46, background: '#FFD469', border: '3px solid #2A1524', borderRadius: 12, color: '#3E2718', fontFamily: luckiest, fontSize: 14, letterSpacing: '.04em', cursor: 'pointer', boxShadow: '0 4px 0 #2A1524' }}>{v.copyLabel}</button>
               </div>
             )}
 
-            <div style={{ fontSize: 11, fontWeight: 800, lineHeight: 1.7, letterSpacing: '.04em', color: '#8E7AAE' }}>TAP A CAT TO UNLEASH IT · TAP AGAIN TO CALM IT · DRAG TO PAN · SCROLL OR + − TO ZOOM · F FRAME THE HOUSE · E EXPAND · ARROWS + ENTER · 1 2 3 HINTS · R TIDY UP</div>
+            <div style={{ fontSize: 11, fontWeight: 800, lineHeight: 1.7, letterSpacing: '.04em', color: '#8E7AAE' }}>TAP A PAD TO DEPLOY · TAP THE CAT TO RECALL IT · DRAG TO PAN · SCROLL OR + − TO ZOOM · F FRAME THE SITE · E EXPAND · ARROWS + ENTER · 1 2 3 CONSULT · R RECALL CREW</div>
           </aside>
         </div>
       </div>

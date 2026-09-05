@@ -15,17 +15,31 @@ History (see `git log --oneline`):
    mockup: a neon "city grid" theme (tap junctions to install transformers,
    light up cables).
 2. First implementation of BLACKOUT shipped to `app/`.
-3. The design pivoted to a **CAT COVER** theme (`project/CAT_COVER.dc.html`):
-   same mechanic, reskinned as "place the fewest cats to ruin every room."
+3. The design pivoted to a **CAT COVER** theme (`project/CAT_COVER.dc.html`,
+   `chats/chat2.md`): same mechanic, reskinned as "place the fewest cats to
+   ruin every room." Cats sit visibly asleep on every node until tapped.
 4. `app/` was updated to implement CAT COVER, replacing the BLACKOUT UI.
-   **This is the current, live design intent.**
+5. The design pivoted again to **CATASTROPHE INC.**
+   (`project/CATASTROPHE_INC.dc.html`, `chats/chat3.md`): same mechanic
+   again, reframed as a feline demolition contractor. The story/concept
+   changed — nodes are now **empty deployment pads** (no cat shown) until
+   you hire/deploy one; "houses" became 7 named **SITES**; the tap-budget
+   language became a payroll/invoice conceit (RECALL CREW, PAYROLL SAYS NO,
+   CONSULT SURVEY/ESTIMATE/INSIDER, WEEKLY INVOICE); a new "work order" intro
+   screen (CLOCK IN) was added before play.
+6. `app/` was updated to implement CATASTROPHE INC.'s concept and copy, but
+   **kept the app's own cat/thing sprite art and camera/pan/zoom/minimap
+   engine** rather than reverting to the prototype's inline-SVG-drawn cats —
+   that art and engine were built after the CAT_COVER.dc.html prototype and
+   are considered better than what any `.dc.html` file draws. **This is the
+   current, live design intent.**
 
 `README.md` and `chats/chat1.md` describe the *original* BLACKOUT brief, not
-the current CAT COVER skin — read them for the underlying puzzle rules
-(par/K, hint tiers, generation approach), but don't treat their neon/city
-theme language as the current spec. `project/CAT_COVER.dc.html` is the
-current design source of truth for visuals/copy; there is no corresponding
-chat transcript for the CAT COVER pivot.
+the current theme — read them for the underlying puzzle rules (par/K, hint
+tiers, generation approach), but don't treat their neon/city theme language
+as the current spec. `project/CATASTROPHE_INC.dc.html` is the current design
+source of truth for story/copy; it is NOT the source of truth for cat/thing
+visuals — `app/src/assets/` and the camera system in `CatCoverGame.jsx` are.
 
 ## Layout
 
@@ -51,7 +65,10 @@ chat transcript for the CAT COVER pivot.
     `CAT_BASELINE`), so a node can swap poses without the cat shifting.
     `index.js` is the only thing the game imports. If you add a breed, cut it
     to the same canvas convention — don't rescale sprites individually, or
-    the cats stop looking like one cast.
+    the cats stop looking like one cast. Since the CATASTROPHE INC. pivot, an
+    empty node renders as a drawn "deployment pad" (dashed ring + paw
+    stencil, no sprite) rather than the `sleep` pose — `sleep` frames still
+    exist in the sticker sheet but are currently unused by the game.
   - `src/assets/things/` — the smashables that sit on the cables, cut from a
     destructible-items sticker sheet: four states per item (`idle`, `wobble`,
     `hit`, `broken`) on a shared 128x128 canvas with a common base line
@@ -60,11 +77,13 @@ chat transcript for the CAT COVER pivot.
     plus a line in `ITEMS`.
   - `src/index.css` / `index.html` — global styles, fonts (Luckiest Guy +
     Nunito from Google Fonts), page title/meta. The `cc-*` keyframes live
-    here; the cats use `cc-snooze` (breathing) when calm and
-    `cc-pounce` + `cc-frame-a`/`cc-frame-b` (a two-frame flip-book) when
-    they're out causing chaos, and the smashables use `cc-teeter` when
+    here; an empty pad uses `cc-slotspin` (the turning dashed ring), a hired
+    cat plays `cc-drop` once (the landing bounce) then loops
+    `cc-pounce` + `cc-frame-a`/`cc-frame-b` (a two-frame flip-book) while
+    it's out causing chaos, and the smashables use `cc-teeter` when
     untouched and `cc-tumble` + `cc-break-0..3` (a one-shot four-frame
-    sequence that holds on the wreckage) when a cat gets to them.
+    sequence that holds on the wreckage) when a cat gets to them. `cc-snooze`
+    and `cc-zzz` are unused leftovers from the CAT COVER sleeping-cat state.
   - No backend, no persistence layer (by design — see the original brief:
     "no backend, no localStorage"). Don't add either without checking with
     the user first; it's a deliberate constraint, not an oversight.
@@ -103,10 +122,12 @@ day-determinism are exactly as they were.
 ## Naming note
 
 Code comments, variable names (`BLACKOUT engine`, `bo-*` CSS classes in the
-old prototype), and this repo's own name (`blackout`) are leftovers from the
-pre-pivot theme. Don't be misled by them — the shipped app is CAT COVER.
-When adding new code, use CAT COVER-appropriate naming; you don't need to
-rename existing leftovers unless asked.
+old prototype), the `cc-*` CSS keyframe prefix, the `CatCoverGame.jsx`
+filename/class name, and this repo's own name (`blackout`) are all leftovers
+from earlier pivots (BLACKOUT, then CAT COVER). Don't be misled by them —
+the shipped app is now CATASTROPHE INC. When adding new code, use
+CATASTROPHE INC.-appropriate naming (SITES, pads, hire/recall, budget); you
+don't need to rename existing leftovers unless asked.
 
 ## Working in `app/`
 
