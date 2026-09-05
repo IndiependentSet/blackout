@@ -58,6 +58,9 @@ visuals — `app/src/assets/` and the camera system in `CatCoverGame.jsx` are.
     generator (leaf chains, degree-2 paths, cycles, hubs, crowns), exact
     branch-and-bound solver, hint helpers (`hintLeaf`, `hintMatching`,
     `hintReveal`). No React imports — keep it that way if you touch it.
+  - `src/house.js` — the building the puzzle sits in (below). Pure like
+    `engine.js`: no React, seeded by the level's own coordinates, and every
+    number it returns is precomputed once per level.
   - `src/assets/cats/` — the graph nodes themselves: cat stickers cut out of
     a hand-drawn sticker sheet, three poses per breed (`sleep`, `wakeA`,
     `wakeB`). Every sprite is baked onto the same 192x192 canvas at the same
@@ -103,12 +106,13 @@ graphs grew (150 world units per lattice step in house 1, 40 in the worst house
 - `CAM_H` (520) is fixed and the camera's *width* follows the board's real
   aspect (a `ResizeObserver` on the SVG keeps `state.aspect` current), so the
   frame never letterboxes and the expand toggle genuinely shows more world.
-- **Two rects per level.** `content` is the puzzle plus a little padding — it
-  decides what Fit frames and whether a house overflows (and so whether the
-  minimap appears). `world` is the floor you can pan into, with extra headroom
-  at the top for the back wall.
+- **Two rects per level.** `content` is the puzzle and the building around it —
+  it decides what Fit frames and whether a house overflows (and so whether the
+  minimap appears). `world` is the ground you can pan into, a margin around the
+  building on all four sides.
 - Entering a house plays an **establishing shot**: fit for ~420ms, then eases
-  to `Z_PLAY` (1). `reset()` deliberately does *not* move the camera.
+  to `Z_PLAY` (1). A site that all but fits (`Z_KEEP`) just stays framed whole
+  instead. `reset()` deliberately does *not* move the camera.
 - Sprites are drawn in **one depth-sorted pass** (cats and smashables together,
   by baseline y), and anything outside the frame grown 30% each way is culled —
   that's what keeps a 100-node house affordable.
@@ -118,6 +122,37 @@ graphs grew (150 world units per lattice step in house 1, 40 in the worst house
 
 None of this touched `engine.js` — seeded generation, the uniqueness check and
 day-determinism are exactly as they were.
+
+## The house is generated from the graph
+
+The board used to be one endless plank floor with a wallpaper band at the back.
+It is now a top-down cutaway home, and `src/house.js` derives it from the level:
+
+- Nodes sit on **integer** lattice cells, so every wall centre-line goes on a
+  **half-integer** one. That is what guarantees a wall can never cross a pad or
+  the cat standing on it — half a cell is 65 world units against a 28-wide cat
+  and a 14-thick wall. Don't move walls off the half-integers.
+- A seeded BSP splits the node bounding box (plus `OUTER_PAD`) into rooms,
+  preferring split lines that few paths straddle, so rooms come out holding
+  clusters of pads. Each room is then dealt a type (living, kitchen, bath,
+  bedroom, study, nursery, storage, hall) with area limits and caps, which
+  fixes its floor material and its furniture.
+- **Paths are allowed to cross walls.** Doorways are decoration — one per wall,
+  dropped on a path crossing when there is one — so nothing about the puzzle
+  depends on the floorplan and there is no gap-fitting machinery to maintain.
+- Furniture is flat vector art drawn in `propArt()` in `CatCoverGame.jsx` from
+  the plan's own numbers; there are no furniture image assets and adding one is
+  a new `case`, not a new sprite sheet. Pieces keep clear of pads and paths.
+- The room a path hangs in picks its smashable (`plan.edgeThing`), so the
+  toilet roll stops turning up in the kitchen. Cosmetic only.
+- `buildHouse()` runs **once per level**, inside `layout()` (memoized in a
+  `WeakMap`), and a frame only ever filters the result against the same `seen()`
+  cull the sprites use. Nothing in `house.js` may be reached from `renderVals()`.
+- Determinism is the one hard rule: seeds come from `houseSeed(lv)` — the
+  level's own contents, never the day or the site index, because `layout()`
+  runs during render and for levels other than the current one — and the only
+  randomness is `engine.js`'s seeded RNG (no `Math.random()`, no random sort
+  comparators).
 
 ## Naming note
 
