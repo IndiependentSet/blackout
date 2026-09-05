@@ -2,6 +2,7 @@ import { Component } from 'react';
 import * as E from './engine.js';
 import { BREEDS, CAT_BASELINE } from './assets/cats/index.js';
 import { THINGS, THING_BASELINE } from './assets/things/index.js';
+import { buildHouse, houseSeed } from './house.js';
 
 const SOUND_ON = true;
 const CABLE_SAG = 0.1;
@@ -35,16 +36,134 @@ const THING_TOP = THING_FOOT - THING_D * THING_BASELINE;
    of legibility. The board is a camera over that world, driven by the SVG's
    viewBox (an inner transform would break getScreenCTM hit-testing). */
 const SPACING = 130;        // world units between neighbouring junctions
-const WORLD_MARGIN = 140;   // floor you can pan into, around the graph
+const WORLD_MARGIN = 140;   // ground you can pan into, around the building
 const CONTENT_PAD = 46;     // what "the whole house" means when fitting it
-const WALL_H = 130;         // back wall band above the floor
 const CAM_H = 520;          // camera frame height in world units; the width
 const CAM_A = 640 / 520;    // follows the board's real aspect, so it never letterboxes
 const Z_PLAY = 1;           // the zoom every house settles at
+const Z_KEEP = 0.88;        // ...unless the whole site is within a whisker of
+                            // fitting, in which case show all of it
 const Z_MAX = 1.8;
 const CAT_S = 1;            // sprite scales are constants now that spacing is
 const THING_S = 1.15;       // fixed — nothing left to compensate for
 const MAP_W = 152, MAP_H = 118;   // minimap, shown only when a house overflows
+
+/* ---- the building ----
+   house.js turns the level's lattice into rooms, walls and furniture; all of
+   it is drawn under the paths, never animates, and is dimmed as one group so
+   the puzzle stays the loudest thing on the board. */
+const HOUSE_DIM = 0.92;
+const THING_NAMES = THINGS.map(t => t.name);
+const FLOOR_FILL = {
+  wood: 'url(#cc-planks)', tile: 'url(#cc-tile)',
+  checker: 'url(#cc-checker)', carpet: 'url(#cc-carpet)', concrete: 'url(#cc-concrete)',
+};
+const WALL_INK = '#D9C39B', WALL_EXT = '#C0A377', WALL_SHADOW = '#160B06';
+const PROP_INK = '#3A2416';
+const PROP_TONES = {
+  bed: ['#B79AC6', '#C6A08F', '#9FB6C9'], sofa: ['#B4635E', '#7F9068', '#8A6FA8'],
+  table: ['#9A6B45', '#8A5E3C', '#A9794F'], counter: ['#C7B49A', '#B9A488', '#D2C0A6'],
+  tub: ['#DEE9EE'], toilet: ['#E8EFF2'], sink: ['#E2ECF0'],
+  shelf: ['#8A5E3C', '#7C5334', '#946949'], cot: ['#C9A46E'], desk: ['#8F6242'],
+  plantpot: ['#B4643C'], crate: ['#A2784B', '#966E44', '#AE8455'],
+  rug: ['#B96F6C', '#6E8C74', '#7C6EA0'],
+};
+
+/* Furniture: flat top-down silhouettes drawn straight from the plan's numbers,
+   no image assets. A piece is drawn with its back on the -h/2 edge and `rot`
+   turns it to face whichever wall house.js stood it against. Everything here
+   is deliberately muted — it sits under the paths and must never read as one. */
+function propArt(p) {
+  const w = p.w, h = p.h, x = -w / 2, y = -h / 2;
+  const tones = PROP_TONES[p.kind] || PROP_TONES.table;
+  const fill = tones[p.tone % tones.length];
+  let art = <rect x={x} y={y} width={w} height={h} rx={6} fill={fill} />;
+
+  if (p.kind === 'rug') {
+    return (
+      <g key={p.key} transform={'translate(' + p.cx + ' ' + p.cy + ') rotate(' + p.rot + ')'}>
+        <rect x={x} y={y} width={w} height={h} rx={h * 0.16} fill={fill} opacity={.62} />
+        <rect x={x + w * 0.1} y={y + h * 0.14} width={w * 0.8} height={h * 0.72} rx={h * 0.1}
+          fill="none" stroke="#FFEBC8" strokeWidth={3} opacity={.35} />
+      </g>
+    );
+  }
+  if (p.kind === 'bed') {
+    art = <>
+      <rect x={x} y={y} width={w} height={h} rx={8} fill={fill} />
+      <rect x={x + w * 0.1} y={y + h * 0.06} width={w * 0.8} height={h * 0.2} rx={5} fill="#FFF3DC" />
+      <rect x={x} y={y + h * 0.42} width={w} height={h * 0.58} rx={8} fill={fill} opacity={.55} />
+      <rect x={x} y={y + h * 0.42} width={w} height={h * 0.58} rx={8} fill="none" />
+    </>;
+  } else if (p.kind === 'sofa') {
+    art = <>
+      <rect x={x} y={y} width={w} height={h} rx={9} fill={fill} />
+      <rect x={x + w * 0.16} y={y + h * 0.34} width={w * 0.68} height={h * 0.6} rx={6} fill="#FFF3DC" opacity={.24} />
+    </>;
+  } else if (p.kind === 'table' || p.kind === 'desk') {
+    art = <>
+      <rect x={x} y={y} width={w} height={h} rx={6} fill={fill} />
+      <rect x={x + w * 0.12} y={y + h * 0.18} width={w * 0.76} height={h * 0.64} rx={4} fill="#FFF3DC" opacity={.16} />
+      {p.kind === 'desk' && <rect x={-w * 0.16} y={y + h * 0.16} width={w * 0.32} height={h * 0.4} rx={3} fill="#2F2338" />}
+    </>;
+  } else if (p.kind === 'counter') {
+    art = <>
+      <rect x={x} y={y} width={w} height={h} rx={5} fill={fill} />
+      <rect x={x} y={y} width={w} height={h * 0.3} rx={5} fill="#7C6A55" opacity={.5} />
+      <circle cx={x + w * 0.72} cy={0} r={Math.min(w, h) * 0.24} fill="#4C4038" />
+    </>;
+  } else if (p.kind === 'tub') {
+    art = <>
+      <rect x={x} y={y} width={w} height={h} rx={h * 0.34} fill={fill} />
+      <rect x={x + w * 0.1} y={y + h * 0.2} width={w * 0.72} height={h * 0.6} rx={h * 0.26} fill="#A9CBDD" />
+      <rect x={x + w * 0.88} y={-h * 0.08} width={w * 0.07} height={h * 0.16} rx={2} fill="#8A9AA4" />
+    </>;
+  } else if (p.kind === 'toilet') {
+    art = <>
+      <rect x={x} y={y} width={w} height={h * 0.34} rx={4} fill={fill} />
+      <ellipse cx={0} cy={y + h * 0.66} rx={w * 0.42} ry={h * 0.3} fill={fill} />
+    </>;
+  } else if (p.kind === 'sink') {
+    art = <>
+      <rect x={x} y={y} width={w} height={h} rx={6} fill={fill} />
+      <ellipse cx={0} cy={h * 0.08} rx={w * 0.32} ry={h * 0.26} fill="#A9CBDD" />
+    </>;
+  } else if (p.kind === 'shelf') {
+    art = <>
+      <rect x={x} y={y} width={w} height={h} rx={3} fill={fill} />
+      {[0.12, 0.3, 0.46, 0.66, 0.82].map((f, i) => (
+        <rect key={i} x={x + w * f} y={y + h * 0.16} width={w * 0.1} height={h * 0.62} rx={2}
+          fill={['#C0503F', '#3F6C7A', '#C99A3C', '#6A4E86', '#4E7A4A'][i]} stroke="none" />
+      ))}
+    </>;
+  } else if (p.kind === 'cot') {
+    art = <>
+      <rect x={x} y={y} width={w} height={h} rx={7} fill={fill} />
+      <rect x={x + w * 0.12} y={y + h * 0.12} width={w * 0.76} height={h * 0.76} rx={5} fill="#F2E3C6" />
+      {[0.3, 0.5, 0.7].map((f, i) => (
+        <rect key={i} x={x + w * f} y={y + h * 0.12} width={w * 0.05} height={h * 0.76} fill={fill} stroke="none" />
+      ))}
+    </>;
+  } else if (p.kind === 'crate') {
+    art = <>
+      <rect x={x} y={y} width={w} height={h} rx={4} fill={fill} />
+      <path d={'M ' + x + ' ' + y + ' L ' + (x + w) + ' ' + (y + h) + ' M ' + (x + w) + ' ' + y + ' L ' + x + ' ' + (y + h)}
+        stroke={PROP_INK} strokeWidth={2.4} opacity={.5} fill="none" />
+    </>;
+  } else if (p.kind === 'plantpot') {
+    art = <>
+      <circle cx={0} cy={-h * 0.06} r={w * 0.34} fill="#4E7A4A" />
+      <circle cx={-w * 0.24} cy={h * 0.06} r={w * 0.26} fill="#5C8C52" />
+      <circle cx={w * 0.24} cy={h * 0.08} r={w * 0.24} fill="#436B41" />
+      <path d={'M ' + (-w * 0.26) + ' ' + (h * 0.16) + ' L ' + (w * 0.26) + ' ' + (h * 0.16) +
+        ' L ' + (w * 0.18) + ' ' + (h * 0.5) + ' L ' + (-w * 0.18) + ' ' + (h * 0.5) + ' Z'} fill={fill} />
+    </>;
+  }
+  return (
+    <g key={p.key} transform={'translate(' + p.cx + ' ' + p.cy + ') rotate(' + p.rot + ')'}
+      stroke={PROP_INK} strokeWidth={3} strokeLinejoin="round">{art}</g>
+  );
+}
 
 export default class CatCoverGame extends Component {
   state = {
@@ -66,6 +185,7 @@ export default class CatCoverGame extends Component {
   };
 
   _ptrs = new Map();
+  _lays = new WeakMap();
 
   componentDidMount() {
     this.onKey = this.onKey.bind(this);
@@ -263,23 +383,34 @@ export default class CatCoverGame extends Component {
     if (best >= 0) this.setState({ focus: best }, () => this.follow(best));
   }
 
-  /* lattice -> world, at one fixed scale for every house */
+  /* lattice -> world, at one fixed scale for every house, plus the building
+     that lattice implies. Memoized per level object: queueing site N+1 frames
+     it while site N is still rendering, so one cache slot would thrash. */
   layout(lv) {
-    if (this._lay && this._lay.lv === lv) return this._lay;
+    const hit = this._lays.get(lv);
+    if (hit) return hit;
     const cs = lv.nodes.map(n => n.c), rs = lv.nodes.map(n => n.r);
     const c0 = Math.min(...cs), r0 = Math.min(...rs);
     const w = (Math.max(...cs) - c0) * SPACING, h = (Math.max(...rs) - r0) * SPACING;
-    this._lay = {
-      lv, sp: SPACING, cx: w / 2, cy: h / 2,
-      pos: lv.nodes.map(n => ({ x: (n.c - c0) * SPACING, y: (n.r - r0) * SPACING })),
-      /* content is the puzzle itself — what Fit frames, and what decides
-         whether a house overflows; world is the floor you can pan into, with
-         extra headroom at the top for the back wall */
-      content: { x: -CONTENT_PAD, y: -CONTENT_PAD, w: w + 2 * CONTENT_PAD, h: h + 2 * CONTENT_PAD },
-      world: { x: -WORLD_MARGIN, y: -WORLD_MARGIN - WALL_H, w: w + 2 * WORLD_MARGIN, h: h + 2 * WORLD_MARGIN + WALL_H },
-      floorY: -WORLD_MARGIN,
+    /* seeded off the level's own coordinates — layout() runs during render, so
+       it must not reach for the day or the site index */
+    const plan = buildHouse(lv, houseSeed(lv), SPACING, THING_NAMES);
+    const O = plan.outer;
+    /* content is what Fit frames and what decides whether a site overflows:
+       the whole building, so its outer walls never get cropped. world is the
+       ground you can pan into, around it. */
+    const c = {
+      x: Math.min(-CONTENT_PAD, O.x), y: Math.min(-CONTENT_PAD, O.y),
+      x1: Math.max(w + CONTENT_PAD, O.x + O.w), y1: Math.max(h + CONTENT_PAD, O.y + O.h),
     };
-    return this._lay;
+    const L = {
+      lv, sp: SPACING, cx: w / 2, cy: h / 2, plan,
+      pos: lv.nodes.map(n => ({ x: (n.c - c0) * SPACING, y: (n.r - r0) * SPACING })),
+      content: { x: c.x, y: c.y, w: c.x1 - c.x, h: c.y1 - c.y },
+      world: { x: O.x - WORLD_MARGIN, y: O.y - WORLD_MARGIN, w: O.w + 2 * WORLD_MARGIN, h: O.h + 2 * WORLD_MARGIN },
+    };
+    this._lays.set(lv, L);
+    return L;
   }
 
   /* ---- camera ---- */
@@ -321,10 +452,15 @@ export default class CatCoverGame extends Component {
     const lv = this.state.levels[i]; if (!lv) return;
     const L = this.layout(lv), zb = this.zBounds(L);
     const play = { x: L.cx, y: L.cy, z: Z_PLAY };
+    const whole = { x: L.content.x + L.content.w / 2, y: L.content.y + L.content.h / 2, z: zb.fit };
     cancelAnimationFrame(this._raf);
     clearTimeout(this._shot);
-    if (zb.fit >= Z_PLAY || this.reduced()) return this.setCam(play, L);
-    this.setCam({ x: L.content.x + L.content.w / 2, y: L.content.y + L.content.h / 2, z: zb.fit }, L);
+    if (zb.fit >= Z_PLAY) return this.setCam(play, L);
+    /* a site that all but fits is worth seeing whole — anything smaller still
+       plays at Z_PLAY, so a cat stays the same size from site 1 to site 7 */
+    if (zb.fit >= Z_KEEP) return this.setCam(whole, L);
+    if (this.reduced()) return this.setCam(play, L);
+    this.setCam(whole, L);
     this._shot = setTimeout(() => this.tween(play, 700, L), 420);
   }
   fit() {
@@ -494,7 +630,8 @@ export default class CatCoverGame extends Component {
       plaque: lv ? SITES[st.idx] : 'DISPATCHING CREW…',
       box: '0 0 ' + this.camW() + ' ' + CAM_H, view: { x: 0, y: 0, w: this.camW(), h: CAM_H },
       edges: [], sprites: [], proof: [], map: null,
-      floor: { x: 0, y: 0, w: this.camW(), h: CAM_H }, wallY: -1e5,
+      floor: { x: 0, y: 0, w: this.camW(), h: CAM_H },
+      house: null, rooms: [], walls: [], doors: [], props: [],
       used: st.placed.length, par: lv ? lv.k : 0, litCount: 0, edgeCount: lv ? lv.edges.length : 0,
       usedColor: '#FFF3D8', msg: st.msg, msgColor: '#C9B8E0',
       steps: [
@@ -544,13 +681,22 @@ export default class CatCoverGame extends Component {
     const view = { x: cam.x - vw / 2, y: cam.y - vh / 2, w: vw, h: vh };
     vals.view = view;
     vals.box = view.x + ' ' + view.y + ' ' + vw + ' ' + vh;
-    /* floor is drawn over the frame (the pattern lives in world space, so it
-       stays put as you pan); the back wall sits above the world's top edge */
+    /* the ground outside the building is drawn over the frame, so it always
+       covers it however far you pan */
     vals.floor = { x: view.x - vw * 0.1, y: view.y - vh * 0.1, w: vw * 1.2, h: vh * 1.2 };
-    vals.wallY = L.floorY;
     /* anything outside the frame grown by 30% each way isn't drawn at all */
     const seen = (x0, y0, x1, y1) =>
       x1 > view.x - vw * 0.3 && x0 < view.x + vw * 1.3 && y1 > view.y - vh * 0.3 && y0 < view.y + vh * 1.3;
+
+    /* the building: everything here was built once, in layout(), so a frame
+       only ever filters it */
+    const P = L.plan;
+    vals.house = P;
+    vals.rooms = P.rooms.filter(r => seen(r.x, r.y, r.x + r.w, r.y + r.h));
+    const shown = new Set(vals.rooms.map(r => r.id));
+    vals.walls = P.wallRects.filter(w => seen(w.x, w.y, w.x + w.w, w.y + w.h));
+    vals.doors = P.doors.filter(d => seen(d.x, d.y, d.x + d.w, d.y + d.h));
+    vals.props = P.props.filter(q => shown.has(q.room));
 
     const litE = this.litSet(lv, st.placed);
     vals.litCount = litE.size;
@@ -572,7 +718,7 @@ export default class CatCoverGame extends Component {
         dash: (11 * catS).toFixed(1) + ' ' + (11 * catS).toFixed(1),
         flow: (5 * catS).toFixed(1) + ' ' + (16 * catS).toFixed(1),
       });
-      const t = THINGS[(u * 7 + v * 3 + i) % THINGS.length];
+      const t = THINGS[P.edgeThing[i]] || THINGS[(u * 7 + v * 3 + i) % THINGS.length];
       vals.sprites.push({
         thing: true, key: 't' + i, base: c.my + THING_FOOT * objS,
         x: c.mx, y: c.my, s: objS, dustO: on ? 1 : 0,
@@ -636,6 +782,9 @@ export default class CatCoverGame extends Component {
       const px = q => ({ x: (q.x - W.x) * k, y: (q.y - W.y) * k });
       vals.map = {
         w: W.w * k, h: W.h * k,
+        /* the floorplan in miniature: once the board is a warren of rooms, the
+           room boxes are what tell you where in the house you are */
+        rooms: P.rooms.map(r => ({ key: r.id, x: (r.x - W.x) * k, y: (r.y - W.y) * k, w: r.w * k, h: r.h * k })),
         edges: lv.edges.map(([u, v], i) => {
           const a = px(pos[u]), b2 = px(pos[v]);
           return { key: i, x1: a.x, y1: a.y, x2: b2.x, y2: b2.y, on: litE.has(i) };
@@ -817,35 +966,88 @@ export default class CatCoverGame extends Component {
                     <rect x={20} width={7} height={430} fill="#71503A" opacity={.5} />
                     <rect x={66} width={5} height={430} fill="#654327" opacity={.5} />
                   </pattern>
-                  <radialGradient id="cc-pool" cx="50%" cy="42%" r="62%">
-                    <stop offset="0%" stopColor="#FFD9A0" stopOpacity={.30} />
-                    <stop offset="55%" stopColor="#FFB870" stopOpacity={.10} />
-                    <stop offset="100%" stopColor="#1A0E06" stopOpacity={.34} />
+                  {/* objectBoundingBox by default, so this one def gives every
+                      room its own pool of light and its own dark corners */}
+                  <radialGradient id="cc-pool" cx="50%" cy="42%" r="66%">
+                    <stop offset="0%" stopColor="#FFD9A0" stopOpacity={.20} />
+                    <stop offset="55%" stopColor="#FFB870" stopOpacity={.07} />
+                    <stop offset="100%" stopColor="#1A0E06" stopOpacity={.30} />
                   </radialGradient>
                   <radialGradient id="cc-contact">
                     <stop offset="0%" stopColor="#12060B" stopOpacity={.5} />
                     <stop offset="60%" stopColor="#12060B" stopOpacity={.28} />
                     <stop offset="100%" stopColor="#12060B" stopOpacity={0} />
                   </radialGradient>
-                  <pattern id="cc-paper" width={54} height={54} patternUnits="userSpaceOnUse">
-                    <rect width={54} height={54} fill="#4A2E52" />
-                    <rect x={24} width={6} height={54} fill="#553662" opacity={.85} />
-                    <circle cx={12} cy={14} r={3} fill="#6A4478" opacity={.7} />
-                    <circle cx={40} cy={38} r={3} fill="#6A4478" opacity={.7} />
+                  {/* one floor pattern per room material; all world-anchored,
+                      so they stay put under the camera instead of swimming */}
+                  <pattern id="cc-tile" width={52} height={52} patternUnits="userSpaceOnUse">
+                    <rect width={52} height={52} fill="#8C7B63" />
+                    <rect width={25} height={25} fill="#9C8B71" />
+                    <rect x={27} y={27} width={25} height={25} fill="#9C8B71" />
                   </pattern>
+                  <pattern id="cc-checker" width={44} height={44} patternUnits="userSpaceOnUse">
+                    <rect width={44} height={44} fill="#7E8A92" />
+                    <rect width={21} height={21} fill="#93A0A8" />
+                    <rect x={23} y={23} width={21} height={21} fill="#93A0A8" />
+                  </pattern>
+                  <pattern id="cc-carpet" width={26} height={26} patternUnits="userSpaceOnUse">
+                    <rect width={26} height={26} fill="#6E5348" />
+                    <circle cx={7} cy={7} r={2.2} fill="#7A5C50" />
+                    <circle cx={19} cy={17} r={2.2} fill="#7A5C50" />
+                    <circle cx={13} cy={23} r={1.6} fill="#654A40" />
+                  </pattern>
+                  <pattern id="cc-concrete" width={38} height={38} patternUnits="userSpaceOnUse">
+                    <rect width={38} height={38} fill="#5E5147" />
+                    <circle cx={9} cy={12} r={1.8} fill="#6A5C51" />
+                    <circle cx={28} cy={26} r={2.2} fill="#544840" />
+                    <circle cx={20} cy={6} r={1.4} fill="#6A5C51" />
+                  </pattern>
+                  <radialGradient id="cc-void" cx="50%" cy="45%" r="70%">
+                    <stop offset="0%" stopColor="#241531" />
+                    <stop offset="100%" stopColor="#120A18" />
+                  </radialGradient>
                 </defs>
 
-                {/* the room: floor pans with the world, wall closes it off at the back */}
-                <rect x={v.floor.x} y={v.floor.y} width={v.floor.w} height={v.floor.h} fill="url(#cc-planks)" />
-                {v.wallY > v.floor.y && (
-                  <g>
-                    <rect x={v.floor.x} y={v.floor.y} width={v.floor.w} height={v.wallY - v.floor.y} fill="url(#cc-paper)" />
-                    <rect x={v.floor.x} y={v.wallY - 26} width={v.floor.w} height={26} fill="#EBD6AE" />
-                    <rect x={v.floor.x} y={v.wallY - 26} width={v.floor.w} height={5} fill="#FFF3D8" />
-                    <rect x={v.floor.x} y={v.wallY - 4} width={v.floor.w} height={4} fill="#2A1524" opacity={.55} />
+                {/* the ground the building stands on */}
+                <rect x={v.floor.x} y={v.floor.y} width={v.floor.w} height={v.floor.h} fill="url(#cc-void)" />
+
+                {/* the building: floors, furniture and walls, all of it under
+                    the paths and dimmed as one group so the puzzle stays loud */}
+                {v.house && (
+                  <g opacity={HOUSE_DIM} style={{ pointerEvents: 'none' }}>
+                    <rect x={v.house.outer.x} y={v.house.outer.y} width={v.house.outer.w} height={v.house.outer.h}
+                      rx={10} fill="#241610" />
+                    {v.rooms.map(r => (
+                      <rect key={'f' + r.id} x={r.x} y={r.y} width={r.w} height={r.h} fill={FLOOR_FILL[r.floor] || FLOOR_FILL.wood} />
+                    ))}
+                    {v.rooms.map(r => (
+                      <rect key={'l' + r.id} x={r.x} y={r.y} width={r.w} height={r.h} fill="url(#cc-pool)" />
+                    ))}
+                    {v.props.map(q => propArt(q))}
+                    {/* one shadow pass then one body pass over the same walls —
+                        cheaper and steadier than an SVG drop shadow */}
+                    {v.walls.map(w => (
+                      <rect key={'ws' + w.key} x={w.x + 3} y={w.y + 5} width={w.w} height={w.h} fill={WALL_SHADOW} opacity={.5} />
+                    ))}
+                    {v.walls.map(w => (
+                      <rect key={'w' + w.key} x={w.x} y={w.y} width={w.w} height={w.h} fill={w.ext ? WALL_EXT : WALL_INK} />
+                    ))}
+                    {v.doors.map(d => (
+                      <g key={d.key}>
+                        <rect x={d.x} y={d.y} width={d.w} height={d.h} fill="#2A1A12" opacity={.35} />
+                        {d.dir === 'v'
+                          ? <>
+                              <rect x={d.x} y={d.y} width={d.w} height={5} fill={WALL_EXT} />
+                              <rect x={d.x} y={d.y + d.h - 5} width={d.w} height={5} fill={WALL_EXT} />
+                            </>
+                          : <>
+                              <rect x={d.x} y={d.y} width={5} height={d.h} fill={WALL_EXT} />
+                              <rect x={d.x + d.w - 5} y={d.y} width={5} height={d.h} fill={WALL_EXT} />
+                            </>}
+                      </g>
+                    ))}
                   </g>
                 )}
-                <rect x={v.floor.x} y={v.floor.y} width={v.floor.w} height={v.floor.h} fill="url(#cc-pool)" />
 
                 {v.edges.map(e => (
                   <g key={e.key}>
@@ -932,6 +1134,10 @@ export default class CatCoverGame extends Component {
                   role="img" aria-label="house overview"
                   onPointerDown={this.onMapDown} onPointerMove={this.onMapMove} onPointerUp={this.onMapUp} onPointerCancel={this.onMapUp}
                   style={{ position: 'absolute', right: v.ui.pad, bottom: v.ui.pad, zIndex: 4, background: 'rgba(26,12,8,.82)', border: '3px solid #2A1524', borderRadius: 10, boxShadow: '0 3px 0 #2A1524', cursor: 'pointer', touchAction: 'none' }}>
+                  {v.map.rooms.map(r => (
+                    <rect key={'r' + r.key} x={r.x} y={r.y} width={r.w} height={r.h}
+                      fill="rgba(244,228,196,.07)" stroke="rgba(244,228,196,.22)" strokeWidth={1} />
+                  ))}
                   {v.map.edges.map(e => (
                     <line key={e.key} x1={e.x1} y1={e.y1} x2={e.x2} y2={e.y2} stroke={e.on ? '#C64BE8' : '#8A7A6A'} strokeWidth={e.on ? 2.6 : 1.6} strokeLinecap="round" />
                   ))}
