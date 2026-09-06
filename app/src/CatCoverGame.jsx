@@ -224,6 +224,20 @@ export default class CatCoverGame extends Component {
         { duration: 620, easing: 'cubic-bezier(.1,.8,.2,1)' });
     });
   }
+  /* one sweep of the whole web when a site opens, or when the crew is recalled
+     and the board goes unlit again: the puzzle announces itself against the
+     room art while the establishing shot still has all of it in frame */
+  pulse() {
+    if (this.reduced()) return;
+    requestAnimationFrame(() => {
+      const el = document.getElementById('cc-web');
+      if (el && el.animate) el.animate(
+        [{ strokeWidth: W_RIM, opacity: .8 },
+         { strokeWidth: W_RIM * 1.32, opacity: 1, offset: .34 },
+         { strokeWidth: W_RIM, opacity: .8 }],
+        { duration: 900, easing: 'cubic-bezier(.2,.8,.3,1)' });
+    });
+  }
   flash() {
     const el = document.getElementById('cc-flash');
     if (el && el.animate) el.animate([{ opacity: 0.55 }, { opacity: 0.55, offset: 0.16 }, { opacity: 0 }],
@@ -259,7 +273,7 @@ export default class CatCoverGame extends Component {
     this.bloom(i);
     if (done) { this.flash(); this.fanfare(); }
   }
-  reset() { this.setState({ placed: [], hint: null, msg: '', focus: 0 }); }
+  reset() { this.setState({ placed: [], hint: null, msg: '', focus: 0 }); this.pulse(); }
   go(i) {
     if (i < 0 || i > 6 || !this.state.levels[i]) return;
     this.setState({ idx: i, placed: [], hint: null, msg: '', focus: 0, copied: false });
@@ -387,6 +401,7 @@ export default class CatCoverGame extends Component {
   /* entering a house: an establishing shot of the whole place, then in to play zoom */
   frame(i) {
     const lv = this.state.levels[i]; if (!lv) return;
+    this.pulse();
     const L = this.layout(lv), zb = this.zBounds(L);
     const play = { x: L.cx, y: L.cy, z: Z_PLAY };
     const whole = { x: L.content.x + L.content.w / 2, y: L.content.y + L.content.h / 2, z: zb.fit };
@@ -972,7 +987,7 @@ export default class CatCoverGame extends Component {
                 {!!v.web && (
                   <g>
                     <path d={v.web} fill="none" stroke="#150C06" strokeWidth={W_SCRIM} strokeOpacity={.24} strokeLinecap="round" />
-                    <path d={v.web} fill="none" stroke={RIM} strokeWidth={W_RIM} strokeLinecap="round" opacity={.8} />
+                    <path id="cc-web" d={v.web} fill="none" stroke={RIM} strokeWidth={W_RIM} strokeLinecap="round" opacity={.8} />
                     <path d={v.web} fill="none" stroke={INK} strokeWidth={W_INK} strokeLinecap="round" />
                     <path d={v.web} fill="none" stroke={DASH} strokeWidth={W_DASH} strokeLinecap="round" strokeDasharray={DASH_ON} opacity={.95} />
                   </g>
