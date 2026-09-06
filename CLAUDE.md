@@ -137,11 +137,18 @@ cuts the level into rooms and fills each one with a drawn room from
   **half-integer** one. That is what makes it impossible for a wall to cross a
   pad or the cat standing on it — half a cell is 65 world units against a
   56-wide cat. Don't move rooms off that grid.
-- A seeded BSP cuts the pads' bounding box (grown to at least `MIN_FOOT`) into
-  rooms **2 or 3 cells a side**: big enough to hold a cluster of pads, close
-  enough in size that furniture drawn into them stays roughly one scale across
-  the house. Splits prefer to fall where few paths straddle them, and where
-  both halves come out a shape the art can actually fill.
+- A seeded BSP cuts the pads' bounding box — no padding; padding only ever buys
+  rooms with nothing in them — into rooms **2 or 3 cells a side**: big enough to
+  hold a cluster of pads, close enough in size that furniture drawn into them
+  stays roughly one scale across the house. Splits prefer to fall where few
+  paths straddle them, and where both halves come out a shape the art can fill.
+- **Every room has to earn its place.** A cut is only allowed if both halves
+  keep an object on them (`WALL_GAP` off the wall, so nothing is drawn half
+  inside it); for a room too big to leave alone, a pad each will do. A room
+  that ends up bigger than `MAX_ROOM` with its contents in one corner has its
+  outer walls pulled in to what it holds — but only at a corner of the house,
+  or the missing floor reads as a hole in the middle rather than an L-shaped
+  plan. What the camera frames is the building that survives that trim.
 - **Paths cross walls freely.** Nothing about the puzzle depends on the house.
 - The art is fixed, so the variety has to come from the arrangement: which
   picture fills which room (chosen for shape first, then pushed away from its

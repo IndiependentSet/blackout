@@ -26,8 +26,10 @@ import { rngFromSeed } from './engine.js';
 export const HOUSE = {
   MIN_ROOM: 2,    // cells: a room is 2 or 3 cells a side, so furniture drawn
   MAX_ROOM: 3,    // into it stays roughly one size across the whole house
-  MIN_FOOT: 4,    // the smallest house that still cuts into rooms
   SEAM: 1.5,      // world units of overdraw, so rooms butt without a hairline
+  CONTENT_GAP: 0.5, // floor a room keeps around the last thing standing in it
+  WALL_GAP: 0.18, // an object this close to a cut doesn't count as being in
+                  // either room — it would be drawn half inside the wall
   SHAPE_TOL: 0.26, // a picture may be stretched this far (~30%); tighter and
                    // the tall rooms run out of pictures and start repeating
   SHAPE_W: 1.6,   // how hard a closer shape is still preferred inside that
@@ -63,6 +65,16 @@ const PLAIN = [
 ];
 
 const aspectOf = r => r.w / r.h;
+
+/* where each path hangs its smashable, in lattice units — a room earns its
+   place by holding at least one of these */
+function midpoints(lv, pts, spacing) {
+  return lv.edges.map(([u, v]) => ({
+    x: (pts[u].x + pts[v].x) / 2,
+    y: (pts[u].y + pts[v].y) / 2
+      + (Math.abs(pts[v].x - pts[u].x) * H.SAG_K) / 2 + H.SAG_C / (2 * spacing),
+  }));
+}
 
 export function latticeOrigin(lv) {
   let c0 = Infinity, r0 = Infinity, c1 = -Infinity, r1 = -Infinity;
@@ -118,44 +130,107 @@ function shapeMiss(shapes, w, h) {
   return best;
 }
 
-function pickLine(rect, ids, pts, edges, vert, rng, shapes) {
+/* `keep` is what both halves of a cut have to end up with: the objects on the
+   paths, or — only for a room too big to leave alone — at least a pad each */
+function pickLine(rect, ids, mids, pts, edges, vert, rng, shapes, keep) {
   const lo = vert ? rect.x : rect.y, len = vert ? rect.w : rect.h;
   const o0 = vert ? rect.y : rect.x, o1 = o0 + (vert ? rect.h : rect.w);
   let best = null;
   for (const t of candidates(lo, len)) {
+    /* a room with nothing in it has no reason to exist, so a cut that leaves
+       one side empty is not a cut we can make */
+    let mL = 0, mR = 0;
+    for (const m of mids) {
+      const at = vert ? m.x : m.y;
+      if (at < t - H.WALL_GAP) mL++; else if (at > t + H.WALL_GAP) mR++;
+    }
     let nL = 0;
     for (const i of ids) if ((vert ? pts[i].x : pts[i].y) < t) nL++;
     const nR = ids.length - nL;
+    if (keep === 'object' ? (!mL || !mR) : (!nL || !nR)) continue;
     const cut = t - lo, rest = len - cut;
     const A = vert ? { w: cut, h: rect.h } : { w: rect.w, h: cut };
     const B = vert ? { w: rest, h: rect.h } : { w: rect.w, h: rest };
     const s = 1.6 * Math.abs(nL - nR) / Math.max(1, ids.length)
+      + 1.4 * Math.abs(mL - mR) / Math.max(1, mids.length)
       + 0.8 * crossings(pts, edges, vert, t, o0, o1)
-      + 3.4 * (shapeMiss(shapes, A.w, A.h) + shapeMiss(shapes, B.w, B.h))
+      + 5.5 * (shapeMiss(shapes, A.w, A.h) + shapeMiss(shapes, B.w, B.h))
       + rng() * 0.5;
     if (!best || s < best.s) best = { t, s };
   }
   return best;
 }
 
-function partition(foot, pts, edges, rng, shapes) {
+function partition(foot, pts, mids, edges, rng, shapes) {
   const rooms = [];
-  const rec = (rect, ids) => {
-    const mustV = rect.w > H.MAX_ROOM, mustH = rect.h > H.MAX_ROOM;
-    if (!mustV && !mustH) { rooms.push({ rect, ids }); return; }
-    const vert = mustV && mustH ? (rect.w === rect.h ? rng() < 0.5 : rect.w > rect.h) : mustV;
-    const best = pickLine(rect, ids, pts, edges, vert, rng, shapes);
-    if (!best) { rooms.push({ rect, ids }); return; }
+  const rec = (rect, ids, mine) => {
+    const leaf = () => rooms.push({ rect, ids, mids: mine, pts });
+    const bigV = rect.w > H.MAX_ROOM, bigH = rect.h > H.MAX_ROOM;
+    if (!bigV && !bigH) { leaf(); return; }
+    /* try the axis that needs cutting first, then the other one: a room too
+       big to leave alone is worth splitting the short way if that is the only
+       cut that keeps an object on both sides */
+    const first = bigV && bigH ? (rect.w === rect.h ? rng() < 0.5 : rect.w > rect.h) : bigV;
+    let vert = first, best = null;
+    /* objects on both sides is what we want; a pad each is what we settle for
+       rather than leave a room the size of four */
+    for (const keep of ['object', 'pad']) {
+      for (const v of [first, !first]) {
+        best = pickLine(rect, ids, mine, pts, edges, v, rng, shapes, keep);
+        if (best) { vert = v; break; }
+      }
+      if (best) break;
+    }
+    if (!best) { leaf(); return; }
     const t = best.t;
     const A = vert ? { x: rect.x, y: rect.y, w: t - rect.x, h: rect.h }
       : { x: rect.x, y: rect.y, w: rect.w, h: t - rect.y };
     const B = vert ? { x: t, y: rect.y, w: rect.x + rect.w - t, h: rect.h }
       : { x: rect.x, y: t, w: rect.w, h: rect.y + rect.h - t };
-    rec(A, ids.filter(i => (vert ? pts[i].x : pts[i].y) < t));
-    rec(B, ids.filter(i => (vert ? pts[i].x : pts[i].y) > t));
+    const side = p => (vert ? p.x : p.y) < t;
+    rec(A, ids.filter(i => side(pts[i])), mine.filter(side));
+    rec(B, ids.filter(i => !side(pts[i])), mine.filter(m => !side(m)));
   };
-  rec(foot, pts.map((_, i) => i));
+  rec(foot, pts.map((_, i) => i), mids);
   return rooms;
+}
+
+/* A room too big for the art that will fill it, whose contents sit in one
+   corner, is mostly floor nobody visits. Pull its outer walls in to what it
+   actually holds — but only at a corner of the house, and only when there is
+   a whole empty cell to win. Bite anywhere else and the missing floor reads
+   as a hole in the middle of the building rather than an L-shaped plan. */
+function trimToContent(rooms, foot) {
+  const eps = 1e-6;
+  const wallAt = v => Math.floor(v - 0.5) + 0.5;   // nearest half-integer below
+  for (const r of rooms) {
+    const held = r.ids.map(i => r.pts[i]).concat(r.mids);
+    if (!held.length) continue;
+    const xs = held.map(p => p.x), ys = held.map(p => p.y);
+    const R = r.rect, G = H.CONTENT_GAP;
+    const onL = R.x <= foot.x + eps, onR = R.x + R.w >= foot.x + foot.w - eps;
+    const onT = R.y <= foot.y + eps, onB = R.y + R.h >= foot.y + foot.h - eps;
+    if (R.w > H.MAX_ROOM && (onT || onB)) {
+      if (onL) {
+        const w = Math.min(wallAt(Math.min(...xs) - G), R.x + R.w - H.MIN_ROOM);
+        if (w >= R.x + 1) { R.w -= w - R.x; R.x = w; }
+      }
+      if (onR) {
+        const w = Math.max(-wallAt(-(Math.max(...xs) + G)), R.x + H.MIN_ROOM);
+        if (w <= R.x + R.w - 1) R.w = w - R.x;
+      }
+    }
+    if (R.h > H.MAX_ROOM && (onL || onR)) {
+      if (onT) {
+        const w = Math.min(wallAt(Math.min(...ys) - G), R.y + R.h - H.MIN_ROOM);
+        if (w >= R.y + 1) { R.h -= w - R.y; R.y = w; }
+      }
+      if (onB) {
+        const w = Math.max(-wallAt(-(Math.max(...ys) + G)), R.y + H.MIN_ROOM);
+        if (w <= R.y + R.h - 1) R.h = w - R.y;
+      }
+    }
+  }
 }
 
 /* ---------- which picture goes where ---------- */
@@ -200,22 +275,29 @@ export function buildHouse(lv, seed, spacing, thingNames, catalogue) {
   const cat = catalogue && catalogue.length ? catalogue : PLAIN;
   const shapes = cat.map(e => e.aspect);
 
-  /* the footprint, in lattice units: the pads' bounding box, grown to
-     something that can actually be cut into rooms and centred on them */
-  const fw = Math.max(H.MIN_FOOT, o.w), fh = Math.max(H.MIN_FOOT, o.h);
-  const ox = Math.floor((fw - o.w) / 2), oy = Math.floor((fh - o.h) / 2);
-  const foot = { x: -0.5 - ox, y: -0.5 - oy, w: fw, h: fh };
+  /* the footprint is the pads' own bounding box and nothing more: padding it
+     out only ever buys rooms with nothing in them */
+  const foot = { x: -0.5, y: -0.5, w: o.w, h: o.h };
+  const mids = midpoints(lv, pts, spacing);
 
-  const rooms = partition(foot, pts, lv.edges, rng, shapes);
+  const rooms = partition(foot, pts, mids, lv.edges, rng, shapes);
+  trimToContent(rooms, foot);
   dealArt(rooms, cat, rng);
 
   const S = spacing;
+  /* what the camera frames is the building that survived the trim, not the
+     bounding box it was cut from */
+  const box = rooms.reduce((b, r) => ({
+    x0: Math.min(b.x0, r.rect.x), y0: Math.min(b.y0, r.rect.y),
+    x1: Math.max(b.x1, r.rect.x + r.rect.w), y1: Math.max(b.y1, r.rect.y + r.rect.h),
+  }), { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity });
+  const shell = { x: box.x0 * S, y: box.y0 * S, w: (box.x1 - box.x0) * S, h: (box.y1 - box.y0) * S };
+
   const roomOfNode = new Int16Array(lv.nodes.length).fill(-1);
   rooms.forEach((r, id) => r.ids.forEach(i => { roomOfNode[i] = id; }));
 
   const plan = {
-    foot: { x: foot.x * S, y: foot.y * S, w: foot.w * S, h: foot.h * S },
-    outer: { x: foot.x * S, y: foot.y * S, w: foot.w * S, h: foot.h * S },
+    foot: shell, outer: shell,
     rooms: rooms.map((r, id) => ({
       id, type: r.type, art: r.art,
       /* mirroring a top-down room is free variety — the art is lit from
