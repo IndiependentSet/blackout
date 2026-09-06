@@ -2,7 +2,8 @@ import { Component } from 'react';
 import * as E from './engine.js';
 import { BREEDS, CAT_BASELINE } from './assets/cats/index.js';
 import { THINGS, THING_BASELINE } from './assets/things/index.js';
-import { buildHouse, houseSeed } from './house.js';
+import { buildHouse, houseSeed, HOUSE as HZ } from './house.js';
+import { roomArt, ROOM_TYPES } from './assets/rooms/index.js';
 
 const SOUND_ON = true;
 const CABLE_SAG = 0.1;
@@ -41,7 +42,7 @@ const CONTENT_PAD = 46;     // what "the whole house" means when fitting it
 const CAM_H = 520;          // camera frame height in world units; the width
 const CAM_A = 640 / 520;    // follows the board's real aspect, so it never letterboxes
 const Z_PLAY = 1;           // the zoom every house settles at
-const Z_KEEP = 0.88;        // ...unless the whole site is within a whisker of
+const Z_KEEP = 0.78;        // ...unless the whole site is within a whisker of
                             // fitting, in which case show all of it
 const Z_MAX = 1.8;
 const CAT_S = 1;            // sprite scales are constants now that spacing is
@@ -49,119 +50,35 @@ const THING_S = 1.15;       // fixed — nothing left to compensate for
 const MAP_W = 152, MAP_H = 118;   // minimap, shown only when a house overflows
 
 /* ---- the building ----
-   house.js turns the level's lattice into rooms, walls and furniture; all of
-   it is drawn under the paths, never animates, and is dimmed as one group so
-   the puzzle stays the loudest thing on the board. */
-const HOUSE_DIM = 0.92;
+   house.js cuts the level's lattice into room-sized tiles; assets/rooms/ draws
+   each one, walls and furniture baked in. It all sits under the paths, never
+   animates, and is dimmed as one group so the puzzle stays the loudest thing
+   on the board. Until a type has art, a tile falls back to a plain drawn room
+   in the same materials. */
+const HOUSE_DIM = 0.95;
 const THING_NAMES = THINGS.map(t => t.name);
 const FLOOR_FILL = {
-  wood: 'url(#cc-planks)', tile: 'url(#cc-tile)',
-  checker: 'url(#cc-checker)', carpet: 'url(#cc-carpet)', concrete: 'url(#cc-concrete)',
+  living: 'url(#cc-planks)', study: 'url(#cc-planks)', hall: 'url(#cc-planks)',
+  kitchen: 'url(#cc-tile)', bath: 'url(#cc-checker)',
+  bedroom: 'url(#cc-carpet)', nursery: 'url(#cc-carpet)', storage: 'url(#cc-concrete)',
 };
-const WALL_INK = '#D9C39B', WALL_EXT = '#C0A377', WALL_SHADOW = '#160B06';
-const PROP_INK = '#3A2416';
-const PROP_TONES = {
-  bed: ['#B79AC6', '#C6A08F', '#9FB6C9'], sofa: ['#B4635E', '#7F9068', '#8A6FA8'],
-  table: ['#9A6B45', '#8A5E3C', '#A9794F'], counter: ['#C7B49A', '#B9A488', '#D2C0A6'],
-  tub: ['#DEE9EE'], toilet: ['#E8EFF2'], sink: ['#E2ECF0'],
-  shelf: ['#8A5E3C', '#7C5334', '#946949'], cot: ['#C9A46E'], desk: ['#8F6242'],
-  plantpot: ['#B4643C'], crate: ['#A2784B', '#966E44', '#AE8455'],
-  rug: ['#B96F6C', '#6E8C74', '#7C6EA0'],
-};
+const WALL_INK = '#D9C39B', WALL_SHADOW = '#160B06';
+const WALL_T = 15;
 
-/* Furniture: flat top-down silhouettes drawn straight from the plan's numbers,
-   no image assets. A piece is drawn with its back on the -h/2 edge and `rot`
-   turns it to face whichever wall house.js stood it against. Everything here
-   is deliberately muted — it sits under the paths and must never read as one. */
-function propArt(p) {
-  const w = p.w, h = p.h, x = -w / 2, y = -h / 2;
-  const tones = PROP_TONES[p.kind] || PROP_TONES.table;
-  const fill = tones[p.tone % tones.length];
-  let art = <rect x={x} y={y} width={w} height={h} rx={6} fill={fill} />;
-
-  if (p.kind === 'rug') {
-    return (
-      <g key={p.key} transform={'translate(' + p.cx + ' ' + p.cy + ') rotate(' + p.rot + ')'}>
-        <rect x={x} y={y} width={w} height={h} rx={h * 0.16} fill={fill} opacity={.62} />
-        <rect x={x + w * 0.1} y={y + h * 0.14} width={w * 0.8} height={h * 0.72} rx={h * 0.1}
-          fill="none" stroke="#FFEBC8" strokeWidth={3} opacity={.35} />
-      </g>
-    );
-  }
-  if (p.kind === 'bed') {
-    art = <>
-      <rect x={x} y={y} width={w} height={h} rx={8} fill={fill} />
-      <rect x={x + w * 0.1} y={y + h * 0.06} width={w * 0.8} height={h * 0.2} rx={5} fill="#FFF3DC" />
-      <rect x={x} y={y + h * 0.42} width={w} height={h * 0.58} rx={8} fill={fill} opacity={.55} />
-      <rect x={x} y={y + h * 0.42} width={w} height={h * 0.58} rx={8} fill="none" />
-    </>;
-  } else if (p.kind === 'sofa') {
-    art = <>
-      <rect x={x} y={y} width={w} height={h} rx={9} fill={fill} />
-      <rect x={x + w * 0.16} y={y + h * 0.34} width={w * 0.68} height={h * 0.6} rx={6} fill="#FFF3DC" opacity={.24} />
-    </>;
-  } else if (p.kind === 'table' || p.kind === 'desk') {
-    art = <>
-      <rect x={x} y={y} width={w} height={h} rx={6} fill={fill} />
-      <rect x={x + w * 0.12} y={y + h * 0.18} width={w * 0.76} height={h * 0.64} rx={4} fill="#FFF3DC" opacity={.16} />
-      {p.kind === 'desk' && <rect x={-w * 0.16} y={y + h * 0.16} width={w * 0.32} height={h * 0.4} rx={3} fill="#2F2338" />}
-    </>;
-  } else if (p.kind === 'counter') {
-    art = <>
-      <rect x={x} y={y} width={w} height={h} rx={5} fill={fill} />
-      <rect x={x} y={y} width={w} height={h * 0.3} rx={5} fill="#7C6A55" opacity={.5} />
-      <circle cx={x + w * 0.72} cy={0} r={Math.min(w, h) * 0.24} fill="#4C4038" />
-    </>;
-  } else if (p.kind === 'tub') {
-    art = <>
-      <rect x={x} y={y} width={w} height={h} rx={h * 0.34} fill={fill} />
-      <rect x={x + w * 0.1} y={y + h * 0.2} width={w * 0.72} height={h * 0.6} rx={h * 0.26} fill="#A9CBDD" />
-      <rect x={x + w * 0.88} y={-h * 0.08} width={w * 0.07} height={h * 0.16} rx={2} fill="#8A9AA4" />
-    </>;
-  } else if (p.kind === 'toilet') {
-    art = <>
-      <rect x={x} y={y} width={w} height={h * 0.34} rx={4} fill={fill} />
-      <ellipse cx={0} cy={y + h * 0.66} rx={w * 0.42} ry={h * 0.3} fill={fill} />
-    </>;
-  } else if (p.kind === 'sink') {
-    art = <>
-      <rect x={x} y={y} width={w} height={h} rx={6} fill={fill} />
-      <ellipse cx={0} cy={h * 0.08} rx={w * 0.32} ry={h * 0.26} fill="#A9CBDD" />
-    </>;
-  } else if (p.kind === 'shelf') {
-    art = <>
-      <rect x={x} y={y} width={w} height={h} rx={3} fill={fill} />
-      {[0.12, 0.3, 0.46, 0.66, 0.82].map((f, i) => (
-        <rect key={i} x={x + w * f} y={y + h * 0.16} width={w * 0.1} height={h * 0.62} rx={2}
-          fill={['#C0503F', '#3F6C7A', '#C99A3C', '#6A4E86', '#4E7A4A'][i]} stroke="none" />
-      ))}
-    </>;
-  } else if (p.kind === 'cot') {
-    art = <>
-      <rect x={x} y={y} width={w} height={h} rx={7} fill={fill} />
-      <rect x={x + w * 0.12} y={y + h * 0.12} width={w * 0.76} height={h * 0.76} rx={5} fill="#F2E3C6" />
-      {[0.3, 0.5, 0.7].map((f, i) => (
-        <rect key={i} x={x + w * f} y={y + h * 0.12} width={w * 0.05} height={h * 0.76} fill={fill} stroke="none" />
-      ))}
-    </>;
-  } else if (p.kind === 'crate') {
-    art = <>
-      <rect x={x} y={y} width={w} height={h} rx={4} fill={fill} />
-      <path d={'M ' + x + ' ' + y + ' L ' + (x + w) + ' ' + (y + h) + ' M ' + (x + w) + ' ' + y + ' L ' + x + ' ' + (y + h)}
-        stroke={PROP_INK} strokeWidth={2.4} opacity={.5} fill="none" />
-    </>;
-  } else if (p.kind === 'plantpot') {
-    art = <>
-      <circle cx={0} cy={-h * 0.06} r={w * 0.34} fill="#4E7A4A" />
-      <circle cx={-w * 0.24} cy={h * 0.06} r={w * 0.26} fill="#5C8C52" />
-      <circle cx={w * 0.24} cy={h * 0.08} r={w * 0.24} fill="#436B41" />
-      <path d={'M ' + (-w * 0.26) + ' ' + (h * 0.16) + ' L ' + (w * 0.26) + ' ' + (h * 0.16) +
-        ' L ' + (w * 0.18) + ' ' + (h * 0.5) + ' L ' + (-w * 0.18) + ' ' + (h * 0.5) + ' Z'} fill={fill} />
-    </>;
-  }
+/* a room with no picture yet: floor, a wall frame, and a gap for a doorway */
+function plainRoom(r) {
+  const t = WALL_T, h = r.h, w = r.w, gap = w * 0.22;
   return (
-    <g key={p.key} transform={'translate(' + p.cx + ' ' + p.cy + ') rotate(' + p.rot + ')'}
-      stroke={PROP_INK} strokeWidth={3} strokeLinejoin="round">{art}</g>
+    <g key={'p' + r.id}>
+      <rect x={r.x} y={r.y} width={w} height={h} fill={FLOOR_FILL[r.type] || FLOOR_FILL.living} />
+      <rect x={r.x} y={r.y} width={w} height={h} fill="url(#cc-pool)" />
+      <rect x={r.x} y={r.y} width={w} height={t} fill={WALL_INK} />
+      <rect x={r.x} y={r.y} width={t} height={h} fill={WALL_INK} />
+      <rect x={r.x + w - t} y={r.y} width={t} height={h} fill={WALL_INK} />
+      <rect x={r.x} y={r.y + h - t} width={(w - gap) / 2} height={t} fill={WALL_INK} />
+      <rect x={r.x + (w + gap) / 2} y={r.y + h - t} width={(w - gap) / 2} height={t} fill={WALL_INK} />
+      <rect x={r.x + t} y={r.y + t} width={w - 2 * t} height={3} fill={WALL_SHADOW} opacity={.32} />
+    </g>
   );
 }
 
@@ -394,7 +311,7 @@ export default class CatCoverGame extends Component {
     const w = (Math.max(...cs) - c0) * SPACING, h = (Math.max(...rs) - r0) * SPACING;
     /* seeded off the level's own coordinates — layout() runs during render, so
        it must not reach for the day or the site index */
-    const plan = buildHouse(lv, houseSeed(lv), SPACING, THING_NAMES);
+    const plan = buildHouse(lv, houseSeed(lv), SPACING, THING_NAMES, ROOM_TYPES);
     const O = plan.outer;
     /* content is what Fit frames and what decides whether a site overflows:
        the whole building, so its outer walls never get cropped. world is the
@@ -631,7 +548,7 @@ export default class CatCoverGame extends Component {
       box: '0 0 ' + this.camW() + ' ' + CAM_H, view: { x: 0, y: 0, w: this.camW(), h: CAM_H },
       edges: [], sprites: [], proof: [], map: null,
       floor: { x: 0, y: 0, w: this.camW(), h: CAM_H },
-      house: null, rooms: [], walls: [], doors: [], props: [],
+      house: null, rooms: [],
       used: st.placed.length, par: lv ? lv.k : 0, litCount: 0, edgeCount: lv ? lv.edges.length : 0,
       usedColor: '#FFF3D8', msg: st.msg, msgColor: '#C9B8E0',
       steps: [
@@ -693,10 +610,6 @@ export default class CatCoverGame extends Component {
     const P = L.plan;
     vals.house = P;
     vals.rooms = P.rooms.filter(r => seen(r.x, r.y, r.x + r.w, r.y + r.h));
-    const shown = new Set(vals.rooms.map(r => r.id));
-    vals.walls = P.wallRects.filter(w => seen(w.x, w.y, w.x + w.w, w.y + w.h));
-    vals.doors = P.doors.filter(d => seen(d.x, d.y, d.x + d.w, d.y + d.h));
-    vals.props = P.props.filter(q => shown.has(q.room));
 
     const litE = this.litSet(lv, st.placed);
     vals.litCount = litE.size;
@@ -1011,41 +924,24 @@ export default class CatCoverGame extends Component {
                 {/* the ground the building stands on */}
                 <rect x={v.floor.x} y={v.floor.y} width={v.floor.w} height={v.floor.h} fill="url(#cc-void)" />
 
-                {/* the building: floors, furniture and walls, all of it under
-                    the paths and dimmed as one group so the puzzle stays loud */}
+                {/* the building: one drawn room per tile, under the paths
+                    and dimmed as one group so the puzzle stays loud */}
                 {v.house && (
                   <g opacity={HOUSE_DIM} style={{ pointerEvents: 'none' }}>
                     <rect x={v.house.outer.x} y={v.house.outer.y} width={v.house.outer.w} height={v.house.outer.h}
-                      rx={10} fill="#241610" />
-                    {v.rooms.map(r => (
-                      <rect key={'f' + r.id} x={r.x} y={r.y} width={r.w} height={r.h} fill={FLOOR_FILL[r.floor] || FLOOR_FILL.wood} />
-                    ))}
-                    {v.rooms.map(r => (
-                      <rect key={'l' + r.id} x={r.x} y={r.y} width={r.w} height={r.h} fill="url(#cc-pool)" />
-                    ))}
-                    {v.props.map(q => propArt(q))}
-                    {/* one shadow pass then one body pass over the same walls —
-                        cheaper and steadier than an SVG drop shadow */}
-                    {v.walls.map(w => (
-                      <rect key={'ws' + w.key} x={w.x + 3} y={w.y + 5} width={w.w} height={w.h} fill={WALL_SHADOW} opacity={.5} />
-                    ))}
-                    {v.walls.map(w => (
-                      <rect key={'w' + w.key} x={w.x} y={w.y} width={w.w} height={w.h} fill={w.ext ? WALL_EXT : WALL_INK} />
-                    ))}
-                    {v.doors.map(d => (
-                      <g key={d.key}>
-                        <rect x={d.x} y={d.y} width={d.w} height={d.h} fill="#2A1A12" opacity={.35} />
-                        {d.dir === 'v'
-                          ? <>
-                              <rect x={d.x} y={d.y} width={d.w} height={5} fill={WALL_EXT} />
-                              <rect x={d.x} y={d.y + d.h - 5} width={d.w} height={5} fill={WALL_EXT} />
-                            </>
-                          : <>
-                              <rect x={d.x} y={d.y} width={5} height={d.h} fill={WALL_EXT} />
-                              <rect x={d.x + d.w - 5} y={d.y} width={5} height={d.h} fill={WALL_EXT} />
-                            </>}
-                      </g>
-                    ))}
+                      fill="#241610" />
+                    {v.rooms.map(r => {
+                      const url = roomArt(r.type, r.variant);
+                      if (!url) return plainRoom(r);
+                      /* overdrawn by a hair, or neighbouring tiles show a
+                         seam; mirrored about the tile's own centre line */
+                      const o = HZ.SEAM;
+                      return (
+                        <image key={r.id} href={url} x={r.x - o} y={r.y - o}
+                          width={r.w + 2 * o} height={r.h + 2 * o} preserveAspectRatio="none"
+                          transform={r.flip ? 'translate(' + (2 * r.cx) + ' 0) scale(-1 1)' : undefined} />
+                      );
+                    })}
                   </g>
                 )}
 

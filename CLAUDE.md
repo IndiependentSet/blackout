@@ -61,6 +61,8 @@ visuals — `app/src/assets/` and the camera system in `CatCoverGame.jsx` are.
   - `src/house.js` — the building the puzzle sits in (below). Pure like
     `engine.js`: no React, seeded by the level's own coordinates, and every
     number it returns is precomputed once per level.
+  - `src/assets/rooms/` — the drawn rooms the house is tiled out of, one
+    picture per room type. Filename is the contract; see its README.
   - `src/assets/cats/` — the graph nodes themselves: cat stickers cut out of
     a hand-drawn sticker sheet, three poses per breed (`sleep`, `wakeA`,
     `wakeB`). Every sprite is baked onto the same 192x192 canvas at the same
@@ -125,24 +127,23 @@ day-determinism are exactly as they were.
 
 ## The house is generated from the graph
 
-The board used to be one endless plank floor with a wallpaper band at the back.
-It is now a top-down cutaway home, and `src/house.js` derives it from the level:
+The board used to be one endless plank floor with a wallpaper band at the back,
+then a procedurally-drawn floorplan. It is now a **grid of drawn rooms**, and
+`src/house.js` derives that grid from the level:
 
-- Nodes sit on **integer** lattice cells, so every wall centre-line goes on a
-  **half-integer** one. That is what guarantees a wall can never cross a pad or
-  the cat standing on it — half a cell is 65 world units against a 28-wide cat
-  and a 14-thick wall. Don't move walls off the half-integers.
-- A seeded BSP splits the node bounding box (plus `OUTER_PAD`) into rooms,
-  preferring split lines that few paths straddle, so rooms come out holding
-  clusters of pads. Each room is then dealt a type (living, kitchen, bath,
-  bedroom, study, nursery, storage, hall) with area limits and caps, which
-  fixes its floor material and its furniture.
-- **Paths are allowed to cross walls.** Doorways are decoration — one per wall,
-  dropped on a path crossing when there is one — so nothing about the puzzle
-  depends on the floorplan and there is no gap-fitting machinery to maintain.
-- Furniture is flat vector art drawn in `propArt()` in `CatCoverGame.jsx` from
-  the plan's own numbers; there are no furniture image assets and adding one is
-  a new `case`, not a new sprite sheet. Pieces keep clear of pads and paths.
+- Nodes sit on **integer** lattice cells. A room tile covers `TILE` (2) cells
+  each way, so a pad always lands half a cell — 65 world units — inside its
+  room and can never sit on a wall. Don't change `TILE` without re-checking
+  that arithmetic against the 56-wide cat sprite.
+- The grid is the node bounding box rounded up to whole tiles, never smaller
+  than `MIN_GRID` (2) rooms a side; the spare rooms are centred on the pads, so
+  a flat level gets a house instead of a row of rooms. World coordinates still
+  start at the top-left pad, so nothing about the camera moved.
+- Each tile is dealt a room type by a seeded draw that pushes a type away from
+  its own neighbours and away from taking more than its share, then given a
+  `variant` and a 50% horizontal `flip`. That is where the variety in a house
+  comes from — the art is fixed, the arrangement isn't.
+- **Paths cross walls freely.** Nothing about the puzzle depends on the house.
 - The room a path hangs in picks its smashable (`plan.edgeThing`), so the
   toilet roll stops turning up in the kitchen. Cosmetic only.
 - `buildHouse()` runs **once per level**, inside `layout()` (memoized in a
@@ -153,6 +154,22 @@ It is now a top-down cutaway home, and `src/house.js` derives it from the level:
   runs during render and for levels other than the current one — and the only
   randomness is `engine.js`'s seeded RNG (no `Math.random()`, no random sort
   comparators).
+
+### The room art
+
+`src/assets/rooms/` holds one picture per room type — walls, floor and
+furniture all baked in — globbed by file name (`<type>.png`, or `<type>-2.png`
+for a second version of a type); see the README there. `roomArt()` hands the
+board a URL and `CatCoverGame.jsx` draws one `<image>` per visible tile,
+overdrawn by `HOUSE.SEAM` so neighbours butt together without a hairline.
+
+A type with no art yet falls back to `plainRoom()` — the old floor patterns
+plus a wall frame — so the game runs with the folder empty. Tiles are only
+ever **mirrored left to right**: the art is lit from above, so a vertical flip
+or a 90° rotation would put the highlights and shadows on the wrong side.
+
+`app/tools/prep-rooms.py` trims a new tile to its outer wall and squares it up;
+untrimmed art shows as a dark seam between rooms.
 
 ## Naming note
 
