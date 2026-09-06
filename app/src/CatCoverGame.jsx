@@ -2,10 +2,13 @@ import { Component } from 'react';
 import * as E from './engine.js';
 import { BREEDS, CAT_BASELINE } from './assets/cats/index.js';
 import { THINGS, THING_BASELINE } from './assets/things/index.js';
+import { CRACKLES } from './assets/sfx/index.js';
 import { buildHouse, houseSeed, HOUSE as HZ } from './house.js';
 import { roomArt, ROOM_CATALOGUE } from './assets/rooms/index.js';
 
 const SOUND_ON = true;
+const CRACKLE_GAIN = 0.3;   // recorded takes are normalised hot; this sits them
+                            // alongside the synthesised chirps and crashes
 const CABLE_SAG = 0.1;
 const DAY_EPOCH = Date.UTC(2026, 3, 15);
 
@@ -111,6 +114,7 @@ export default class CatCoverGame extends Component {
     levels[0] = E.makeLevelForDay(this.seed(), 0);
     this.setState({ levels }, () => this.frame(0));
     this.queue(1);
+    this.loadCrackles();
   }
   componentWillUnmount() {
     window.removeEventListener('keydown', this.onKey);
@@ -145,16 +149,23 @@ export default class CatCoverGame extends Component {
     return !!lv && this.litSet(lv, this.state.placed).size === lv.edges.length;
   }
 
-  /* ---- audio: chirp on wake, crash on smash ---- */
-  ac() {
+  /* ---- audio: crackle on hire, chirp on recall, crash on smash ---- */
+  /* The context is built as soon as there is anything to decode and left
+     suspended — nothing is ever started before a tap — so the recorded takes
+     are decoded and waiting by the time the first cat is hired. */
+  ctx() {
     if (!SOUND_ON) return null;
     if (!this._ac) {
       const C = window.AudioContext || window.webkitAudioContext;
       if (!C) return null;
       this._ac = new C();
     }
-    if (this._ac.state === 'suspended') this._ac.resume();
     return this._ac;
+  }
+  ac() {
+    const ac = this.ctx(); if (!ac) return null;
+    if (ac.state === 'suspended') ac.resume();
+    return ac;
   }
   chirp(n, up) {
     const ac = this.ac(); if (!ac) return;
@@ -170,6 +181,32 @@ export default class CatCoverGame extends Component {
     g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
     o.connect(f); f.connect(g); g.connect(ac.destination);
     o.start(t); o.stop(t + 0.36);
+  }
+  /* The sound of a cat hitting a pad: one of the recorded takes, chosen at
+     random so a run of deployments doesn't turn into a loop. Deliberately not
+     used when a cat is recalled — putting one down and taking one back should
+     never sound the same. Returns false if nothing has decoded yet, so the
+     caller can fall back to the synthesised chirp rather than play silence. */
+  crackle() {
+    const ac = this.ac(); if (!ac) return false;
+    this.loadCrackles();
+    const ready = this._crackles.filter(Boolean);
+    if (!ready.length) return false;
+    const src = ac.createBufferSource(), g = ac.createGain();
+    src.buffer = ready[(Math.random() * ready.length) | 0];
+    g.gain.value = CRACKLE_GAIN;
+    src.connect(g); g.connect(ac.destination);
+    src.start(ac.currentTime);
+    return true;
+  }
+  loadCrackles() {
+    if (!SOUND_ON || this._crackles) return;
+    this._crackles = [];
+    CRACKLES.forEach((url, i) => fetch(url)
+      .then(r => r.arrayBuffer())
+      .then(bytes => { const ac = this.ctx(); return ac && ac.decodeAudioData(bytes); })
+      .then(buf => { if (buf) this._crackles[i] = buf; })
+      .catch(() => {}));
   }
   crash(count) {
     const ac = this.ac(); if (!ac || !count) return;
@@ -235,7 +272,7 @@ export default class CatCoverGame extends Component {
     const results = this.state.results.slice();
     if (done) results[this.state.idx] = placed.length <= lv.k ? 'perfect' : 'over';
     this.setState({ placed, results, focus: i, hint: null, msg: '', copied: false });
-    this.chirp(placed.length, true);
+    if (!this.crackle()) this.chirp(placed.length, true);
     this.crash(after - before);
     this.bloom(i);
     if (done) { this.flash(); this.fanfare(); }
