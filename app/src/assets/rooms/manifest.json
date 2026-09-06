@@ -1,0 +1,92 @@
+{
+  "bath-1": {
+    "h": 441,
+    "type": "bath",
+    "w": 446
+  },
+  "bath-2": {
+    "h": 330,
+    "type": "bath",
+    "w": 202
+  },
+  "bath-3": {
+    "h": 256,
+    "type": "bath",
+    "w": 200
+  },
+  "bedroom-1": {
+    "h": 454,
+    "type": "bedroom",
+    "w": 456
+  },
+  "bedroom-2": {
+    "h": 319,
+    "type": "bedroom",
+    "w": 400
+  },
+  "dining-1": {
+    "h": 335,
+    "type": "dining",
+    "w": 370
+  },
+  "hall-1": {
+    "h": 303,
+    "type": "hall",
+    "w": 205
+  },
+  "kitchen-1": {
+    "h": 454,
+    "type": "kitchen",
+    "w": 461
+  },
+  "kitchen-2": {
+    "h": 307,
+    "type": "kitchen",
+    "w": 404
+  },
+  "laundry-1": {
+    "h": 283,
+    "type": "laundry",
+    "w": 237
+  },
+  "living-1": {
+    "h": 454,
+    "type": "living",
+    "w": 458
+  },
+  "living-2": {
+    "h": 328,
+    "type": "living",
+    "w": 403
+  },
+  "music-1": {
+    "h": 297,
+    "type": "music",
+    "w": 314
+  },
+  "nursery-1": {
+    "h": 440,
+    "type": "nursery",
+    "w": 448
+  },
+  "nursery-2": {
+    "h": 264,
+    "type": "nursery",
+    "w": 223
+  },
+  "plants-1": {
+    "h": 268,
+    "type": "plants",
+    "w": 239
+  },
+  "study-1": {
+    "h": 265,
+    "type": "study",
+    "w": 263
+  },
+  "workshop-1": {
+    "h": 273,
+    "type": "workshop",
+    "w": 198
+  }
+}

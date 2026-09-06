@@ -58,6 +58,12 @@ visuals — `app/src/assets/` and the camera system in `CatCoverGame.jsx` are.
     generator (leaf chains, degree-2 paths, cycles, hubs, crowns), exact
     branch-and-bound solver, hint helpers (`hintLeaf`, `hintMatching`,
     `hintReveal`). No React imports — keep it that way if you touch it.
+  - `src/house.js` — the building the puzzle sits in (below). Pure like
+    `engine.js`: no React, seeded by the level's own coordinates, and every
+    number it returns is precomputed once per level.
+  - `src/assets/rooms/` — the drawn rooms the house is filled with, plus the
+    `raw/` originals they are trimmed from. Filename is the contract and
+    `manifest.json` is generated; see its README.
   - `src/assets/cats/` — the graph nodes themselves: cat stickers cut out of
     a hand-drawn sticker sheet, three poses per breed (`sleep`, `wakeA`,
     `wakeB`). Every sprite is baked onto the same 192x192 canvas at the same
@@ -103,12 +109,13 @@ graphs grew (150 world units per lattice step in house 1, 40 in the worst house
 - `CAM_H` (520) is fixed and the camera's *width* follows the board's real
   aspect (a `ResizeObserver` on the SVG keeps `state.aspect` current), so the
   frame never letterboxes and the expand toggle genuinely shows more world.
-- **Two rects per level.** `content` is the puzzle plus a little padding — it
-  decides what Fit frames and whether a house overflows (and so whether the
-  minimap appears). `world` is the floor you can pan into, with extra headroom
-  at the top for the back wall.
+- **Two rects per level.** `content` is the puzzle and the building around it —
+  it decides what Fit frames and whether a house overflows (and so whether the
+  minimap appears). `world` is the ground you can pan into, a margin around the
+  building on all four sides.
 - Entering a house plays an **establishing shot**: fit for ~420ms, then eases
-  to `Z_PLAY` (1). `reset()` deliberately does *not* move the camera.
+  to `Z_PLAY` (1). A site that all but fits (`Z_KEEP`) just stays framed whole
+  instead. `reset()` deliberately does *not* move the camera.
 - Sprites are drawn in **one depth-sorted pass** (cats and smashables together,
   by baseline y), and anything outside the frame grown 30% each way is culled —
   that's what keeps a 100-node house affordable.
@@ -118,6 +125,64 @@ graphs grew (150 world units per lattice step in house 1, 40 in the worst house
 
 None of this touched `engine.js` — seeded generation, the uniqueness check and
 day-determinism are exactly as they were.
+
+## The house is generated from the graph
+
+The board used to be one endless plank floor with a wallpaper band at the back,
+then a procedurally-drawn floorplan. It is now a real cutaway house: `house.js`
+cuts the level into rooms and fills each one with a drawn room from
+`src/assets/rooms/`.
+
+- Nodes sit on **integer** lattice cells, so every wall line lands on a
+  **half-integer** one. That is what makes it impossible for a wall to cross a
+  pad or the cat standing on it — half a cell is 65 world units against a
+  56-wide cat. Don't move rooms off that grid.
+- A seeded BSP cuts the pads' bounding box — no padding; padding only ever buys
+  rooms with nothing in them — into rooms **2 or 3 cells a side**: big enough to
+  hold a cluster of pads, close enough in size that furniture drawn into them
+  stays roughly one scale across the house. Splits prefer to fall where few
+  paths straddle them, and where both halves come out a shape the art can fill.
+- **Every room has to earn its place.** A cut is only allowed if both halves
+  keep an object on them (`WALL_GAP` off the wall, so nothing is drawn half
+  inside it); for a room too big to leave alone, a pad each will do. A room
+  that ends up bigger than `MAX_ROOM` with its contents in one corner has its
+  outer walls pulled in to what it holds — but only at a corner of the house,
+  or the missing floor reads as a hole in the middle rather than an L-shaped
+  plan. What the camera frames is the building that survives that trim.
+- **Paths cross walls freely.** Nothing about the puzzle depends on the house.
+- The art is fixed, so the variety has to come from the arrangement: which
+  picture fills which room (chosen for shape first, then pushed away from its
+  own kind next door, from taking more than its share, and from being used
+  twice), plus a 50% horizontal mirror. Over 60 days that gives a different
+  house almost every time; the pinch point is **tall rooms**, where the
+  catalogue is thinnest.
+- The room a path hangs in picks its smashable (`plan.edgeThing`), so the
+  toilet roll stops turning up in the kitchen. Cosmetic only.
+- `buildHouse()` runs **once per level**, inside `layout()` (memoized in a
+  `WeakMap`), and a frame only ever filters the result against the same `seen()`
+  cull the sprites use. Nothing in `house.js` may be reached from `renderVals()`.
+- Determinism is the one hard rule: seeds come from `houseSeed(lv)` — the
+  level's own contents, never the day or the site index, because `layout()`
+  runs during render and for levels other than the current one — and the only
+  randomness is `engine.js`'s seeded RNG (no `Math.random()`, no random sort
+  comparators).
+
+### The room art
+
+`src/assets/rooms/` holds the pictures, one complete room each, globbed by file
+name with a generated `manifest.json` carrying each one's type and trimmed
+shape; see the README there before adding any. Two things about it are easy to
+get wrong:
+
+- A room has to be cropped **exactly to its outer wall**. Backdrop left around
+  the art shows up as a dark seam between neighbouring rooms;
+  `app/tools/prep-rooms.py` does the trimming.
+- Rooms are only ever **mirrored left to right**. The art is lit from above, so
+  a vertical flip or a 90° rotation puts the highlights and shadows on the
+  wrong side.
+
+A room type with no art falls back to `plainRoom()` — floor pattern plus a wall
+frame — so the game still runs with the folder empty.
 
 ## Naming note
 
