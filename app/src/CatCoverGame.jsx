@@ -68,6 +68,9 @@ const INK = '#241409', RIM = '#F6EAD3', DASH = '#FFF3D8';
 const W_SCRIM = 34, W_RIM = 21, W_INK = 15, W_DASH = 6.5;
 const W_GLOW = 26, W_LIT = 13, W_CORE = 4.4;
 const DASH_ON = '13 9', FLOW = '5 16';
+/* the opening sweep: three slow breaths of the whole web, deep enough to see
+   over a busy room and long enough to outlast the establishing shot */
+const PULSE_MS = 900, PULSE_N = 3, PULSE_GROW = 1.55;
 /* a surveyor's mark around a fixture: four corner ticks, so a target can never
    be read as one of the room's own drawn lamps or books */
 const MARK = 'M -26 -24 L -26 -30 L -20 -30 M 20 -30 L 26 -30 L 26 -24'
@@ -233,9 +236,9 @@ export default class CatCoverGame extends Component {
       const el = document.getElementById('cc-web');
       if (el && el.animate) el.animate(
         [{ strokeWidth: W_RIM, opacity: .8 },
-         { strokeWidth: W_RIM * 1.32, opacity: 1, offset: .34 },
+         { strokeWidth: W_RIM * PULSE_GROW, opacity: 1, offset: .5 },
          { strokeWidth: W_RIM, opacity: .8 }],
-        { duration: 900, easing: 'cubic-bezier(.2,.8,.3,1)' });
+        { duration: PULSE_MS, iterations: PULSE_N, easing: 'ease-in-out' });
     });
   }
   flash() {
