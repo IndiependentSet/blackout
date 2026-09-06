@@ -3,7 +3,7 @@ import * as E from './engine.js';
 import { BREEDS, CAT_BASELINE } from './assets/cats/index.js';
 import { THINGS, THING_BASELINE } from './assets/things/index.js';
 import { buildHouse, houseSeed, HOUSE as HZ } from './house.js';
-import { roomArt, ROOM_TYPES } from './assets/rooms/index.js';
+import { roomArt, ROOM_CATALOGUE } from './assets/rooms/index.js';
 
 const SOUND_ON = true;
 const CABLE_SAG = 0.1;
@@ -311,7 +311,7 @@ export default class CatCoverGame extends Component {
     const w = (Math.max(...cs) - c0) * SPACING, h = (Math.max(...rs) - r0) * SPACING;
     /* seeded off the level's own coordinates — layout() runs during render, so
        it must not reach for the day or the site index */
-    const plan = buildHouse(lv, houseSeed(lv), SPACING, THING_NAMES, ROOM_TYPES);
+    const plan = buildHouse(lv, houseSeed(lv), SPACING, THING_NAMES, ROOM_CATALOGUE);
     const O = plan.outer;
     /* content is what Fit frames and what decides whether a site overflows:
        the whole building, so its outer walls never get cropped. world is the
@@ -931,7 +931,7 @@ export default class CatCoverGame extends Component {
                     <rect x={v.house.outer.x} y={v.house.outer.y} width={v.house.outer.w} height={v.house.outer.h}
                       fill="#241610" />
                     {v.rooms.map(r => {
-                      const url = roomArt(r.type, r.variant);
+                      const url = roomArt(r.art);
                       if (!url) return plainRoom(r);
                       /* overdrawn by a hair, or neighbouring tiles show a
                          seam; mirrored about the tile's own centre line */

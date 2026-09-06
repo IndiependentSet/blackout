@@ -1,54 +1,68 @@
 /*
  * CATASTROPHE INC. floorplan: the house the puzzle sits in.
  *
- * The building is a grid of drawn rooms. Every level is a planar graph on
- * integer lattice cells, so the plan can be derived from it rather than
- * authored: cut the node bounding box into TILE-by-TILE blocks, give each
- * block a room, and let the art carry the walls, the floor and the furniture
- * (`assets/rooms/`). A block is squared on the lattice, so a pad always lands
- * half a cell — 65 world units — inside its room and can never sit on a wall.
+ * Every level is a planar graph on integer lattice cells, so the building can
+ * be derived from it rather than authored. A seeded BSP cuts the node bounding
+ * box into rooms 2 or 3 cells a side, and each room is then matched to one of
+ * the drawn rooms in `assets/rooms/` — walls, floor and furniture all baked
+ * into the art. Wall lines land on HALF-integers, so a pad always sits half a
+ * cell (65 world units) inside its room and can never end up on a wall.
  *
- * Pure and framework-free, like engine.js: the module works in lattice units
- * and multiplies by `spacing` once, on the way out, so the caller gets a
- * render-ready plan in world units and never does geometry per frame.
- * Deterministic — the only randomness is engine.js's seeded RNG, fed by a
- * seed folded out of the level's own coordinates.
+ * Because the art is fixed, the variety has to come from the arrangement: the
+ * split lines, which picture fills which room, and a horizontal mirror. Rooms
+ * are matched on shape, so a tall room gets a tall picture and the art is
+ * never stretched far.
+ *
+ * Pure and framework-free, like engine.js: lattice units throughout, scaled by
+ * `spacing` once on the way out, so the caller gets a render-ready plan and
+ * never does geometry per frame. Deterministic — the only randomness is
+ * engine.js's seeded RNG, fed by a seed folded out of the level's own
+ * coordinates.
  *
  * Paths cross walls freely; nothing in the puzzle depends on this file.
  */
 import { rngFromSeed } from './engine.js';
 
 export const HOUSE = {
-  TILE: 2,          // lattice cells per room, square — up to 4 pads a room
-  MIN_GRID: 2,      // ...and never fewer rooms than this on a side, or a flat
-                    // level comes out a row of rooms instead of a house
-  SEAM: 1.5,        // world units of overdraw, so tiles butt without a hairline
-  REPEAT_PEN: 0.12, // how hard a room type is pushed away from its own kind
-  SHARE_PEN: 5,     // ...and away from taking over the whole house
-  SAG_K: 0.1,       // mirrors CABLE_SAG in CatCoverGame.jsx
-  SAG_C: 3,         // mirrors the +3 in cable(); world units
+  MIN_ROOM: 2,    // cells: a room is 2 or 3 cells a side, so furniture drawn
+  MAX_ROOM: 3,    // into it stays roughly one size across the whole house
+  MIN_FOOT: 4,    // the smallest house that still cuts into rooms
+  SEAM: 1.5,      // world units of overdraw, so rooms butt without a hairline
+  SHAPE_TOL: 0.26, // a picture may be stretched this far (~30%); tighter and
+                   // the tall rooms run out of pictures and start repeating
+  SHAPE_W: 1.6,   // how hard a closer shape is still preferred inside that
+  SHARE_W: 1.6,   // ...how hard one room type is stopped from taking over
+  REPEAT_W: 1.3,  // ...and pushed away from its own neighbours
+  AGAIN_W: 1.4,   // ...and the same picture from being used twice
+  SAG_K: 0.1,     // mirrors CABLE_SAG in CatCoverGame.jsx
+  SAG_C: 3,       // mirrors the +3 in cable(); world units
 };
 const H = HOUSE;
-
-/* how often a type comes up before the penalties below have their say */
-const WEIGHT = {
-  living: 3, bedroom: 3, kitchen: 2, bath: 2,
-  study: 2, nursery: 1, hall: 1, storage: 1,
-};
-/* used when there is no art at all yet, so the fallback rooms still vary */
-export const DEFAULT_TYPES = ['living', 'kitchen', 'bedroom', 'bath', 'study'];
 
 /* which smashables belong in which room */
 export const ROOM_THINGS = {
   kitchen: ['mug', 'can', 'pot', 'plant', 'clock'],
+  dining: ['mug', 'vase', 'can', 'books', 'clock'],
   bath: ['toilet-paper', 'vase', 'fishbowl', 'mug'],
   bedroom: ['pillow', 'lamp', 'books', 'clock', 'petbed'],
   living: ['vase', 'lamp', 'fishbowl', 'books', 'plant', 'clock'],
   study: ['books', 'lamp', 'mug', 'clock', 'plant'],
   nursery: ['ball', 'mouse', 'yarn', 'fishtoy', 'pillow'],
+  music: ['vase', 'lamp', 'books', 'clock', 'plant'],
+  plants: ['plant', 'pot', 'vase', 'fishbowl', 'can'],
+  laundry: ['box', 'crate', 'can', 'yarn', 'petbed'],
+  workshop: ['crate', 'box', 'can', 'clock', 'yarn'],
   hall: ['box', 'crate', 'plant', 'vase'],
   storage: ['box', 'crate', 'can', 'yarn', 'petbed'],
 };
+/* stands in for the catalogue when no art has been prepared yet */
+const PLAIN = [
+  { key: 'living', type: 'living', aspect: 1 }, { key: 'kitchen', type: 'kitchen', aspect: 1 },
+  { key: 'bedroom', type: 'bedroom', aspect: 1 }, { key: 'bath', type: 'bath', aspect: 0.7 },
+  { key: 'study', type: 'study', aspect: 1 }, { key: 'hall', type: 'hall', aspect: 0.7 },
+];
+
+const aspectOf = r => r.w / r.h;
 
 export function latticeOrigin(lv) {
   let c0 = Infinity, r0 = Infinity, c1 = -Infinity, r1 = -Infinity;
@@ -73,86 +87,150 @@ export function houseSeed(lv) {
   return h >>> 0;
 }
 
-/* Deal a room to every tile. Two houses on two days should not look like the
-   same house, so a type is pushed away from its own neighbours and away from
-   taking more than its share of the plan; what's left is a seeded draw. */
-function dealRooms(grid, gw, gh, types, rng) {
-  const used = {};
-  const total = gw * gh;
-  for (let i = 0; i < grid.length; i++) {
-    const t = grid[i];
-    const left = t.gx > 0 ? grid[i - 1].type : null;
-    const up = t.gy > 0 ? grid[i - gw].type : null;
-    let sum = 0;
-    const score = types.map(type => {
-      let s = WEIGHT[type] || 1;
-      if (type === left || type === up) s *= H.REPEAT_PEN;
-      s /= 1 + ((used[type] || 0) * H.SHARE_PEN) / total;
-      sum += s;
-      return s;
-    });
-    let at = rng() * sum, type = types[types.length - 1];
-    for (let j = 0; j < types.length; j++) { at -= score[j]; if (at <= 0) { type = types[j]; break; } }
-    t.type = type;
-    used[type] = (used[type] || 0) + 1;
-  }
+/* ---------- the partition ---------- */
+/* wall lines sit on half-integers, and every room they leave behind is at
+   least MIN_ROOM cells wide, so a pad is never closer than half a cell */
+function candidates(lo, len) {
+  const out = [];
+  for (let k = H.MIN_ROOM; k <= len - H.MIN_ROOM; k++) out.push(lo + k);
+  return out;
 }
 
-export function buildHouse(lv, seed, spacing, thingNames, artTypes) {
+/* how many paths straddle a line — walls prefer to fall where the graph is
+   sparse, which is what makes rooms hold clusters of pads */
+function crossings(pts, edges, vert, t, o0, o1) {
+  let n = 0;
+  for (const [a, b] of edges) {
+    const pa = vert ? pts[a].x : pts[a].y, pb = vert ? pts[b].x : pts[b].y;
+    if ((pa < t) === (pb < t)) continue;
+    const m = ((vert ? pts[a].y : pts[a].x) + (vert ? pts[b].y : pts[b].x)) / 2;
+    if (m >= o0 && m <= o1) n++;
+  }
+  return n;
+}
+
+/* how far a room's shape is from the nearest picture that could fill it —
+ * this is what keeps the art from being stretched */
+function shapeMiss(shapes, w, h) {
+  let best = Infinity;
+  const a = w / h;
+  for (const s of shapes) best = Math.min(best, Math.abs(Math.log(s / a)));
+  return best;
+}
+
+function pickLine(rect, ids, pts, edges, vert, rng, shapes) {
+  const lo = vert ? rect.x : rect.y, len = vert ? rect.w : rect.h;
+  const o0 = vert ? rect.y : rect.x, o1 = o0 + (vert ? rect.h : rect.w);
+  let best = null;
+  for (const t of candidates(lo, len)) {
+    let nL = 0;
+    for (const i of ids) if ((vert ? pts[i].x : pts[i].y) < t) nL++;
+    const nR = ids.length - nL;
+    const cut = t - lo, rest = len - cut;
+    const A = vert ? { w: cut, h: rect.h } : { w: rect.w, h: cut };
+    const B = vert ? { w: rest, h: rect.h } : { w: rect.w, h: rest };
+    const s = 1.6 * Math.abs(nL - nR) / Math.max(1, ids.length)
+      + 0.8 * crossings(pts, edges, vert, t, o0, o1)
+      + 3.4 * (shapeMiss(shapes, A.w, A.h) + shapeMiss(shapes, B.w, B.h))
+      + rng() * 0.5;
+    if (!best || s < best.s) best = { t, s };
+  }
+  return best;
+}
+
+function partition(foot, pts, edges, rng, shapes) {
+  const rooms = [];
+  const rec = (rect, ids) => {
+    const mustV = rect.w > H.MAX_ROOM, mustH = rect.h > H.MAX_ROOM;
+    if (!mustV && !mustH) { rooms.push({ rect, ids }); return; }
+    const vert = mustV && mustH ? (rect.w === rect.h ? rng() < 0.5 : rect.w > rect.h) : mustV;
+    const best = pickLine(rect, ids, pts, edges, vert, rng, shapes);
+    if (!best) { rooms.push({ rect, ids }); return; }
+    const t = best.t;
+    const A = vert ? { x: rect.x, y: rect.y, w: t - rect.x, h: rect.h }
+      : { x: rect.x, y: rect.y, w: rect.w, h: t - rect.y };
+    const B = vert ? { x: t, y: rect.y, w: rect.x + rect.w - t, h: rect.h }
+      : { x: rect.x, y: t, w: rect.w, h: rect.y + rect.h - t };
+    rec(A, ids.filter(i => (vert ? pts[i].x : pts[i].y) < t));
+    rec(B, ids.filter(i => (vert ? pts[i].x : pts[i].y) > t));
+  };
+  rec(foot, pts.map((_, i) => i));
+  return rooms;
+}
+
+/* ---------- which picture goes where ---------- */
+const touching = (a, b) =>
+  a.x < b.x + b.w + 1e-6 && b.x < a.x + a.w + 1e-6 &&
+  a.y < b.y + b.h + 1e-6 && b.y < a.y + a.h + 1e-6;
+
+/* Two houses on two days shouldn't look like the same house: a picture is
+   chosen for its shape first, then pushed away from its own kind next door,
+   away from taking more than its share, and away from being used twice. */
+function dealArt(rooms, cat, rng) {
+  const used = {}, again = {};
+  const share = Math.max(1, rooms.length / 3);
+  rooms.forEach((room, i) => {
+    const near = [];
+    for (let j = 0; j < i; j++) if (touching(rooms[j].rect, room.rect)) near.push(rooms[j].type);
+    const a = aspectOf(room.rect);
+    /* shape first, and as a filter rather than a score: a bathroom squeezed
+       into a room the wrong shape reads as a mistake, however varied it is */
+    const fits = cat.filter(e => Math.abs(Math.log(e.aspect / a)) <= H.SHAPE_TOL);
+    let best = null;
+    for (const e of (fits.length ? fits : cat)) {
+      const s = H.SHAPE_W * Math.abs(Math.log(e.aspect / a))
+        + H.SHARE_W * ((used[e.type] || 0) / share)
+        + H.AGAIN_W * (again[e.key] || 0)
+        + (near.includes(e.type) ? H.REPEAT_W : 0)
+        + rng() * 0.45;
+      if (!best || s < best.s) best = { s, e };
+    }
+    room.type = best.e.type;
+    room.art = best.e.key;
+    used[best.e.type] = (used[best.e.type] || 0) + 1;
+    again[best.e.key] = (again[best.e.key] || 0) + 1;
+  });
+}
+
+/* ---------- build ---------- */
+export function buildHouse(lv, seed, spacing, thingNames, catalogue) {
   const rng = rngFromSeed(seed);
   const o = latticeOrigin(lv);
   const pts = lv.nodes.map(n => ({ x: n.c - o.c0, y: n.r - o.r0 }));
-  const T = H.TILE;
-  const types = artTypes && artTypes.length ? artTypes.slice() : DEFAULT_TYPES;
+  const cat = catalogue && catalogue.length ? catalogue : PLAIN;
+  const shapes = cat.map(e => e.aspect);
 
-  /* The grid, in lattice units: a tile covers T cells each way, so a pad sits
-     half a cell inside its room however the graph fell. A house too flat to
-     read as one is padded out with spare rooms, centred on the pads. */
-  const nw = Math.ceil(o.w / T), nh = Math.ceil(o.h / T);
-  const gw = Math.max(H.MIN_GRID, nw), gh = Math.max(H.MIN_GRID, nh);
-  const ox = Math.floor((gw - nw) / 2), oy = Math.floor((gh - nh) / 2);
-  const grid = [];
-  for (let gy = 0; gy < gh; gy++)
-    for (let gx = 0; gx < gw; gx++)
-      grid.push({ id: grid.length, gx, gy, ids: [] });
+  /* the footprint, in lattice units: the pads' bounding box, grown to
+     something that can actually be cut into rooms and centred on them */
+  const fw = Math.max(H.MIN_FOOT, o.w), fh = Math.max(H.MIN_FOOT, o.h);
+  const ox = Math.floor((fw - o.w) / 2), oy = Math.floor((fh - o.h) / 2);
+  const foot = { x: -0.5 - ox, y: -0.5 - oy, w: fw, h: fh };
 
+  const rooms = partition(foot, pts, lv.edges, rng, shapes);
+  dealArt(rooms, cat, rng);
+
+  const S = spacing;
   const roomOfNode = new Int16Array(lv.nodes.length).fill(-1);
-  pts.forEach((p, i) => {
-    const gx = ox + Math.min(nw - 1, Math.floor(p.x / T));
-    const gy = oy + Math.min(nh - 1, Math.floor(p.y / T));
-    const id = gy * gw + gx;
-    roomOfNode[i] = id;
-    grid[id].ids.push(i);
-  });
+  rooms.forEach((r, id) => r.ids.forEach(i => { roomOfNode[i] = id; }));
 
-  dealRooms(grid, gw, gh, types, rng);
-
-  const S = spacing, side = T * S;
-  /* world origin stays on the pads: the spare rooms grow around them */
-  const fx = (-ox * T - 0.5) * S, fy = (-oy * T - 0.5) * S;
-  const foot = { x: fx, y: fy, w: gw * side, h: gh * side };
   const plan = {
-    foot,
-    outer: foot,
-    tile: side,
-    rooms: grid.map(t => {
-      const x = fx + t.gx * side, y = fy + t.gy * side;
-      return {
-        id: t.id, type: t.type, ids: t.ids,
-        /* the renderer picks the picture: house.js stays clear of the assets */
-        variant: Math.floor(rng() * 997),
-        /* mirroring a top-down room is free variety — the art is lit from
-           above, so left-to-right is the one flip that stays believable */
-        flip: rng() < 0.5,
-        x, y, w: side, h: side, cx: x + side / 2, cy: y + side / 2,
-      };
-    }),
+    foot: { x: foot.x * S, y: foot.y * S, w: foot.w * S, h: foot.h * S },
+    outer: { x: foot.x * S, y: foot.y * S, w: foot.w * S, h: foot.h * S },
+    rooms: rooms.map((r, id) => ({
+      id, type: r.type, art: r.art,
+      /* mirroring a top-down room is free variety — the art is lit from
+         above, so left-to-right is the one flip that stays believable */
+      flip: rng() < 0.5,
+      x: r.rect.x * S, y: r.rect.y * S, w: r.rect.w * S, h: r.rect.h * S,
+      cx: (r.rect.x + r.rect.w / 2) * S, cy: (r.rect.y + r.rect.h / 2) * S,
+    })),
     roomOfNode,
     edgeThing: null,
   };
   plan.edgeThing = pickThings(plan, lv, pts, S, thingNames);
   return plan;
 }
+
 
 /* which smashable sits on each path — the room it hangs in picks it, so the
    toilet roll stops turning up in the kitchen. Cosmetic only. */

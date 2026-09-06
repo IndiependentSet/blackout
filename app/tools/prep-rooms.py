@@ -1,18 +1,22 @@
 #!/usr/bin/env python3
 """
-Normalise room tiles for the house grid.
+Normalise the drawn rooms the house is built from.
 
-The board lays rooms out edge to edge, so a tile has to be cropped exactly to
-its outer wall: any dark background left around the art shows up as a seam
-between neighbouring rooms. This trims that border, squares the tile up and
-writes it next to index.js under the name the game globs for.
+Rooms are laid out edge to edge, so a room has to be cropped exactly to its
+outer wall: any backdrop left around the art shows up as a seam between
+neighbouring rooms. This trims that border, caps the resolution, and writes
+the room next to index.js along with a manifest of its type and its trimmed
+shape — the generator picks art whose shape matches the room it has to fill,
+so those numbers matter.
 
     pip install pillow
-    python3 app/tools/prep-rooms.py [--size 512]
+    python3 app/tools/prep-rooms.py [--max 512]
 
-Reads  app/src/assets/rooms/raw/*.png|jpg
-Writes app/src/assets/rooms/<name>.png
+Reads  app/src/assets/rooms/raw/<type>[-<n>].png    (a leading _ is skipped)
+Writes app/src/assets/rooms/<type>[-<n>].png
+       app/src/assets/rooms/manifest.json
 """
+import json
 import argparse
 import pathlib
 import sys
@@ -88,7 +92,7 @@ def content_box(im):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--size', type=int, default=512, help='output tile side in px')
+    ap.add_argument('--max', type=int, default=512, help='longest output side in px')
     ap.add_argument('--no-trim', action='store_true', help='square up without trimming')
     args = ap.parse_args()
 
@@ -98,15 +102,29 @@ def main():
     if not srcs:
         sys.exit('nothing to prepare in ' + str(RAW))
 
+    manifest = {}
     for src in srcs:
+        if src.stem.startswith('_'):
+            print('%-22s skipped' % src.name)
+            continue
         im = Image.open(src).convert('RGBA')
         box = (0, 0) + im.size if args.no_trim else content_box(im)
         cut = im.crop(box)
-        out = cut.resize((args.size, args.size), Image.LANCZOS)
-        dst = ROOMS / (src.stem.lower().replace(' ', '-') + '.png')
-        out.save(dst, optimize=True)
-        print('%-22s %sx%s -> trim %s -> %s (%.0f kB)' % (
-            src.name, im.size[0], im.size[1], box, dst.name, dst.stat().st_size / 1024))
+        w, h = cut.size
+        k = min(1.0, args.max / max(w, h))
+        if k < 1.0:
+            cut = cut.resize((round(w * k), round(h * k)), Image.LANCZOS)
+        key = src.stem.lower().replace(' ', '-')
+        dst = ROOMS / (key + '.png')
+        cut.save(dst, optimize=True)
+        manifest[key] = {'type': key.rsplit('-', 1)[0] if key[-1].isdigit() else key,
+                         'w': cut.size[0], 'h': cut.size[1]}
+        print('%-22s %sx%s -> %sx%s  %-9s %.2f  %.0f kB' % (
+            src.name, im.size[0], im.size[1], cut.size[0], cut.size[1],
+            manifest[key]['type'], cut.size[0] / cut.size[1], dst.stat().st_size / 1024))
+
+    (ROOMS / 'manifest.json').write_text(json.dumps(manifest, indent=2, sort_keys=True) + '\n')
+    print('%d rooms -> manifest.json' % len(manifest))
 
 
 if __name__ == '__main__':

@@ -1,28 +1,40 @@
 # Room art
 
-The house is a grid of drawn rooms: one image per room tile, walls and
-furniture baked in. `index.js` picks the tiles up by glob, so the **file name
-is the contract**:
+The house is cut into rooms and each one is filled with a picture from here:
+walls, floor and furniture are all baked into the art, so the game draws one
+`<image>` per room and nothing else.
 
-    <type>.png            e.g. living.png, kitchen.png
-    <type>-<n>.png        a second, third, ... version of the same type
+## The contract
 
-Recognised types (anything else is ignored):
+    <type>.png            e.g. living.png
+    <type>-<n>.png        another version of the same type
 
-    living  kitchen  bedroom  bath  study  nursery  hall  storage
+Types the generator knows how to stock with smashables (`ROOM_THINGS` in
+`../../house.js`):
 
-More versions of a type mean more varied houses — `bedroom.png`,
-`bedroom-2.png` and `bedroom-3.png` are drawn from at random (seeded), and
-every tile may also be mirrored horizontally.
+    living  kitchen  dining  bedroom  nursery  bath  study
+    music   plants   laundry  workshop  hall  storage
 
-## Preparing a new tile
+`manifest.json` is generated, not hand-written: it records each room's type
+and its trimmed pixel size. The shape matters — `house.js` picks a picture
+whose proportions match the room it has to fill, so a tall room gets a tall
+picture instead of a square one stretched to fit. A room may be stretched up
+to `HOUSE.SHAPE_TOL`, and is mirrored left-to-right half the time.
 
-Drop the original into `raw/` and run:
+More versions of a type, and more shapes, both make houses less samey. Tall
+rooms are the scarcest — art around 2:3 is the most useful thing to add.
+
+## Adding a room
+
+Drop the original in `raw/` and run:
 
     pip install pillow
     python3 app/tools/prep-rooms.py
 
-It trims the dark background from around the room's outer walls, squares the
-tile up and writes a normalised PNG next to `index.js`. Tiles have to be
-trimmed exactly to the outer wall, or neighbouring rooms show a dark seam
-between them.
+That trims the backdrop from around the outer wall, caps the resolution and
+rewrites `manifest.json`. Trimming is the part that matters: art left
+untrimmed shows as a dark seam between rooms.
+
+Prefix a raw file with `_` to keep it out of the game — `_bedroom-3.png` is
+held back because its outline is L-shaped, and a non-rectangular room leaves a
+hole in the floorplan.
