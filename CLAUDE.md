@@ -184,6 +184,32 @@ get wrong:
 A room type with no art falls back to `plainRoom()` — floor pattern plus a wall
 frame — so the game still runs with the folder empty.
 
+### Keeping the puzzle readable over it
+
+The art brackets the puzzle on both sides of the value scale — `music-1`'s dark
+wood is as dark as the paths' casing, and lamp cores and window bays are
+*brighter* than the old bone dash was. No single tone can win against both, so
+every piece of the puzzle layer is drawn **two-tone**: a near-black core with a
+light rim outside it (`INK` / `RIM` / `DASH` at the top of `CatCoverGame.jsx`).
+Whichever half loses against a given room, the other one carries the edge.
+
+- Paths: a `#150C06` scrim, a cream rim, the dark casing, then dashes brighter
+  than anything painted. The four layers are identical on every edge, so they
+  are drawn as **one joined path each** (`vals.web`) rather than four per edge —
+  fewer elements than before, and it keeps every unlit layer below every lit one
+  so a path's magenta can't be overpainted by its neighbour's casing.
+- Pads: gold ring framed in a near-black outer ring, over a dark disc.
+- Smashables: a bracket mark (`MARK`) that fades once the fixture is wrecked.
+  The room art is full of drawn lamps, books and plants, so a target needs a
+  mark no painted object would ever have.
+- **DIM** (button, or `d`) drops the house group to `HOUSE_DIM_LOW`. It sits over
+  the dark `#cc-void` ground, so lowering the group's opacity reads as the lights
+  going out — no filter, no extra elements. On by default only for
+  `prefers-contrast: more`.
+
+No SVG filters, masks or `backdrop-filter` anywhere on the board: they force a
+raster pass per frame. Everything above is plain strokes.
+
 ## Naming note
 
 Code comments, variable names (`BLACKOUT engine`, `bo-*` CSS classes in the
