@@ -52,7 +52,8 @@ visuals — `app/src/assets/` and the camera system in `CatCoverGame.jsx` are.
 - `app/` — the actual React app (Vite + React 19, JS not TS). This is what
   ships and what you should be editing for any real feature/bug work.
   - `src/CatCoverGame.jsx` — the entire game (single class component): state,
-    level queueing, input handling, audio (Web Audio chirps/crashes), share
+    level queueing, input handling, audio (Web Audio chirps/crashes plus the
+    recorded crackles in `src/assets/sfx/`), share
     card, keyboard support, and the camera (below).
   - `src/engine.js` — pure, framework-free: seeded RNG, gadget-based level
     generator (leaf chains, degree-2 paths, cycles, hubs, crowns), exact
@@ -81,6 +82,14 @@ visuals — `app/src/assets/` and the camera system in `CatCoverGame.jsx` are.
     (`THING_BASELINE`). `index.js` picks them up by glob, so the file name
     `<name>-<pose>.png` is the contract; adding an item means four frames
     plus a line in `ITEMS`.
+  - `src/assets/sfx/` — the recorded sound effects, as opposed to the chirps,
+    crashes and fanfare the game synthesises in the Web Audio graph. Today
+    that is the crackles a hired cat lands with (`crackle-<n>.wav`, globbed by
+    `index.js`, one picked at random per hire); recalling a cat deliberately
+    keeps the synthesised chirp, so hiring and recalling never sound alike.
+    `app/tools/prep-sfx.py` trims the room tone off a raw take and levels it —
+    untrimmed, a recording starts up to half a second after the tap that
+    caused it. See the README there.
   - `src/index.css` / `index.html` — global styles, fonts (Luckiest Guy +
     Nunito from Google Fonts), page title/meta. The `cc-*` keyframes live
     here; an empty pad uses `cc-slotspin` (the turning dashed ring), a hired
