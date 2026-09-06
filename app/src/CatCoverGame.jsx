@@ -59,6 +59,25 @@ const MAP_W = 152, MAP_H = 118;   // minimap, shown only when a house overflows
    on the board. Until a type has art, a tile falls back to a plain drawn room
    in the same materials. */
 const HOUSE_DIM = 0.95;
+const HOUSE_DIM_LOW = 0.42;   // what the DIM button drops the house to
+
+/* The puzzle is drawn two-tone — a cream rim outside a dark casing — so it
+   keeps its edge over a dark study floor and a pale bathroom tile alike,
+   without either layer having to know what it is sitting on. */
+const INK = '#241409', RIM = '#F6EAD3', DASH = '#FFF3D8';
+/* the art's brightest pixels — lamp cores and window bays — sit around
+   luminance 234, so the dash has to clear that or it loses wherever the room
+   is lit; #FFF3D8 is 244 and warm, so it gains contrast without going cold */
+const W_SCRIM = 34, W_RIM = 21, W_INK = 15, W_DASH = 6.5;
+const W_GLOW = 26, W_LIT = 13, W_CORE = 4.4;
+const DASH_ON = '13 9', FLOW = '5 16';
+/* the opening sweep: three slow breaths of the whole web, deep enough to see
+   over a busy room and long enough to outlast the establishing shot */
+const PULSE_MS = 900, PULSE_N = 3, PULSE_GROW = 1.55;
+/* a surveyor's mark around a fixture: four corner ticks, so a target can never
+   be read as one of the room's own drawn lamps or books */
+const MARK = 'M -26 -24 L -26 -30 L -20 -30 M 20 -30 L 26 -30 L 26 -24'
+  + ' M 26 10 L 26 16 L 20 16 M -20 16 L -26 16 L -26 10';
 const THING_NAMES = THINGS.map(t => t.name);
 const FLOOR_FILL = {
   living: 'url(#cc-planks)', study: 'url(#cc-planks)', hall: 'url(#cc-planks)',
@@ -101,6 +120,9 @@ export default class CatCoverGame extends Component {
     aspect: CAM_A,
     boardW: 640,
     expanded: false,
+    /* someone who has asked their system for more contrast gets the house
+       turned down from the start; everyone else can hit DIM */
+    dim: !!(window.matchMedia && window.matchMedia('(prefers-contrast: more)').matches),
     grabbing: false,
   };
 
@@ -242,6 +264,20 @@ export default class CatCoverGame extends Component {
         { duration: 620, easing: 'cubic-bezier(.1,.8,.2,1)' });
     });
   }
+  /* one sweep of the whole web when a site opens, or when the crew is recalled
+     and the board goes unlit again: the puzzle announces itself against the
+     room art while the establishing shot still has all of it in frame */
+  pulse() {
+    if (this.reduced()) return;
+    requestAnimationFrame(() => {
+      const el = document.getElementById('cc-web');
+      if (el && el.animate) el.animate(
+        [{ strokeWidth: W_RIM, opacity: .8 },
+         { strokeWidth: W_RIM * PULSE_GROW, opacity: 1, offset: .5 },
+         { strokeWidth: W_RIM, opacity: .8 }],
+        { duration: PULSE_MS, iterations: PULSE_N, easing: 'ease-in-out' });
+    });
+  }
   flash() {
     const el = document.getElementById('cc-flash');
     if (el && el.animate) el.animate([{ opacity: 0.55 }, { opacity: 0.55, offset: 0.16 }, { opacity: 0 }],
@@ -277,7 +313,7 @@ export default class CatCoverGame extends Component {
     this.bloom(i);
     if (done) { this.flash(); this.fanfare(); }
   }
-  reset() { this.setState({ placed: [], hint: null, msg: '', focus: 0 }); }
+  reset() { this.setState({ placed: [], hint: null, msg: '', focus: 0 }); this.pulse(); }
   go(i) {
     if (i < 0 || i > 6 || !this.state.levels[i]) return;
     this.setState({ idx: i, placed: [], hint: null, msg: '', focus: 0, copied: false });
@@ -317,6 +353,7 @@ export default class CatCoverGame extends Component {
     if (k === 'n' || k === 'N') { e.preventDefault(); return this.next(); }
     if (k === 'f' || k === 'F') { e.preventDefault(); return this.fit(); }
     if (k === 'e' || k === 'E') { e.preventDefault(); return this.setState(s => ({ expanded: !s.expanded })); }
+    if (k === 'd' || k === 'D') { e.preventDefault(); return this.setState(s => ({ dim: !s.dim })); }
     if (k === '+' || k === '=') { e.preventDefault(); return this.zoomBy(1.25); }
     if (k === '-' || k === '_') { e.preventDefault(); return this.zoomBy(0.8); }
     if (k === '1' || k === '2' || k === '3') { e.preventDefault(); return this.hint(+k); }
@@ -404,6 +441,7 @@ export default class CatCoverGame extends Component {
   /* entering a house: an establishing shot of the whole place, then in to play zoom */
   frame(i) {
     const lv = this.state.levels[i]; if (!lv) return;
+    this.pulse();
     const L = this.layout(lv), zb = this.zBounds(L);
     const play = { x: L.cx, y: L.cy, z: Z_PLAY };
     const whole = { x: L.content.x + L.content.w / 2, y: L.content.y + L.content.h / 2, z: zb.fit };
@@ -583,9 +621,9 @@ export default class CatCoverGame extends Component {
       levelNo: st.idx + 1, stars: lv ? '✦'.repeat(lv.stars) : '',
       plaque: lv ? SITES[st.idx] : 'DISPATCHING CREW…',
       box: '0 0 ' + this.camW() + ' ' + CAM_H, view: { x: 0, y: 0, w: this.camW(), h: CAM_H },
-      edges: [], sprites: [], proof: [], map: null,
+      edges: [], web: '', sprites: [], proof: [], map: null,
       floor: { x: 0, y: 0, w: this.camW(), h: CAM_H },
-      house: null, rooms: [],
+      house: null, rooms: [], houseO: st.dim ? HOUSE_DIM_LOW : HOUSE_DIM,
       used: st.placed.length, par: lv ? lv.k : 0, litCount: 0, edgeCount: lv ? lv.edges.length : 0,
       usedColor: '#FFF3D8', msg: st.msg, msgColor: '#C9B8E0',
       steps: [
@@ -617,6 +655,10 @@ export default class CatCoverGame extends Component {
         { k: 'fit', t: 'FIT', label: 'frame the whole site', go: () => this.fit() },
         { k: 'exp', t: st.expanded ? '↘↖' : '↖↘', label: st.expanded ? 'shrink the board' : 'expand the board',
           go: () => this.setState(s => ({ expanded: !s.expanded })) },
+        /* the house is lovely and busy; DIM turns its lights down so the
+           puzzle is all that is left standing */
+        { k: 'dim', t: 'DIM', label: st.dim ? 'turn the house lights back up' : 'dim the house',
+          bg: st.dim ? '#FFD469' : '#F4E4C4', go: () => this.setState(s => ({ dim: !s.dim })) },
       ],
       showShare: st.results.filter(Boolean).length === 7,
       shareText: this.share(), copyLabel: st.copied ? 'COPIED!' : 'COPY INVOICE',
@@ -661,13 +703,7 @@ export default class CatCoverGame extends Component {
       const A = pos[flip ? v : u], B = pos[flip ? u : v];
       if (!seen(Math.min(A.x, B.x) - 60, Math.min(A.y, B.y) - 60, Math.max(A.x, B.x) + 60, Math.max(A.y, B.y) + 60)) return;
       const c = this.cable(A, B);
-      vals.edges.push({
-        key: i, d: c.d, off: on ? 0 : 1, on,
-        w1: +(15 * catS).toFixed(1), w2: +(6 * catS).toFixed(1), w3: +(26 * catS).toFixed(1),
-        w4: +(13 * catS).toFixed(1), w5: +(4.4 * catS).toFixed(1),
-        dash: (11 * catS).toFixed(1) + ' ' + (11 * catS).toFixed(1),
-        flow: (5 * catS).toFixed(1) + ' ' + (16 * catS).toFixed(1),
-      });
+      vals.edges.push({ key: i, d: c.d, off: on ? 0 : 1, on });
       const t = THINGS[P.edgeThing[i]] || THINGS[(u * 7 + v * 3 + i) % THINGS.length];
       vals.sprites.push({
         thing: true, key: 't' + i, base: c.my + THING_FOOT * objS,
@@ -681,7 +717,7 @@ export default class CatCoverGame extends Component {
         f1: on ? 'cc-break-1 .5s steps(1, end) forwards' : 'none',
         f2: on ? 'cc-break-2 .5s steps(1, end) forwards' : 'none',
         f3: on ? 'cc-break-3 .5s steps(1, end) forwards' : 'none',
-        idleO: on ? 0 : 1,
+        idleO: on ? 0 : 1, markO: on ? 0 : 0.72,
       });
     });
 
@@ -707,7 +743,7 @@ export default class CatCoverGame extends Component {
         on: on ? 1 : 0,
         /* an empty pad shows a slowly-turning dashed ring + paw stencil; once a
            cat is hired the pad fades out under it */
-        slotO: on ? 0 : 0.9,
+        slotO: on ? 0 : 0.9, rimO: on ? 0 : 0.9,
         slotAnim: on ? 'none' : 'cc-slotspin 3.6s linear infinite',
         haloO: on ? 0.2 : 0, ringO: on ? 1 : 0,
         glow: on ? 'cc-glow 1.8s ease-in-out infinite' : 'none',
@@ -722,6 +758,12 @@ export default class CatCoverGame extends Component {
     /* painter's order: whoever stands further back is drawn first, so a cat in
        front overlaps the cat and the smashables behind it */
     vals.sprites.sort((a, b) => a.base - b.base);
+
+    /* The scrim, rim, casing and dash are identical on every path, so they are
+       drawn as one path each rather than four per edge: fewer elements, and it
+       puts every unlit layer below every lit one, so a path's magenta can no
+       longer be overpainted by its neighbour's casing where they meet. */
+    vals.web = vals.edges.map(e => e.d).join(' ');
 
     /* the minimap only earns its space when the house doesn't fit in the frame */
     const C = L.content;
@@ -924,8 +966,8 @@ export default class CatCoverGame extends Component {
                     <stop offset="100%" stopColor="#1A0E06" stopOpacity={.30} />
                   </radialGradient>
                   <radialGradient id="cc-contact">
-                    <stop offset="0%" stopColor="#12060B" stopOpacity={.5} />
-                    <stop offset="60%" stopColor="#12060B" stopOpacity={.28} />
+                    <stop offset="0%" stopColor="#12060B" stopOpacity={.62} />
+                    <stop offset="60%" stopColor="#12060B" stopOpacity={.34} />
                     <stop offset="100%" stopColor="#12060B" stopOpacity={0} />
                   </radialGradient>
                   {/* one floor pattern per room material; all world-anchored,
@@ -964,7 +1006,7 @@ export default class CatCoverGame extends Component {
                 {/* the building: one drawn room per tile, under the paths
                     and dimmed as one group so the puzzle stays loud */}
                 {v.house && (
-                  <g opacity={HOUSE_DIM} style={{ pointerEvents: 'none' }}>
+                  <g opacity={v.houseO} style={{ pointerEvents: 'none', transition: 'opacity 220ms ease-out' }}>
                     <rect x={v.house.outer.x} y={v.house.outer.y} width={v.house.outer.w} height={v.house.outer.h}
                       fill="#241610" />
                     {v.rooms.map(r => {
@@ -982,15 +1024,22 @@ export default class CatCoverGame extends Component {
                   </g>
                 )}
 
+                {!!v.web && (
+                  <g>
+                    <path d={v.web} fill="none" stroke="#150C06" strokeWidth={W_SCRIM} strokeOpacity={.24} strokeLinecap="round" />
+                    <path id="cc-web" d={v.web} fill="none" stroke={RIM} strokeWidth={W_RIM} strokeLinecap="round" opacity={.8} />
+                    <path d={v.web} fill="none" stroke={INK} strokeWidth={W_INK} strokeLinecap="round" />
+                    <path d={v.web} fill="none" stroke={DASH} strokeWidth={W_DASH} strokeLinecap="round" strokeDasharray={DASH_ON} opacity={.95} />
+                  </g>
+                )}
+
                 {v.edges.map(e => (
                   <g key={e.key}>
-                    <path d={e.d} fill="none" stroke="#241409" strokeWidth={e.w1} strokeLinecap="round" opacity={.92} />
-                    <path d={e.d} fill="none" stroke="#D6C2A6" strokeWidth={e.w2} strokeLinecap="round" strokeDasharray={e.dash} opacity={.85} />
-                    <path d={e.d} pathLength="1" fill="none" stroke="#F06BFF" strokeWidth={e.w3} strokeOpacity={.22} strokeLinecap="round" strokeDasharray="1 1" strokeDashoffset={e.off} style={{ transition: 'stroke-dashoffset 500ms cubic-bezier(.15,.85,.25,1)' }} />
-                    <path d={e.d} pathLength="1" fill="none" stroke="#C64BE8" strokeWidth={e.w4} strokeLinecap="round" strokeDasharray="1 1" strokeDashoffset={e.off} style={{ transition: 'stroke-dashoffset 420ms cubic-bezier(.15,.85,.25,1)' }} />
-                    <path d={e.d} pathLength="1" fill="none" stroke="#FFEFFF" strokeWidth={e.w5} strokeLinecap="round" strokeDasharray="1 1" strokeDashoffset={e.off} style={{ transition: 'stroke-dashoffset 360ms cubic-bezier(.15,.85,.25,1)' }} />
+                    <path d={e.d} pathLength="1" fill="none" stroke="#F06BFF" strokeWidth={W_GLOW} strokeOpacity={.22} strokeLinecap="round" strokeDasharray="1 1" strokeDashoffset={e.off} style={{ transition: 'stroke-dashoffset 500ms cubic-bezier(.15,.85,.25,1)' }} />
+                    <path d={e.d} pathLength="1" fill="none" stroke="#C64BE8" strokeWidth={W_LIT} strokeLinecap="round" strokeDasharray="1 1" strokeDashoffset={e.off} style={{ transition: 'stroke-dashoffset 420ms cubic-bezier(.15,.85,.25,1)' }} />
+                    <path d={e.d} pathLength="1" fill="none" stroke="#FFEFFF" strokeWidth={W_CORE} strokeLinecap="round" strokeDasharray="1 1" strokeDashoffset={e.off} style={{ transition: 'stroke-dashoffset 360ms cubic-bezier(.15,.85,.25,1)' }} />
                     {e.on && (
-                      <path d={e.d} fill="none" stroke="#FFFFFF" strokeWidth={e.w5} strokeLinecap="round" strokeDasharray={e.flow} style={{ animation: 'cc-dash 800ms linear infinite' }} />
+                      <path d={e.d} fill="none" stroke="#FFFFFF" strokeWidth={W_CORE} strokeLinecap="round" strokeDasharray={FLOW} style={{ animation: 'cc-dash 800ms linear infinite' }} />
                     )}
                   </g>
                 ))}
@@ -1003,7 +1052,9 @@ export default class CatCoverGame extends Component {
                     stands in front overlaps whoever stands behind */}
                 {v.sprites.map(o => (o.thing ? (
                   <g key={o.key} transform={'translate(' + o.x + ' ' + o.y + ') scale(' + o.s + ')'}>
-                    <ellipse cx={0} cy={11} rx={17} ry={6} fill="url(#cc-contact)" />
+                    <ellipse cx={0} cy={11} rx={19} ry={7} fill="url(#cc-contact)" />
+                    <path d={MARK} fill="none" stroke={RIM} strokeWidth={2.8} strokeLinecap="round" strokeLinejoin="round"
+                      opacity={o.markO} style={{ transition: 'opacity 320ms ease-out' }} />
                     <g style={{ animation: o.body, transformOrigin: '0px ' + THING_FOOT + 'px' }}>
                       <image href={o.idle} x={-THING_D / 2} y={THING_TOP} width={THING_D} height={THING_D} opacity={o.idleO} style={{ animation: o.f0 }}>
                         <title>{o.label}</title>
@@ -1021,12 +1072,14 @@ export default class CatCoverGame extends Component {
                 ) : (
                   <g key={o.key} transform={'translate(' + o.x + ' ' + o.y + ') scale(' + o.s + ')'}>
                     <circle cx={0} cy={-8} r={o.pulseR} fill="none" stroke="#FFD469" strokeWidth={3} opacity={o.pulseO} style={{ animation: o.anim }} />
-                    <ellipse cx={0} cy={18} rx={22} ry={7.5} fill="url(#cc-contact)" />
+                    <ellipse cx={0} cy={18} rx={25} ry={9} fill="url(#cc-contact)" />
                     {/* empty deployment pad: a slowly-turning dashed ring with a paw
                         stencil, fades out once a cat is hired */}
-                    <circle cx={0} cy={4} r={20} fill="rgba(0,0,0,.4)" stroke="#FFD469" strokeWidth={2.6} strokeDasharray="9 8"
+                    <circle cx={0} cy={4} r={23.5} fill="none" stroke="#1A0E06" strokeWidth={4.5}
+                      opacity={o.rimO} style={{ transition: 'opacity 160ms ease-out' }} />
+                    <circle cx={0} cy={4} r={20} fill="rgba(10,5,3,.62)" stroke="#FFD469" strokeWidth={3.4} strokeDasharray="9 8"
                       opacity={o.slotO} style={{ animation: o.slotAnim, transformOrigin: '0px 4px', transition: 'opacity 160ms ease-out' }} />
-                    <g opacity={o.slotO} fill="#FFD469" transform="translate(0 4)" style={{ transition: 'opacity 160ms ease-out' }}>
+                    <g opacity={o.slotO} fill="#FFE49A" transform="translate(0 4)" style={{ transition: 'opacity 160ms ease-out' }}>
                       <ellipse cx={0} cy={3} rx={5.6} ry={4.4} />
                       <circle cx={-5.2} cy={-4.4} r={2.2} />
                       <circle cx={-1.8} cy={-7.4} r={2.2} />
@@ -1058,7 +1111,7 @@ export default class CatCoverGame extends Component {
               <div style={{ position: 'absolute', right: v.ui.pad, top: v.ui.pad, zIndex: 4, display: 'flex', gap: v.ui.gap }}>
                 {v.tools.map(t => (
                   <button key={t.k} type="button" onClick={t.go} aria-label={t.label} title={t.label}
-                    style={{ minWidth: v.ui.btn + 2, height: v.ui.btn, padding: '0 ' + Math.round(8 * v.ui.k) + 'px', background: '#F4E4C4', border: '3px solid #2A1524', borderRadius: 9, boxShadow: '0 3px 0 #2A1524', color: '#3E2718', fontFamily: luckiest, fontSize: v.ui.font, lineHeight: 1, cursor: 'pointer' }}>{t.t}</button>
+                    style={{ minWidth: v.ui.btn + 2, height: v.ui.btn, padding: '0 ' + Math.round(8 * v.ui.k) + 'px', background: t.bg || '#F4E4C4', border: '3px solid #2A1524', borderRadius: 9, boxShadow: '0 3px 0 #2A1524', color: '#3E2718', fontFamily: luckiest, fontSize: v.ui.font, lineHeight: 1, cursor: 'pointer' }}>{t.t}</button>
                 ))}
               </div>
 
@@ -1072,7 +1125,7 @@ export default class CatCoverGame extends Component {
                       fill="rgba(244,228,196,.07)" stroke="rgba(244,228,196,.22)" strokeWidth={1} />
                   ))}
                   {v.map.edges.map(e => (
-                    <line key={e.key} x1={e.x1} y1={e.y1} x2={e.x2} y2={e.y2} stroke={e.on ? '#C64BE8' : '#8A7A6A'} strokeWidth={e.on ? 2.6 : 1.6} strokeLinecap="round" />
+                    <line key={e.key} x1={e.x1} y1={e.y1} x2={e.x2} y2={e.y2} stroke={e.on ? '#C64BE8' : '#F4E4C4'} strokeWidth={e.on ? 2.6 : 1.7} opacity={e.on ? 1 : .55} strokeLinecap="round" />
                   ))}
                   {v.map.nodes.map(n => (
                     <circle key={n.key} cx={n.x} cy={n.y} r={n.on ? 3.4 : 2.3} fill={n.on ? '#FFD469' : '#F4E4C4'} opacity={n.on ? 1 : .5} />
@@ -1149,7 +1202,7 @@ export default class CatCoverGame extends Component {
               </div>
             )}
 
-            <div style={{ fontSize: 11, fontWeight: 800, lineHeight: 1.7, letterSpacing: '.04em', color: '#8E7AAE' }}>TAP A PAD TO DEPLOY · TAP THE CAT TO RECALL IT · DRAG TO PAN · SCROLL OR + − TO ZOOM · F FRAME THE SITE · E EXPAND · ARROWS + ENTER · 1 2 3 CONSULT · R RECALL CREW</div>
+            <div style={{ fontSize: 11, fontWeight: 800, lineHeight: 1.7, letterSpacing: '.04em', color: '#8E7AAE' }}>TAP A PAD TO DEPLOY · TAP THE CAT TO RECALL IT · DRAG TO PAN · SCROLL OR + − TO ZOOM · F FRAME THE SITE · E EXPAND · D DIM THE HOUSE · ARROWS + ENTER · 1 2 3 CONSULT · R RECALL CREW</div>
           </aside>
         </div>
       </div>
