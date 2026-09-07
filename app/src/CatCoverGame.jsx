@@ -5,6 +5,8 @@ import { THINGS, THING_BASELINE } from './assets/things/index.js';
 import { CRACKLES } from './assets/sfx/index.js';
 import { buildHouse, houseSeed, HOUSE as HZ } from './house.js';
 import { roomArt, ROOM_CATALOGUE } from './assets/rooms/index.js';
+import { supabase, nickFromEmail, ensureProfile, getProfile, recordClear } from './supabase.js';
+import AccountScreen from './AccountScreen.jsx';
 
 const SOUND_ON = true;
 const CRACKLE_GAIN = 0.3;   // recorded takes are normalised hot; this sits them
@@ -107,6 +109,10 @@ function plainRoom(r) {
 export default class CatCoverGame extends Component {
   state = {
     screen: 'intro',
+    acctFrom: 'intro',
+    account: null,
+    userId: null,
+    nickname: null,
     levels: [null, null, null, null, null, null, null],
     idx: 0,
     placed: [],
@@ -137,6 +143,8 @@ export default class CatCoverGame extends Component {
     this.setState({ levels }, () => this.frame(0));
     this.queue(1);
     this.loadCrackles();
+    supabase.auth.getSession().then(({ data }) => this.applySession(data.session));
+    this.authSub = supabase.auth.onAuthStateChange((_e, session) => this.applySession(session)).data.subscription;
   }
   componentWillUnmount() {
     window.removeEventListener('keydown', this.onKey);
@@ -144,6 +152,26 @@ export default class CatCoverGame extends Component {
     cancelAnimationFrame(this._raf);
     clearTimeout(this._shot);
     if (this._svg) this._svg.removeEventListener('wheel', this.onWheel);
+    if (this.authSub) this.authSub.unsubscribe();
+  }
+  /* sign-in state is derived purely from Supabase's own session — never from
+     app-owned storage — so this and AccountScreen always agree */
+  applySession(session) {
+    const user = session && session.user;
+    this.setState({ account: user ? user.email : null, userId: user ? user.id : null, nickname: null });
+    if (user) {
+      ensureProfile(user).then(() => getProfile(user.id))
+        .then(p => this.setState({ nickname: (p && p.nickname) || nickFromEmail(user.email) }));
+    }
+  }
+  openAccount(from) { this.setState({ screen: 'account', acctFrom: from }); }
+  closeAccount() { this.setState({ screen: this.state.acctFrom || 'intro' }); }
+  /* the pick made on the Staff Office ID card, synced back here immediately
+     so the badge never shows the stale email-derived name after an edit */
+  badgeLabel() { return this.state.account ? (this.state.nickname || nickFromEmail(this.state.account)) : 'STAFF LOGIN'; }
+  badgeSub() {
+    if (!this.state.account) return 'SAVE YOUR SCORE';
+    return this.state.results.filter(r => r === 'perfect').length + '/7 PURR-FECT';
   }
 
   seed() { return this.day() + 11; }
@@ -260,7 +288,7 @@ export default class CatCoverGame extends Component {
     requestAnimationFrame(() => {
       const el = document.getElementById('cc-bloom-' + i);
       if (el && el.animate) el.animate(
-        [{ r: 8, opacity: 0.9, strokeWidth: 5 }, { r: 44, opacity: 0, strokeWidth: 0.6 }],
+        [{ r: '8px', opacity: 0.9, strokeWidth: 5 }, { r: '44px', opacity: 0, strokeWidth: 0.6 }],
         { duration: 620, easing: 'cubic-bezier(.1,.8,.2,1)' });
     });
   }
@@ -306,7 +334,16 @@ export default class CatCoverGame extends Component {
     const after = this.litSet(lv, placed).size;
     const done = after === lv.edges.length;
     const results = this.state.results.slice();
-    if (done) results[this.state.idx] = placed.length <= lv.k ? 'perfect' : 'over';
+    if (done) {
+      results[this.state.idx] = placed.length <= lv.k ? 'perfect' : 'over';
+      if (this.state.userId) {
+        recordClear(this.state.userId, this.day(), this.state.idx, placed.length, lv.k, lv.stars).then(({ error }) => {
+          if (error) this.setState({ msg: 'SCORE NOT SAVED — ' + error });
+        });
+      } else if (this.state.account) {
+        this.setState({ msg: 'SCORE NOT SAVED — SIGNED IN BUT NO USER ID' });
+      }
+    }
     this.setState({ placed, results, focus: i, hint: null, msg: '', copied: false });
     if (!this.crackle()) this.chirp(placed.length, true);
     this.crash(after - before);
@@ -347,6 +384,7 @@ export default class CatCoverGame extends Component {
       if (k === 'Enter' || k === ' ') { e.preventDefault(); this.setState({ screen: 'game' }); }
       return;
     }
+    if (this.state.screen !== 'game') return;
     const lv = this.lv(); if (!lv) return;
     if (!this.state.kbd) this.setState({ kbd: true });
     if (k === 'r' || k === 'R') { e.preventDefault(); return this.reset(); }
@@ -665,7 +703,7 @@ export default class CatCoverGame extends Component {
       banner: '', bannerBg: 'rgba(255,255,255,.08)', bannerInk: '#F4E4C4',
       nextBg: 'rgba(255,255,255,.22)', nextLabel: 'NEXT', nextO: 0.45,
     };
-    vals.msgColor = st.msg && st.msg.indexOf('PAYROLL') === 0 ? '#FF8FA8' : '#FFD469';
+    vals.msgColor = st.msg && (st.msg.indexOf('PAYROLL') === 0 || st.msg.indexOf('SCORE NOT SAVED') === 0) ? '#FF8FA8' : '#FFD469';
     if (!lv) return vals;
 
     const L = this.layout(lv), pos = L.pos, pset = new Set(st.placed);
@@ -820,6 +858,11 @@ export default class CatCoverGame extends Component {
               <span style={{ fontSize: 13, fontWeight: 900, letterSpacing: '.16em', color: '#8E7AAE' }}>FELINE DIVISION · EST. 2019</span>
               <span style={{ fontSize: 17, fontWeight: 800, lineHeight: 1.4, color: '#F4E4C4', textWrap: 'pretty' }}>We don't own a wrecking ball. We own <span style={{ color: '#F06BFF', fontWeight: 900 }}>cats</span>.</span>
             </div>
+            <button type="button" onClick={() => this.openAccount('intro')}
+              style={{ marginLeft: 'auto', alignSelf: 'flex-start', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3, background: 'rgba(255,255,255,.08)', border: '3px solid #2A1524', borderRadius: 12, padding: '9px 15px', cursor: 'pointer' }}>
+              <span style={{ fontFamily: luckiest, fontSize: 14, letterSpacing: '.03em', color: '#FFD469' }}>{this.badgeLabel()}</span>
+              <span style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: '.05em', color: '#C9B8E0' }}>{this.badgeSub()}</span>
+            </button>
           </div>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 18, alignItems: 'stretch' }}>
@@ -900,6 +943,10 @@ export default class CatCoverGame extends Component {
   }
 
   render() {
+    if (this.state.screen === 'account') {
+      return <AccountScreen onClose={() => this.closeAccount()} weeklyResults={this.state.results}
+        onNicknameChange={n => this.setState({ nickname: n })} />;
+    }
     if (this.state.screen === 'intro') return this.renderIntro();
     const v = this.renderVals();
     const luckiest = "'Luckiest Guy', cursive";
@@ -913,6 +960,12 @@ export default class CatCoverGame extends Component {
               <span style={{ fontFamily: luckiest, fontSize: 40, letterSpacing: '.01em', color: '#F7B32B', WebkitTextStroke: '6px #2A1524', paintOrder: 'stroke fill', textShadow: '0 5px 0 #2A1524' }}>CATASTROPHE</span>
               <span style={{ fontFamily: luckiest, fontSize: 34, letterSpacing: '.04em', color: '#EADDF7', WebkitTextStroke: '6px #2A1524', paintOrder: 'stroke fill', textShadow: '0 5px 0 #2A1524' }}>INC.</span>
             </div>
+
+            <button type="button" onClick={() => this.openAccount('game')}
+              style={{ alignSelf: 'stretch', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, background: 'rgba(255,255,255,.08)', border: '3px solid #2A1524', borderRadius: 12, padding: '9px 13px', cursor: 'pointer' }}>
+              <span style={{ fontFamily: luckiest, fontSize: 14, color: '#FFD469' }}>{this.badgeLabel()}</span>
+              <span style={{ fontSize: 10.5, fontWeight: 800, color: '#C9B8E0', textAlign: 'right' }}>{this.badgeSub()}</span>
+            </button>
 
             <div style={{ background: 'linear-gradient(#F6E8CA, #EBD8AE)', border: '3px solid #2A1524', borderRadius: '4px 14px 6px 16px', boxShadow: '0 5px 0 #2A1524, inset 0 0 26px rgba(150,110,60,.25)', padding: '13px 15px', transform: 'rotate(-1.2deg)' }}>
               <div style={{ fontFamily: luckiest, fontSize: 18, lineHeight: 1.22, color: '#3E2718', textWrap: 'pretty' }}>HIRE THE FEWEST CATS THAT STILL <span style={{ color: '#8A3FC0' }}>FLATTEN THE LOT.</span></div>
