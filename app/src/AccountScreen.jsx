@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { supabase, nickFromEmail, ensureProfile, getProfile, updateNickname, getAllTimeCount, getLeaderboard } from './supabase.js';
+import { supabase, APP_BASE_URL, ensureProfile, getProfile, setUsername, displayName, getAllTimeCount, getLeaderboard } from './supabase.js';
+import CrewScreen from './CrewScreen.jsx';
 
 const EMAIL_RE = /\S+@\S+\.\S+/;
 const luckiest = "'Luckiest Guy', cursive";
@@ -8,22 +9,23 @@ const luckiest = "'Luckiest Guy', cursive";
    the game as its own full-page screen. Sign-in state is derived purely
    from Supabase's own session (getSession + onAuthStateChange), never from
    app-owned storage, so this and the badge in CatCoverGame always agree. */
-export default function AccountScreen({ onClose, weeklyResults, onNicknameChange }) {
+export default function AccountScreen({ onClose, weeklyResults, onNameChange }) {
   const [step, setStep] = useState('loading');
   const [typedEmail, setTypedEmail] = useState('');
   const [email, setEmail] = useState('');
   const [userId, setUserId] = useState(null);
-  const [nickname, setNickname] = useState('');
-  const [editingNick, setEditingNick] = useState(false);
-  const [nickDraft, setNickDraft] = useState('');
-  const [savingNick, setSavingNick] = useState(false);
-  const [nickErr, setNickErr] = useState('');
+  const [handle, setHandle] = useState('');
+  const [editingHandle, setEditingHandle] = useState(false);
+  const [handleDraft, setHandleDraft] = useState('');
+  const [savingHandle, setSavingHandle] = useState(false);
+  const [handleErr, setHandleErr] = useState('');
   const [tab, setTab] = useState('week');
   const [board, setBoard] = useState([]);
   const [boardErr, setBoardErr] = useState('');
   const [allTime, setAllTime] = useState(0);
   const [allTimeErr, setAllTimeErr] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [crewOpen, setCrewOpen] = useState(false);
 
   const applySession = useCallback(session => {
     const user = session && session.user;
@@ -33,7 +35,7 @@ export default function AccountScreen({ onClose, weeklyResults, onNicknameChange
       setUserId(user.id);
       ensureProfile(user).then(() => {
         getAllTimeCount(user.id).then(({ count, error }) => { setAllTime(count); setAllTimeErr(error || ''); });
-        getProfile(user.id).then(p => setNickname((p && p.nickname) || nickFromEmail(user.email)));
+        getProfile(user.id).then(p => setHandle((p && p.username) || ''));
       });
     } else {
       setStep(s => (s === 'sent' ? 'sent' : 'signin'));
@@ -41,8 +43,8 @@ export default function AccountScreen({ onClose, weeklyResults, onNicknameChange
       setUserId(null);
       setAllTime(0);
       setAllTimeErr('');
-      setNickname('');
-      setEditingNick(false);
+      setHandle('');
+      setEditingHandle(false);
     }
   }, []);
 
@@ -64,9 +66,15 @@ export default function AccountScreen({ onClose, weeklyResults, onNicknameChange
     const v = (typedEmail || '').trim();
     if (!EMAIL_RE.test(v)) return;
     setStep('sending');
-    supabase.auth.signInWithOtp({ email: v, options: { emailRedirectTo: window.location.href } }).then(({ error }) => {
+    supabase.auth.signInWithOtp({ email: v, options: { emailRedirectTo: APP_BASE_URL } }).then(({ error }) => {
       if (error) { setStep('signin'); setErrorMsg(error.message); }
       else setStep('sent');
+    });
+  }
+  function signInWithOAuth(provider) {
+    setErrorMsg('');
+    supabase.auth.signInWithOAuth({ provider, options: { redirectTo: APP_BASE_URL } }).then(({ error }) => {
+      if (error) setErrorMsg(error.message);
     });
   }
   function backToSignin(e) {
@@ -76,22 +84,24 @@ export default function AccountScreen({ onClose, weeklyResults, onNicknameChange
   }
   function signOut() { supabase.auth.signOut(); }
 
-  function startEditNick() { setNickDraft(nickname); setNickErr(''); setEditingNick(true); }
-  function cancelEditNick() { setEditingNick(false); setNickErr(''); }
-  function saveNickname() {
-    setSavingNick(true);
-    updateNickname(userId, nickDraft).then(({ error, nickname: saved }) => {
-      setSavingNick(false);
-      if (error) { setNickErr(error); return; }
-      setNickname(saved);
-      setEditingNick(false);
-      if (onNicknameChange) onNicknameChange(saved);
+  function startEditHandle() { setHandleDraft(handle); setHandleErr(''); setEditingHandle(true); }
+  function cancelEditHandle() { setEditingHandle(false); setHandleErr(''); }
+  function saveHandle() {
+    setSavingHandle(true);
+    setUsername(userId, handleDraft).then(({ error, username: saved }) => {
+      setSavingHandle(false);
+      if (error) { setHandleErr(error); return; }
+      setHandle(saved);
+      setEditingHandle(false);
+      if (onNameChange) onNameChange(saved);
     });
   }
 
   const weeklyPerfect = (weeklyResults || []).filter(r => r === 'perfect').length;
   const validEmail = EMAIL_RE.test(typedEmail || '');
   const busy = step === 'sending';
+
+  if (crewOpen) return <CrewScreen userId={userId} onClose={() => setCrewOpen(false)} />;
 
   return (
     <div style={{ minHeight: '100vh', boxSizing: 'border-box', padding: '22px 16px 40px', color: '#F4E4C4', background: 'radial-gradient(120% 90% at 50% 0%, #2A1B3D 0%, #170F22 55%, #100A18 100%)', fontFamily: "'Nunito', ui-rounded, system-ui, sans-serif" }}>
@@ -117,6 +127,15 @@ export default function AccountScreen({ onClose, weeklyResults, onNicknameChange
               {!!errorMsg && <div style={{ fontSize: 12.5, fontWeight: 800, color: '#C0405A' }}>{errorMsg}</div>}
               <button type="button" onClick={sendLink} disabled={busy || !validEmail}
                 style={{ minHeight: 56, background: validEmail ? '#FFD469' : '#E4D7BC', border: '3px solid #2A1524', borderRadius: 14, boxShadow: '0 4px 0 #2A1524', color: '#3E2718', fontFamily: luckiest, fontSize: 16, letterSpacing: '.04em', cursor: 'pointer', opacity: busy ? 0.7 : validEmail ? 1 : 0.6 }}>{busy ? 'SENDING…' : 'SEND PUNCH-IN LINK'}</button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '2px 0' }}>
+                <div style={{ flex: 1, height: 2, background: '#D8C49C' }} />
+                <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: '.08em', color: '#8A7350' }}>OR</div>
+                <div style={{ flex: 1, height: 2, background: '#D8C49C' }} />
+              </div>
+              <button type="button" onClick={() => signInWithOAuth('google')}
+                style={{ minHeight: 50, background: '#FFF7E6', border: '3px solid #2A1524', borderRadius: 12, boxShadow: '0 4px 0 #2A1524', color: '#3E2718', fontSize: 14, fontWeight: 900, letterSpacing: '.03em', cursor: 'pointer' }}>CONTINUE WITH GOOGLE</button>
+              <button type="button" disabled
+                style={{ minHeight: 50, background: '#B8ABA0', border: '3px solid #2A1524', borderRadius: 12, boxShadow: '0 4px 0 #2A1524', color: '#6E6259', fontSize: 14, fontWeight: 900, letterSpacing: '.03em', cursor: 'not-allowed', opacity: 0.7 }}>GITHUB &mdash; COMING SOON</button>
             </div>
           </div>
         )}
@@ -138,24 +157,24 @@ export default function AccountScreen({ onClose, weeklyResults, onNicknameChange
               <div style={{ alignSelf: 'flex-start', background: '#C877D8', border: '3px solid #2A1524', borderRadius: '9px 9px 0 0', boxShadow: '0 4px 0 #2A1524', padding: '5px 20px', fontFamily: luckiest, fontSize: 15, letterSpacing: '.06em', color: '#3E1B4A' }}>STAFF ID CARD</div>
               <div style={{ background: 'linear-gradient(#F6E8CA, #EBD8AE)', border: '3px solid #2A1524', borderRadius: '4px 16px 16px 16px', boxShadow: '0 6px 0 #2A1524, inset 0 0 36px rgba(150,110,60,.24)', padding: '20px 20px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-                  <div style={{ flex: 'none', width: 54, height: 54, borderRadius: '50%', background: '#6E3FA3', border: '3px solid #2A1524', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: luckiest, fontSize: 22, color: '#FFD469' }}>{nickname.slice(0, 1) || 'S'}</div>
+                  <div style={{ flex: 'none', width: 54, height: 54, borderRadius: '50%', background: '#6E3FA3', border: '3px solid #2A1524', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: luckiest, fontSize: 22, color: '#FFD469' }}>{(handle.slice(0, 1) || 'S').toUpperCase()}</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-                    {!editingNick ? (
+                    {!editingHandle ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <div style={{ fontFamily: luckiest, fontSize: 20, color: '#3E2718' }}>{nickname}</div>
-                        <button type="button" onClick={startEditNick} style={{ minHeight: 24, padding: '0 9px', background: '#FFF7E6', border: '2px solid #2A1524', borderRadius: 7, color: '#3E2718', fontSize: 10, fontWeight: 900, letterSpacing: '.05em', cursor: 'pointer' }}>EDIT</button>
+                        <div style={{ fontFamily: luckiest, fontSize: 20, color: '#3E2718' }}>{displayName({ username: handle })}</div>
+                        <button type="button" onClick={startEditHandle} style={{ minHeight: 24, padding: '0 9px', background: '#FFF7E6', border: '2px solid #2A1524', borderRadius: 7, color: '#3E2718', fontSize: 10, fontWeight: 900, letterSpacing: '.05em', cursor: 'pointer' }}>EDIT</button>
                       </div>
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                        <input value={nickDraft} onChange={e => setNickDraft(e.target.value)} maxLength={24} autoFocus
+                        <input value={handleDraft} onChange={e => setHandleDraft(e.target.value)} maxLength={16} autoFocus
                           style={{ minHeight: 34, width: 160, border: '2.5px solid #2A1524', borderRadius: 8, padding: '0 10px', fontSize: 14, fontWeight: 800, color: '#3E2718', background: '#FFF7E6', boxSizing: 'border-box' }} />
                         <div style={{ display: 'flex', gap: 6 }}>
-                          <button type="button" disabled={savingNick} onClick={saveNickname} style={{ minHeight: 26, padding: '0 11px', background: '#FFD469', border: '2px solid #2A1524', borderRadius: 7, color: '#3E2718', fontSize: 10, fontWeight: 900, letterSpacing: '.05em', cursor: 'pointer', opacity: savingNick ? 0.7 : 1 }}>{savingNick ? 'SAVING…' : 'SAVE'}</button>
-                          <button type="button" disabled={savingNick} onClick={cancelEditNick} style={{ minHeight: 26, padding: '0 11px', background: '#FFF7E6', border: '2px solid #2A1524', borderRadius: 7, color: '#3E2718', fontSize: 10, fontWeight: 900, letterSpacing: '.05em', cursor: 'pointer' }}>CANCEL</button>
+                          <button type="button" disabled={savingHandle} onClick={saveHandle} style={{ minHeight: 26, padding: '0 11px', background: '#FFD469', border: '2px solid #2A1524', borderRadius: 7, color: '#3E2718', fontSize: 10, fontWeight: 900, letterSpacing: '.05em', cursor: 'pointer', opacity: savingHandle ? 0.7 : 1 }}>{savingHandle ? 'SAVING…' : 'SAVE'}</button>
+                          <button type="button" disabled={savingHandle} onClick={cancelEditHandle} style={{ minHeight: 26, padding: '0 11px', background: '#FFF7E6', border: '2px solid #2A1524', borderRadius: 7, color: '#3E2718', fontSize: 10, fontWeight: 900, letterSpacing: '.05em', cursor: 'pointer' }}>CANCEL</button>
                         </div>
                       </div>
                     )}
-                    {!!nickErr && <div style={{ fontSize: 11, fontWeight: 800, color: '#C0405A' }}>{nickErr}</div>}
+                    {!!handleErr && <div style={{ fontSize: 11, fontWeight: 800, color: '#C0405A' }}>{handleErr}</div>}
                     <div style={{ fontSize: 12.5, fontWeight: 700, color: '#6A4A30' }}>{email}</div>
                   </div>
                   <button type="button" onClick={signOut} style={{ marginLeft: 'auto', minHeight: 40, padding: '0 14px', background: '#FFF7E6', border: '2.5px solid #2A1524', borderRadius: 10, color: '#3E2718', fontSize: 11.5, fontWeight: 900, letterSpacing: '.06em', cursor: 'pointer' }}>CLOCK OUT</button>
@@ -171,6 +190,11 @@ export default function AccountScreen({ onClose, weeklyResults, onNicknameChange
                   </div>
                 </div>
                 {!!allTimeErr && <div style={{ fontSize: 11, fontWeight: 800, color: '#C0405A' }}>COULDN'T LOAD STATS — {allTimeErr}</div>}
+                <button type="button" onClick={() => setCrewOpen(true)}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minHeight: 46, padding: '0 14px', background: '#FFF7E6', border: '2.5px solid #2A1524', borderRadius: 10, color: '#3E2718', fontSize: 12.5, fontWeight: 900, letterSpacing: '.05em', cursor: 'pointer' }}>
+                  <span>CREW ROSTER &amp; SQUADS</span>
+                  <span style={{ fontFamily: luckiest, fontSize: 16, color: '#8A3FC0' }}>&rsaquo;</span>
+                </button>
               </div>
             </div>
 
@@ -192,7 +216,7 @@ export default function AccountScreen({ onClose, weeklyResults, onNicknameChange
                 {board.map((row, i) => (
                   <div key={row.user_id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: row.user_id === userId ? '#FFE9B0' : '#FFF7E6', border: '2.5px solid #2A1524', borderRadius: 10, padding: '8px 12px' }}>
                     <span style={{ flex: 'none', width: 24, fontFamily: luckiest, fontSize: 14, color: i === 0 ? '#B8860B' : '#8A3FC0' }}>{i + 1}</span>
-                    <span style={{ flex: 1, fontSize: 13.5, fontWeight: 800, color: '#3E2718' }}>{row.nickname}{row.user_id === userId ? ' (YOU)' : ''}</span>
+                    <span style={{ flex: 1, fontSize: 13.5, fontWeight: 800, color: '#3E2718' }}>{displayName(row)}{row.user_id === userId ? ' (YOU)' : ''}</span>
                     <span style={{ fontFamily: luckiest, fontSize: 15, color: '#8A3FC0' }}>{row.score}</span>
                   </div>
                 ))}

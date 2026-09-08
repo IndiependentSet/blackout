@@ -5,7 +5,7 @@ import { THINGS, THING_BASELINE } from './assets/things/index.js';
 import { CRACKLES } from './assets/sfx/index.js';
 import { buildHouse, houseSeed, HOUSE as HZ } from './house.js';
 import { roomArt, ROOM_CATALOGUE } from './assets/rooms/index.js';
-import { supabase, nickFromEmail, ensureProfile, getProfile, recordClear } from './supabase.js';
+import { supabase, displayName, ensureProfile, getProfile, recordClear } from './supabase.js';
 import AccountScreen from './AccountScreen.jsx';
 
 const SOUND_ON = true;
@@ -112,7 +112,7 @@ export default class CatCoverGame extends Component {
     acctFrom: 'intro',
     account: null,
     userId: null,
-    nickname: null,
+    handle: null,
     levels: [null, null, null, null, null, null, null],
     idx: 0,
     placed: [],
@@ -158,17 +158,17 @@ export default class CatCoverGame extends Component {
      app-owned storage — so this and AccountScreen always agree */
   applySession(session) {
     const user = session && session.user;
-    this.setState({ account: user ? user.email : null, userId: user ? user.id : null, nickname: null });
+    this.setState({ account: user ? user.email : null, userId: user ? user.id : null, handle: null });
     if (user) {
       ensureProfile(user).then(() => getProfile(user.id))
-        .then(p => this.setState({ nickname: (p && p.nickname) || nickFromEmail(user.email) }));
+        .then(p => this.setState({ handle: displayName(p) }));
     }
   }
   openAccount(from) { this.setState({ screen: 'account', acctFrom: from }); }
   closeAccount() { this.setState({ screen: this.state.acctFrom || 'intro' }); }
   /* the pick made on the Staff Office ID card, synced back here immediately
-     so the badge never shows the stale email-derived name after an edit */
-  badgeLabel() { return this.state.account ? (this.state.nickname || nickFromEmail(this.state.account)) : 'STAFF LOGIN'; }
+     so the badge never shows the stale name after an edit */
+  badgeLabel() { return this.state.account ? (this.state.handle || 'STAFF') : 'STAFF LOGIN'; }
   badgeSub() {
     if (!this.state.account) return 'SAVE YOUR SCORE';
     return this.state.results.filter(r => r === 'perfect').length + '/7 PURR-FECT';
@@ -945,7 +945,7 @@ export default class CatCoverGame extends Component {
   render() {
     if (this.state.screen === 'account') {
       return <AccountScreen onClose={() => this.closeAccount()} weeklyResults={this.state.results}
-        onNicknameChange={n => this.setState({ nickname: n })} />;
+        onNameChange={n => this.setState({ handle: displayName({ username: n }) })} />;
     }
     if (this.state.screen === 'intro') return this.renderIntro();
     const v = this.renderVals();
