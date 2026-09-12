@@ -5,7 +5,7 @@ import { THINGS, THING_BASELINE } from './assets/things/index.js';
 import { CRACKLES } from './assets/sfx/index.js';
 import { buildHouse, houseSeed, HOUSE as HZ } from './house.js';
 import { roomArt, ROOM_CATALOGUE } from './assets/rooms/index.js';
-import { supabase, displayName, ensureProfile, getProfile, recordClear } from './supabase.js';
+import { supabase, displayName, ensureProfile, getProfile, recordClear, siteScore, siteBest } from './supabase.js';
 import AccountScreen from './AccountScreen.jsx';
 
 const SOUND_ON = true;
@@ -67,6 +67,16 @@ const HOUSE_DIM_LOW = 0.42;   // what the DIM button drops the house to
    keeps its edge over a dark study floor and a pale bathroom tile alike,
    without either layer having to know what it is sitting on. */
 const INK = '#241409', RIM = '#F6EAD3', DASH = '#FFF3D8';
+/* Grade thresholds against score/best (design's own cutoffs). The app's
+   scoring only has two player-controlled outcomes — on budget, or one cat
+   over — so only S (on budget) and B/C (one over, at 2-3★/1★) are actually
+   reachable today. A and D stay in the map so it still holds if the DB
+   formula (app/sql/2026-09-07-weighted-score.sql) ever gains a third term. */
+const GRADE_BG = { S: '#8CE8B0', A: '#C877D8', B: '#FFD469', C: '#E8A34A', D: '#FF8FA8' };
+function siteGrade(score, best) {
+  const g = best ? score / best : 0;
+  return g >= 0.999 ? 'S' : g >= 0.86 ? 'A' : g >= 0.68 ? 'B' : g >= 0.45 ? 'C' : 'D';
+}
 /* the art's brightest pixels — lamp cores and window bays — sit around
    luminance 234, so the dash has to clear that or it loses wherever the room
    is lit; #FFF3D8 is 244 and warm, so it gains contrast without going cold */
@@ -130,10 +140,12 @@ export default class CatCoverGame extends Component {
        turned down from the start; everyone else can hit DIM */
     dim: !!(window.matchMedia && window.matchMedia('(prefers-contrast: more)').matches),
     grabbing: false,
+    card: null, cardStep: 0, cardTotal: 0, cardPrev: 0, cardSave: null,
   };
 
   _ptrs = new Map();
   _lays = new WeakMap();
+  _cardT = [];
 
   componentDidMount() {
     this.onKey = this.onKey.bind(this);
@@ -151,8 +163,17 @@ export default class CatCoverGame extends Component {
     if (this._ro) this._ro.disconnect();
     cancelAnimationFrame(this._raf);
     clearTimeout(this._shot);
+    this.clearCard();
     if (this._svg) this._svg.removeEventListener('wheel', this.onWheel);
     if (this.authSub) this.authSub.unsubscribe();
+  }
+  /* the score card runs its own rAF/timeout chain, separate from the camera's
+     this._raf/_shot (tween()/frame()) — sharing either would let the
+     establishing shot and the count-up cancel each other */
+  clearCard() {
+    (this._cardT || []).forEach(clearTimeout);
+    this._cardT = [];
+    if (this._cardRaf) { cancelAnimationFrame(this._cardRaf); this._cardRaf = null; }
   }
   /* sign-in state is derived purely from Supabase's own session — never from
      app-owned storage — so this and AccountScreen always agree */
@@ -171,7 +192,7 @@ export default class CatCoverGame extends Component {
   badgeLabel() { return this.state.account ? (this.state.handle || 'STAFF') : 'STAFF LOGIN'; }
   badgeSub() {
     if (!this.state.account) return 'SAVE YOUR SCORE';
-    return this.state.results.filter(r => r === 'perfect').length + '/7 PURR-FECT';
+    return this.state.results.filter(r => r && r.status === 'perfect').length + '/7 PURR-FECT';
   }
 
   seed() { return this.day() + 11; }
@@ -334,29 +355,88 @@ export default class CatCoverGame extends Component {
     const after = this.litSet(lv, placed).size;
     const done = after === lv.edges.length;
     const results = this.state.results.slice();
+    let run = null, prevScore = 0;
     if (done) {
-      results[this.state.idx] = placed.length <= lv.k ? 'perfect' : 'over';
+      run = this.scoreRun(lv, placed.length);
+      const prev = results[this.state.idx];
+      prevScore = prev ? prev.score : 0;
+      /* mirrors the DB's keep-best trigger (site_clears_keep_best) — a
+         replay only overwrites the local record when it scores better */
+      results[this.state.idx] = prev && prev.score >= run.score ? prev : run;
       if (this.state.userId) {
+        this.setState({ cardSave: 'saving' });
         recordClear(this.state.userId, this.day(), this.state.idx, placed.length, lv.k, lv.stars).then(({ error }) => {
           if (error) this.setState({ msg: 'SCORE NOT SAVED — ' + error });
+          this.setState({ cardSave: error || 'saved' });
         });
       } else if (this.state.account) {
-        this.setState({ msg: 'SCORE NOT SAVED — SIGNED IN BUT NO USER ID' });
+        this.setState({ msg: 'SCORE NOT SAVED — SIGNED IN BUT NO USER ID', cardSave: 'SIGNED IN BUT NO USER ID' });
+      } else {
+        this.setState({ cardSave: 'anon' });
       }
     }
     this.setState({ placed, results, focus: i, hint: null, msg: '', copied: false });
     if (!this.crackle()) this.chirp(placed.length, true);
     this.crash(after - before);
     this.bloom(i);
-    if (done) { this.flash(); this.fanfare(); }
+    if (done) {
+      this.flash(); this.fanfare();
+      this._cardT.push(setTimeout(() => this.openCard(run, prevScore), 760));
+    }
   }
   reset() { this.setState({ placed: [], hint: null, msg: '', focus: 0 }); this.pulse(); }
   go(i) {
     if (i < 0 || i > 6 || !this.state.levels[i]) return;
-    this.setState({ idx: i, placed: [], hint: null, msg: '', focus: 0, copied: false });
+    this.clearCard();
+    this.setState({ idx: i, placed: [], hint: null, msg: '', focus: 0, copied: false, card: null, cardStep: 0, cardTotal: 0 });
     this.frame(i);
   }
   next() { if (this.solved() && this.state.idx < 6) this.go(this.state.idx + 1); }
+
+  /* ---- scoring: the score card shown right after a clear, and the record
+     kept per site so the plaque can show it again on revisit ---- */
+  scoreRun(lv, used) {
+    const score = siteScore(lv.stars, used, lv.k);
+    const best = siteBest(lv.stars);
+    const rows = [{ label: 'SITE DIFFICULTY', note: '✦'.repeat(lv.stars) + ' × 10', v: lv.stars * 10 }];
+    if (used <= lv.k) rows.push({ label: 'ON BUDGET', note: used + '/' + lv.k + ' CATS', v: 0 });
+    else rows.push({ label: 'OVER BUDGET', note: '+' + (used - lv.k) + ' CAT × 5', v: -5 * (used - lv.k) });
+    return { status: used <= lv.k ? 'perfect' : 'over', score, best, grade: siteGrade(score, best), used, par: lv.k, stars: lv.stars, rows };
+  }
+  openCard(run, prevScore) {
+    this.clearCard();
+    this.setState({ card: run, cardStep: 0, cardTotal: 0, cardPrev: prevScore || 0 });
+    const n = run.rows.length;
+    for (let i = 1; i <= n; i++) {
+      this._cardT.push(setTimeout(() => { this.setState({ cardStep: i }); this.cardTick(i); }, 420 + i * 240));
+    }
+    this._cardT.push(setTimeout(() => this.cardCountUp(run.score), 520 + n * 240));
+  }
+  cardTick(i) {
+    const ac = this.ac(); if (!ac) return;
+    const t = ac.currentTime, o = ac.createOscillator(), g = ac.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(620 + i * 90, t);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.05, t + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.14);
+    o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + 0.16);
+  }
+  cardCountUp(target) {
+    const t0 = performance.now(), dur = 520;
+    const step = () => {
+      const p = Math.min(1, (performance.now() - t0) / dur);
+      this.setState({ cardTotal: Math.round(target * (1 - Math.pow(1 - p, 3))) });
+      if (p < 1) this._cardRaf = requestAnimationFrame(step);
+      else this._cardRaf = null;
+    };
+    this._cardRaf = requestAnimationFrame(step);
+  }
+  closeCard() { this.clearCard(); this.setState({ card: null }); }
+  cardNext() {
+    this.clearCard();
+    this.setState({ card: null });
+    if (this.state.idx < 6) this.go(this.state.idx + 1);
+  }
   hint(tier) {
     const lv = this.lv(); if (!lv) return;
     const p = new Set(this.state.placed);
@@ -386,6 +466,11 @@ export default class CatCoverGame extends Component {
     }
     if (this.state.screen !== 'game') return;
     const lv = this.lv(); if (!lv) return;
+    if (this.state.card) {
+      if (k === 'Enter' || k === ' ') { e.preventDefault(); return this.cardNext(); }
+      if (k === 'Escape') { e.preventDefault(); return this.closeCard(); }
+      return;
+    }
     if (!this.state.kbd) this.setState({ kbd: true });
     if (k === 'r' || k === 'R') { e.preventDefault(); return this.reset(); }
     if (k === 'n' || k === 'N') { e.preventDefault(); return this.next(); }
@@ -641,9 +726,10 @@ export default class CatCoverGame extends Component {
 
   share() {
     const r = this.state.results;
-    const glyphs = r.map(x => (x === 'perfect' ? '🐾' : '⬜')).join('');
-    const n = r.filter(x => x === 'perfect').length;
-    return 'CATASTROPHE INC. #' + this.day() + '\n' + glyphs + '  ' + n + '/7 on budget';
+    const glyphs = r.map(x => (x && x.status === 'perfect' ? '🐾' : '⬜')).join('');
+    const grades = r.map(x => (x ? x.grade : '–')).join('');
+    const total = r.reduce((a, x) => a + (x ? x.score : 0), 0);
+    return 'CATASTROPHE INC. #' + this.day() + '\n' + glyphs + '\n' + grades + '  ' + total.toLocaleString() + ' pts';
   }
   copyShare() {
     const t = this.share();
@@ -675,13 +761,17 @@ export default class CatCoverGame extends Component {
         tier: t, label: ['SURVEY', 'ESTIMATE', 'INSIDER'][t - 1],
         bg: active(t) ? '#FFD469' : '#F4E4C4', ink: '#3E2718',
       })),
-      pips: [0, 1, 2, 3, 4, 5, 6].map(i => ({
-        i, n: i + 1,
-        lift: i === st.idx ? 0 : 4, dy: i === st.idx ? 4 : 0,
-        ink: st.results[i] || i === st.idx ? '#2A1524' : '#C9B8E0',
-        fill: i === st.idx ? '#FFD469' : st.results[i] === 'perfect' ? '#C877D8'
-          : st.results[i] === 'over' ? '#E8A34A' : this.state.levels[i] ? 'rgba(255,255,255,.14)' : 'rgba(255,255,255,.06)',
-      })),
+      pips: [0, 1, 2, 3, 4, 5, 6].map(i => {
+        const r = st.results[i];
+        return {
+          i, n: i + 1, grade: r ? r.grade : '',
+          lift: i === st.idx ? 0 : 4, dy: i === st.idx ? 4 : 0,
+          ink: r || i === st.idx ? '#2A1524' : '#C9B8E0',
+          gradeInk: i === st.idx ? '#6E3FA3' : 'rgba(42,21,36,.75)',
+          fill: i === st.idx ? '#FFD469' : r && r.status === 'perfect' ? '#C877D8'
+            : r ? '#E8A34A' : this.state.levels[i] ? 'rgba(255,255,255,.14)' : 'rgba(255,255,255,.06)',
+        };
+      }),
       /* the overlays are sized in screen px, so they have to shrink with the board */
       ui: (() => {
         const k = Math.max(0.52, Math.min(1, st.boardW / 620));
@@ -698,12 +788,47 @@ export default class CatCoverGame extends Component {
         { k: 'dim', t: 'DIM', label: st.dim ? 'turn the house lights back up' : 'dim the house',
           bg: st.dim ? '#FFD469' : '#F4E4C4', go: () => this.setState(s => ({ dim: !s.dim })) },
       ],
+      totalScore: st.results.reduce((a, r) => a + (r ? r.score : 0), 0).toLocaleString(),
+      totalDone: st.results.filter(Boolean).length + '/7 SCORED',
       showShare: st.results.filter(Boolean).length === 7,
       shareText: this.share(), copyLabel: st.copied ? 'COPIED!' : 'COPY INVOICE',
       banner: '', bannerBg: 'rgba(255,255,255,.08)', bannerInk: '#F4E4C4',
       nextBg: 'rgba(255,255,255,.22)', nextLabel: 'NEXT', nextO: 0.45,
+      hasScore: !!st.results[st.idx], scoreLine: '', scoreGrade: '', scoreNote: '', scoreGradeBg: '#FFD469',
+      showCard: !!st.card, cardRows: [], cardTotal: '0', cardGrade: '', cardGradeBg: '#FFD469',
+      cardTitle: '', cardSite: '', cardHeadBg: '#C877D8', cardBest: '', cardSaveNote: '',
+      cardNextLabel: st.idx < 6 ? 'NEXT SITE' : 'WEEK DONE',
     };
     vals.msgColor = st.msg && (st.msg.indexOf('PAYROLL') === 0 || st.msg.indexOf('SCORE NOT SAVED') === 0) ? '#FF8FA8' : '#FFD469';
+
+    const rec = st.results[st.idx];
+    if (rec) {
+      vals.scoreLine = rec.score.toLocaleString() + ' PTS';
+      vals.scoreGrade = rec.grade;
+      vals.scoreGradeBg = GRADE_BG[rec.grade];
+      vals.scoreNote = 'BEST RUN · ' + rec.used + '/' + rec.par + ' CATS';
+    }
+    const c = st.card;
+    if (c) {
+      vals.cardTitle = c.status === 'perfect' ? 'SITE CLEARED' : 'CLEARED — OVER BUDGET';
+      vals.cardHeadBg = c.status === 'perfect' ? '#C877D8' : '#E8A34A';
+      vals.cardSite = lv ? SITES[st.idx] : '';
+      vals.cardGrade = c.grade;
+      vals.cardGradeBg = GRADE_BG[c.grade];
+      vals.cardTotal = st.cardTotal.toLocaleString();
+      vals.cardRows = c.rows.map((r, i) => ({
+        label: r.label, note: r.note,
+        val: (r.v > 0 ? '+' : '') + r.v.toLocaleString(),
+        ink: r.v >= 0 ? '#3E2718' : '#B5453F',
+        o: i < st.cardStep ? 1 : 0, dy: i < st.cardStep ? 0 : 10,
+      }));
+      const done = st.cardTotal >= c.score;
+      if (done) vals.cardBest = st.cardPrev
+        ? (c.score > st.cardPrev ? 'NEW BEST — BEAT ' + st.cardPrev.toLocaleString() : 'BEST STANDS AT ' + st.cardPrev.toLocaleString())
+        : (c.grade === 'S' ? 'FLAWLESS. THE CLIENT IS WEEPING.' : 'PERFECT RUN PAYS ' + c.best.toLocaleString());
+      vals.cardSaveNote = st.cardSave === 'saving' ? 'SAVING…' : st.cardSave === 'saved' ? 'SAVED TO YOUR LEDGER'
+        : st.cardSave === 'anon' ? 'SIGN IN TO SAVE YOUR SCORE' : st.cardSave ? 'SCORE NOT SAVED — ' + st.cardSave : '';
+    }
     if (!lv) return vals;
 
     const L = this.layout(lv), pos = L.pos, pset = new Set(st.placed);
@@ -980,7 +1105,12 @@ export default class CatCoverGame extends Component {
               <div style={{ display: 'flex', gap: 6 }}>
                 {v.pips.map(p => (
                   <button key={p.i} type="button" onClick={() => this.go(p.i)} aria-label={'site ' + (p.i + 1)}
-                    style={{ flex: 1, minHeight: 40, background: p.fill, border: '3px solid #2A1524', borderRadius: 10, padding: 0, cursor: 'pointer', color: p.ink, fontFamily: luckiest, fontSize: 15, boxShadow: '0 ' + p.lift + 'px 0 #2A1524', transform: 'translateY(' + p.dy + 'px)' }}>{p.n}</button>
+                    style={{ flex: 1, minHeight: 40, background: p.fill, border: '3px solid #2A1524', borderRadius: 10, padding: 0, cursor: 'pointer', color: p.ink, fontFamily: luckiest, fontSize: 15, boxShadow: '0 ' + p.lift + 'px 0 #2A1524', transform: 'translateY(' + p.dy + 'px)' }}>
+                    <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1 }}>
+                      <span>{p.n}</span>
+                      <span style={{ fontSize: 9, letterSpacing: '.04em', color: p.gradeInk }}>{p.grade}</span>
+                    </span>
+                  </button>
                 ))}
               </div>
             </div>
@@ -992,7 +1122,16 @@ export default class CatCoverGame extends Component {
           <main style={{ flex: '5 1 460px', minWidth: 300, maxWidth: this.state.expanded ? 'none' : 780, display: 'flex', flexDirection: 'column', gap: 11 }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0 }}>
               <div style={{ background: '#6E3FA3', border: '3px solid #2A1524', borderRadius: 10, boxShadow: '0 4px 0 #2A1524', padding: '3px 22px', fontFamily: luckiest, fontSize: 17, letterSpacing: '.05em', color: '#FFD469', position: 'relative', zIndex: 2 }}>SITE {v.levelNo} <span style={{ color: '#F06BFF' }}>{v.stars}</span></div>
-              <div style={{ marginTop: -6, width: '92%', background: 'linear-gradient(#F6E8CA, #E8D3A6)', border: '3px solid #2A1524', borderRadius: '3px 3px 10px 10px', boxShadow: '0 5px 0 #2A1524', padding: '9px 12px 6px', textAlign: 'center', fontFamily: luckiest, fontSize: 20, letterSpacing: '.02em', color: '#3E2718' }}>{v.plaque}</div>
+              <div style={{ marginTop: -6, width: '92%', background: 'linear-gradient(#F6E8CA, #E8D3A6)', border: '3px solid #2A1524', borderRadius: '3px 3px 10px 10px', boxShadow: '0 5px 0 #2A1524', padding: '9px 12px 6px', textAlign: 'center', color: '#3E2718' }}>
+                <div style={{ fontFamily: luckiest, fontSize: 20, letterSpacing: '.02em' }}>{v.plaque}</div>
+                {v.hasScore && (
+                  <div style={{ margin: '7px -4px -2px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, borderTop: '2.5px dashed rgba(62,39,24,.28)', paddingTop: 6 }}>
+                    <span style={{ width: 24, height: 24, borderRadius: 7, background: v.scoreGradeBg, border: '2.5px solid #2A1524', fontFamily: luckiest, fontSize: 13, color: '#2A1524', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{v.scoreGrade}</span>
+                    <span style={{ fontFamily: luckiest, fontSize: 17, color: '#8A3FC0' }}>{v.scoreLine}</span>
+                    <span style={{ fontSize: 11, fontWeight: 900, letterSpacing: '.1em', color: '#7A5638' }}>{v.scoreNote}</span>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div style={{ background: '#3A2416', border: '6px solid #34200F', borderRadius: 18, boxShadow: '0 8px 0 #1E1208, inset 0 0 70px rgba(0,0,0,.55)', padding: 6, position: 'relative', aspectRatio: CAM_A, maxHeight: '76vh', boxSizing: 'border-box' }}>
@@ -1235,14 +1374,21 @@ export default class CatCoverGame extends Component {
             </div>
 
             <div style={{ alignSelf: 'center', background: '#C877D8', border: '3px solid #2A1524', borderRadius: 9, boxShadow: '0 4px 0 #2A1524', padding: '4px 18px', fontFamily: luckiest, fontSize: 15, letterSpacing: '.05em', color: '#3E1B4A', position: 'relative', zIndex: 2 }}>THE INVOICE</div>
-            <div style={{ marginTop: -20, background: 'linear-gradient(#F6E8CA, #EBD8AE)', border: '3px solid #2A1524', borderRadius: 14, boxShadow: '0 5px 0 #2A1524', padding: '22px 12px 12px', display: 'flex', gap: 8 }}>
-              <div style={{ flex: 1, background: '#FFF7E6', border: '2.5px solid #2A1524', borderRadius: 10, padding: '9px 10px' }}>
-                <div style={{ fontFamily: luckiest, fontSize: 13, color: '#3E2718' }}>{v.overLabel}</div>
-                <div style={{ fontSize: 11.5, fontWeight: 800, color: '#7A5638', lineHeight: 1.3 }}>OVER BUDGET — ACCOUNTS WILL CALL.</div>
+            <div style={{ marginTop: -20, background: 'linear-gradient(#F6E8CA, #EBD8AE)', border: '3px solid #2A1524', borderRadius: 14, boxShadow: '0 5px 0 #2A1524', padding: '22px 12px 12px', display: 'flex', flexDirection: 'column', gap: 9 }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, borderBottom: '2.5px dashed rgba(62,39,24,.28)', paddingBottom: 8 }}>
+                <span style={{ fontFamily: luckiest, fontSize: 26, color: '#3E2718' }}>{v.totalScore}</span>
+                <span style={{ fontSize: 11.5, fontWeight: 900, letterSpacing: '.1em', color: '#7A5638' }}>PTS BILLED</span>
+                <span style={{ marginLeft: 'auto', fontSize: 11.5, fontWeight: 900, letterSpacing: '.1em', color: '#8A3FC0' }}>{v.totalDone}</span>
               </div>
-              <div style={{ flex: 1, background: '#EBD4F5', border: '2.5px solid #2A1524', borderRadius: 10, padding: '9px 10px' }}>
-                <div style={{ fontFamily: luckiest, fontSize: 13, color: '#3E1B4A' }}>{v.parLabel}</div>
-                <div style={{ fontSize: 11.5, fontWeight: 800, color: '#6E3FA3', lineHeight: 1.3 }}>ON BUDGET — PURR-FECT.</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <div style={{ flex: 1, background: '#FFF7E6', border: '2.5px solid #2A1524', borderRadius: 10, padding: '9px 10px' }}>
+                  <div style={{ fontFamily: luckiest, fontSize: 13, color: '#3E2718' }}>{v.overLabel}</div>
+                  <div style={{ fontSize: 11.5, fontWeight: 800, color: '#7A5638', lineHeight: 1.3 }}>OVER BUDGET — ACCOUNTS WILL CALL.</div>
+                </div>
+                <div style={{ flex: 1, background: '#EBD4F5', border: '2.5px solid #2A1524', borderRadius: 10, padding: '9px 10px' }}>
+                  <div style={{ fontFamily: luckiest, fontSize: 13, color: '#3E1B4A' }}>{v.parLabel}</div>
+                  <div style={{ fontSize: 11.5, fontWeight: 800, color: '#6E3FA3', lineHeight: 1.3 }}>ON BUDGET — PURR-FECT.</div>
+                </div>
               </div>
             </div>
 
@@ -1259,6 +1405,45 @@ export default class CatCoverGame extends Component {
           </aside>
         </div>
       </div>
+      {v.showCard && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 25, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 18, background: 'rgba(12,7,18,.72)', animation: 'cc-fadein 220ms ease-out both' }}>
+          <div style={{ width: '100%', maxWidth: 420, background: 'linear-gradient(#F6E8CA, #E8D3A6)', border: '4px solid #2A1524', borderRadius: '6px 20px 6px 20px', boxShadow: '0 10px 0 #2A1524, 0 26px 60px rgba(0,0,0,.55)', padding: '0 0 16px', overflow: 'hidden', animation: 'cc-cardin 460ms cubic-bezier(.2,1.2,.3,1) both', position: 'relative' }}>
+            <div style={{ background: v.cardHeadBg, borderBottom: '4px solid #2A1524', padding: '12px 18px 11px', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <span style={{ fontSize: 11, fontWeight: 900, letterSpacing: '.22em', color: 'rgba(42,21,36,.7)' }}>WORK ORDER #{this.day()} · SITE {v.levelNo}</span>
+                <span style={{ fontFamily: luckiest, fontSize: 26, lineHeight: 1.05, color: '#2A1524' }}>{v.cardTitle}</span>
+                <span style={{ fontSize: 12, fontWeight: 900, letterSpacing: '.1em', color: 'rgba(42,21,36,.75)' }}>{v.cardSite}</span>
+              </div>
+              <div style={{ flex: 'none', width: 74, height: 74, borderRadius: '50%', background: v.cardGradeBg, border: '5px solid #2A1524', boxShadow: '0 5px 0 #2A1524', display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'cc-stamp 520ms cubic-bezier(.2,1.2,.3,1) both' }}>
+                <span style={{ fontFamily: luckiest, fontSize: 42, lineHeight: 1, color: '#2A1524' }}>{v.cardGrade}</span>
+              </div>
+            </div>
+            <div style={{ padding: '14px 18px 0', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {v.cardRows.map((r, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 8, opacity: r.o, transform: 'translateY(' + r.dy + 'px)', transition: 'opacity 300ms ease-out, transform 320ms cubic-bezier(.2,1.3,.3,1)' }}>
+                  <span style={{ fontSize: 13, fontWeight: 900, letterSpacing: '.06em', color: '#3E2718' }}>{r.label}</span>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: '#8A6A4C' }}>{r.note}</span>
+                  <span style={{ flex: 1, borderBottom: '2px dotted rgba(62,39,24,.35)' }}></span>
+                  <span style={{ fontFamily: luckiest, fontSize: 18, color: r.ink }}>{r.val}</span>
+                </div>
+              ))}
+              <div style={{ marginTop: 4, borderTop: '3px solid #2A1524', paddingTop: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontFamily: luckiest, fontSize: 16, letterSpacing: '.04em', color: '#3E2718' }}>TOTAL</span>
+                <span style={{ marginLeft: 'auto', fontFamily: luckiest, fontSize: 40, lineHeight: 1, color: '#8A3FC0' }}>{v.cardTotal}</span>
+                <span style={{ fontSize: 11, fontWeight: 900, letterSpacing: '.1em', color: '#7A5638' }}>PTS</span>
+              </div>
+              <div style={{ fontSize: 11.5, fontWeight: 900, letterSpacing: '.08em', color: '#7A5638', minHeight: 16 }}>{v.cardBest}</div>
+              <div style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: '.06em', color: '#8E7AAE', minHeight: 14 }}>{v.cardSaveNote}</div>
+            </div>
+            <div style={{ margin: '12px 18px 0', display: 'flex', gap: 8 }}>
+              <button type="button" onClick={() => this.closeCard()}
+                style={{ minHeight: 52, padding: '0 16px', background: '#FFF7E6', border: '3px solid #2A1524', borderRadius: 13, boxShadow: '0 4px 0 #2A1524', color: '#3E2718', fontSize: 12, fontWeight: 900, letterSpacing: '.08em', cursor: 'pointer' }}>REVIEW SITE</button>
+              <button type="button" onClick={() => this.cardNext()}
+                style={{ flex: 1, minHeight: 52, background: '#FFD469', border: '3px solid #2A1524', borderRadius: 13, boxShadow: '0 4px 0 #2A1524', color: '#3E2718', fontFamily: luckiest, fontSize: 17, letterSpacing: '.04em', cursor: 'pointer' }}>{v.cardNextLabel}</button>
+            </div>
+          </div>
+        </div>
+      )}
       <div id="cc-flash" style={{ position: 'fixed', inset: 0, background: '#FFE9FF', opacity: 0, pointerEvents: 'none', zIndex: 30 }}></div>
       </>
     );
