@@ -97,7 +97,7 @@ export default function AccountScreen({ onClose, weeklyResults, onNameChange }) 
     });
   }
 
-  const weeklyPerfect = (weeklyResults || []).filter(r => r === 'perfect').length;
+  const weeklyPerfect = (weeklyResults || []).filter(r => r && r.status === 'perfect').length;
   const validEmail = EMAIL_RE.test(typedEmail || '');
   const busy = step === 'sending';
 
