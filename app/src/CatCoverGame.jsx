@@ -976,8 +976,8 @@ export default class CatCoverGame extends Component {
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 18, borderBottom: '4px dashed rgba(247,179,43,.35)', paddingBottom: 18 }}>
             <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 0.82 }}>
               <span style={{ fontFamily: luckiest, fontSize: 15, letterSpacing: '.34em', color: '#C877D8', marginBottom: 8 }}>STRUCTURAL DEMOLITION</span>
-              <span style={{ fontFamily: luckiest, fontSize: 74, color: '#F7B32B', WebkitTextStroke: '8px #2A1524', paintOrder: 'stroke fill', textShadow: '0 7px 0 #2A1524' }}>CATASTROPHE</span>
-              <span style={{ fontFamily: luckiest, fontSize: 50, letterSpacing: '.04em', color: '#EADDF7', WebkitTextStroke: '8px #2A1524', paintOrder: 'stroke fill', textShadow: '0 7px 0 #2A1524' }}>INC.</span>
+              <span style={{ fontFamily: luckiest, fontSize: 'min(74px, 13vw)', color: '#F7B32B', WebkitTextStroke: 'min(8px, 1.5vw) #2A1524', paintOrder: 'stroke fill', textShadow: '0 7px 0 #2A1524' }}>CATASTROPHE</span>
+              <span style={{ fontFamily: luckiest, fontSize: 'min(50px, 9vw)', letterSpacing: '.04em', color: '#EADDF7', WebkitTextStroke: 'min(8px, 1.5vw) #2A1524', paintOrder: 'stroke fill', textShadow: '0 7px 0 #2A1524' }}>INC.</span>
             </div>
             <div style={{ flex: '1 1 220px', minWidth: 200, display: 'flex', flexDirection: 'column', gap: 6, paddingBottom: 8 }}>
               <span style={{ fontSize: 13, fontWeight: 900, letterSpacing: '.16em', color: '#8E7AAE' }}>FELINE DIVISION · EST. 2019</span>
