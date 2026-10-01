@@ -67,6 +67,10 @@ button { font-family: inherit; }
 /* the score card: its scrim fades in, the card itself bounces up, and the
    grade stamp slams down once the count-up lands */
 @keyframes cc-fadein { from { opacity: 0; } to { opacity: 1; } }
+
+/* the orientation slideshow: each slide slides in from the side it came from */
+@keyframes cc-slide-l { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+@keyframes cc-slide-r { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
 @keyframes cc-cardin {
   0% { transform: translateY(26px) scale(.9); opacity: 0; }
   60% { transform: translateY(0) scale(1.03); opacity: 1; }
