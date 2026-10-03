@@ -1,0 +1,6 @@
+.avatar {
+  flex: none; border-radius: 50%; box-sizing: border-box; background: var(--purple); color: var(--gold);
+  font-family: var(--font-display); display: flex; align-items: center; justify-content: center;
+}
+.lg { width: 54px; height: 54px; border: var(--bd); font-size: 22px; }
+.sm { width: 34px; height: 34px; border: 2.5px solid var(--ink); font-size: 15px; }

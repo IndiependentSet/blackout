@@ -1,0 +1,53 @@
+.floor {
+  position: relative; box-sizing: border-box;
+  background: repeating-linear-gradient(96deg, #6B4730 0 46px, #664129 46px 48px, #6E4A32 48px 94px, #5E3B25 94px 96px);
+  border: 5px solid #34200F; border-radius: 16px; box-shadow: 0 6px 0 var(--ink-deep), inset 0 0 60px rgba(0, 0, 0, .55);
+}
+.svg { display: block; }
+.board { display: block; touch-action: manipulation; user-select: none; }
+
+.stamp {
+  display: inline-block; white-space: nowrap; box-sizing: border-box;
+  background: var(--mint); color: var(--ink); border: var(--bd); border-radius: 9px; box-shadow: var(--lift-sm);
+  font-family: var(--font-display); font-size: 16px; letter-spacing: .05em; padding: 3px 10px;
+  animation: cc-stamp .45s cubic-bezier(.2, 1.4, .4, 1) both;
+}
+.pink { background: var(--pink); }
+.rose { background: var(--rose); }
+
+.caption { text-align: center; font-family: var(--font-display); font-size: 14px; letter-spacing: .06em; min-height: 20px; }
+.gold { color: var(--gold); }
+.magenta { color: var(--pink); }
+
+.corner { position: absolute; right: 14px; top: 12px; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.crewTag { position: absolute; left: 10px; top: 6px; font-family: var(--font-display); font-size: 13px; letter-spacing: .06em; color: var(--gold); }
+.stampCorner { position: absolute; right: 8px; bottom: -12px; z-index: 1; }
+.budgets { display: flex; flex-direction: column; gap: 18px; padding-bottom: 10px; }
+.overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+
+.training { display: flex; flex-direction: column; gap: 8px; }
+.trainingBar { display: flex; gap: 8px; justify-content: space-between; align-items: center; font-family: var(--font-display); font-size: 15px; letter-spacing: .04em; }
+.note { text-align: center; font-size: 13px; font-weight: 900; letter-spacing: .06em; min-height: 36px; }
+
+.tiers { display: flex; flex-direction: column; gap: 10px; }
+.tier {
+  display: flex; gap: 12px; align-items: center; padding: 10px 12px;
+  background: var(--parchment); border: var(--bd); border-radius: 4px 14px 8px 14px; box-shadow: var(--lift);
+  animation: cc-cardin .5s both;
+}
+.tierIcon { flex: none; font-size: 26px; }
+.tierName { font-family: var(--font-display); font-size: 17px; color: var(--purple); letter-spacing: .04em; }
+.tierBody { font-size: 13.5px; font-weight: 700; color: var(--text-2); line-height: 1.35; }
+
+.week { display: flex; flex-direction: column; gap: 12px; }
+.bars { display: flex; align-items: flex-end; justify-content: space-between; gap: 4px; height: 92px; }
+.barCol { flex: 1 1 0; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.bar {
+  position: relative; width: 100%; max-width: 46px; box-sizing: border-box; border: var(--bd);
+  border-radius: 6px 6px 3px 3px; box-shadow: var(--lift-sm); transition: background .25s;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-size: 15px; background: rgba(255, 255, 255, .1); color: var(--muted);
+}
+.closed { background: var(--orchid); color: var(--ink); }
+.legend { text-align: center; font-size: 12px; font-weight: 900; letter-spacing: .12em; color: var(--muted); }
+.finale { min-height: 40px; display: flex; justify-content: center; }

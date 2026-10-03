@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { SITES } from '../domain/sites';
 import { GameScreen } from '../game/GameScreen';
 import { useGameSession } from '../game/useGameSession';
-import AccountScreen from '../AccountScreen';
-import HowToPlay from '../HowToPlay';
+import HowToPlay from '../screens/HowToPlay/HowToPlay';
+import { StaffOfficeScreen } from '../screens/StaffOffice/StaffOfficeScreen';
 import { WorkOrderScreen } from '../screens/WorkOrder/WorkOrderScreen';
+import { perfectCount } from '../game/state/selectors';
 import { AuthProvider } from '../services/auth/AuthProvider';
 import { useAuth } from '../services/auth/authContext';
 import { staffBadge } from './staffBadge';
@@ -25,7 +26,7 @@ function Shell() {
   const openAccount = (from: Exclude<Screen, 'account'>) => { setAccountFrom(from); setScreen('account'); };
 
   if (screen === 'account') {
-    return <AccountScreen onClose={() => setScreen(accountFrom)} weeklyResults={session.state.results} onNameChange={auth.setHandle} />;
+    return <StaffOfficeScreen onClose={() => setScreen(accountFrom)} weeklyPerfect={perfectCount(session.state.results)} />;
   }
 
   if (screen === 'game') {

@@ -1,0 +1,6 @@
+.tabs { display: flex; gap: 4px; margin-bottom: 4px; }
+.tab {
+  min-height: 30px; padding: 0 12px; background: var(--paper); border: 2.5px solid var(--ink); border-radius: 9px;
+  color: var(--text); font-family: inherit; font-size: 11px; font-weight: 900; letter-spacing: .04em; cursor: pointer;
+}
+.on { background: var(--gold); }

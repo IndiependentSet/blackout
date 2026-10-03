@@ -3,7 +3,7 @@ import { cx } from './cx';
 import styles from './Button.module.css';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'paper' | 'accent' | 'mint' | 'muted' | 'glass';
-export type ButtonSize = 'chip' | 'nav' | 'md' | 'lg' | 'xl';
+export type ButtonSize = 'mini' | 'chip' | 'nav' | 'md' | 'lg' | 'xl';
 
 interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;

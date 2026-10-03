@@ -6,13 +6,15 @@ export interface AuthState {
   ready: boolean;
   userId: string | null;
   email: string | null;
-  /** "@handle", or '' while loading / signed out */
+  /** the raw username, or '' while loading / signed out */
+  username: string;
+  /** "@username", or '' while loading / signed out */
   handle: string;
   /** an in-place rename (the Staff ID card) so the badge never shows a stale name */
   setHandle: (username: string) => void;
 }
 
-export const SIGNED_OUT: AuthState = { ready: false, userId: null, email: null, handle: '', setHandle: () => {} };
+export const SIGNED_OUT: AuthState = { ready: false, userId: null, email: null, username: '', handle: '', setHandle: () => {} };
 export const AuthContext = createContext<AuthState>(SIGNED_OUT);
 
 export const useAuth = () => useContext(AuthContext);
