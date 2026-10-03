@@ -99,9 +99,10 @@ visuals — `app/src/assets/` and the camera system in `CatCoverGame.jsx` are.
     untouched and `cc-tumble` + `cc-break-0..3` (a one-shot four-frame
     sequence that holds on the wreckage) when a cat gets to them. `cc-snooze`
     and `cc-zzz` are unused leftovers from the CAT COVER sleeping-cat state.
-  - No backend, no persistence layer (by design — see the original brief:
-    "no backend, no localStorage"). Don't add either without checking with
-    the user first; it's a deliberate constraint, not an oversight.
+  - Supabase backs optional sign-in, the leaderboard, crews and squads
+    (`src/services/`; SQL in `app/sql/`). The puzzle itself still needs no
+    backend, and a signed-out player gets the whole game. Don't add other
+    persistence (localStorage etc.) without checking with the user first.
 
 ## The board is a camera, not a fit
 
@@ -229,6 +230,51 @@ the shipped app is now CATASTROPHE INC. When adding new code, use
 CATASTROPHE INC.-appropriate naming (SITES, pads, hire/recall, budget); you
 don't need to rename existing leftovers unless asked.
 
+## Engineering standards (the default for ALL new work)
+
+The codebase is being moved to the layered structure below (see
+`git log` for refactor progress). New code and any code you touch follows these
+rules; don't add to the old patterns (god components, inline styles, copy-paste).
+
+**Layers and dependency direction** — `domain` ← `game` / `services` ←
+`screens` / `app`. `ui` and `sprites` depend only on `styles`, `assets` and
+`domain/types`.
+
+- `src/domain/` — pure TypeScript: engine, house, cover rules, scoring,
+  calendar, sites, share text. No React, DOM, Supabase or `Math.random()`.
+- `src/services/` — Supabase client, repositories (one file per aggregate:
+  profiles, siteClears, leaderboards, friendships, squads), auth provider.
+  Repositories return `Result<T>` and log through one shared logger. Components
+  never call Supabase directly; they use repositories via hooks.
+- `src/game/` — reducer + selectors, pure camera maths, scene building, input
+  hooks, audio service, and the board components.
+- `src/screens/`, `src/ui/`, `src/sprites/`, `src/styles/` — screens, shared
+  primitives (Button, Card, TabHeader, Logo, GradeBadge), the cat/pad/thing
+  sprite components, and design tokens.
+
+**Rules**
+
+- Function components + hooks only. One responsibility per component, aim for
+  < 200 lines. No business rules in JSX; derive view data with pure functions
+  (never write instance fields during render). Memoize expensive static layers.
+- Multi-field state machines use a reducer. Side effects live in hooks/effects,
+  are explicit, and are cleaned up (timers, rAF, subscriptions, in-flight
+  requests — ignore stale responses).
+- DRY: one source for every constant (tokens, `SITE_COUNT`, sprite geometry);
+  scoring has exactly one implementation, mirroring the SQL. Before writing
+  something, look for the existing helper/component; before copying, extract.
+- Styling: CSS Modules + `styles/tokens.css`. Inline `style` only for genuinely
+  dynamic values (positions, per-frame opacity, animation strings). No new hex
+  literals or font stacks outside token files.
+- TypeScript strict. No `any` without a comment saying why. Shared types live
+  in `domain/types.ts`. New files are `.ts`/`.tsx`; touch a `.js` file and
+  you're expected to convert it if it is small.
+- Tests: Vitest (+ React Testing Library for components with logic). Every
+  pure module gets unit tests. The determinism snapshots in
+  `src/__tests__/determinism.test.js` must pass unchanged — if one changes,
+  the day's puzzles changed, which is a bug unless explicitly intended.
+- Keep this file in sync with the structure when you move things.
+
 ## Working in `app/`
 
 ```
@@ -240,8 +286,9 @@ npm run lint       # oxlint
 ```
 
 - Lint is `oxlint` (`.oxlintrc.json`), not ESLint — don't add ESLint config.
-- No test suite exists yet. If asked to add tests, ask which runner the user
-  wants rather than assuming.
+- `npm run check` = lint + `tsc --noEmit` + Vitest + build. It must be green
+  before any change is considered done. Tests live beside the code
+  (`*.test.ts[x]`) or in `src/__tests__/`.
 - The puzzle generator (`engine.js`) is deterministic per day via a seed
   derived from `Date.UTC` epoch + day offset — the same puzzle set must be
   reproducible for all players on a given day. Be careful not to break that
