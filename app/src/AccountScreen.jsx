@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import { supabase, APP_BASE_URL, ensureProfile, getProfile, setUsername, displayName, getAllTimeCount, getLeaderboard } from './supabase.js';
+import { supabase } from './services/supabase/client';
+import { displayName } from './domain/profile';
+import { ensureProfile, getProfile, setUsername } from './services/repositories/profiles';
+import { getAllTimeCount } from './services/repositories/siteClears';
+import { getLeaderboard } from './services/repositories/leaderboards';
+import { sendMagicLink, signInWithOAuth as oauthSignIn, signOut as authSignOut } from './services/repositories/auth';
 import CrewScreen from './CrewScreen.jsx';
 
 const EMAIL_RE = /\S+@\S+\.\S+/;
@@ -34,8 +39,8 @@ export default function AccountScreen({ onClose, weeklyResults, onNameChange }) 
       setEmail(user.email);
       setUserId(user.id);
       ensureProfile(user).then(() => {
-        getAllTimeCount(user.id).then(({ count, error }) => { setAllTime(count); setAllTimeErr(error || ''); });
-        getProfile(user.id).then(p => setHandle((p && p.username) || ''));
+        getAllTimeCount(user.id).then(r => { setAllTime(r.ok ? r.data : 0); setAllTimeErr(r.ok ? '' : r.error); });
+        getProfile(user.id).then(r => setHandle((r.ok && r.data && r.data.username) || ''));
       });
     } else {
       setStep(s => (s === 'sent' ? 'sent' : 'signin'));
@@ -55,7 +60,7 @@ export default function AccountScreen({ onClose, weeklyResults, onNameChange }) 
   }, [applySession]);
 
   useEffect(() => {
-    getLeaderboard(tab).then(({ rows, error }) => { setBoard(rows); setBoardErr(error || ''); });
+    getLeaderboard(tab).then(r => { setBoard(r.ok ? r.data : []); setBoardErr(r.ok ? '' : r.error); });
   }, [tab]);
 
   function onEmailChange(e) {
@@ -66,34 +71,32 @@ export default function AccountScreen({ onClose, weeklyResults, onNameChange }) 
     const v = (typedEmail || '').trim();
     if (!EMAIL_RE.test(v)) return;
     setStep('sending');
-    supabase.auth.signInWithOtp({ email: v, options: { emailRedirectTo: APP_BASE_URL } }).then(({ error }) => {
-      if (error) { setStep('signin'); setErrorMsg(error.message); }
+    sendMagicLink(v).then(r => {
+      if (!r.ok) { setStep('signin'); setErrorMsg(r.error); }
       else setStep('sent');
     });
   }
   function signInWithOAuth(provider) {
     setErrorMsg('');
-    supabase.auth.signInWithOAuth({ provider, options: { redirectTo: APP_BASE_URL } }).then(({ error }) => {
-      if (error) setErrorMsg(error.message);
-    });
+    oauthSignIn(provider).then(r => { if (!r.ok) setErrorMsg(r.error); });
   }
   function backToSignin(e) {
     e.preventDefault();
     setStep('signin');
     setErrorMsg('');
   }
-  function signOut() { supabase.auth.signOut(); }
+  function signOut() { authSignOut(); }
 
   function startEditHandle() { setHandleDraft(handle); setHandleErr(''); setEditingHandle(true); }
   function cancelEditHandle() { setEditingHandle(false); setHandleErr(''); }
   function saveHandle() {
     setSavingHandle(true);
-    setUsername(userId, handleDraft).then(({ error, username: saved }) => {
+    setUsername(userId, handleDraft).then(r => {
       setSavingHandle(false);
-      if (error) { setHandleErr(error); return; }
-      setHandle(saved);
+      if (!r.ok) { setHandleErr(r.error); return; }
+      setHandle(r.data);
       setEditingHandle(false);
-      if (onNameChange) onNameChange(saved);
+      if (onNameChange) onNameChange(r.data);
     });
   }
 

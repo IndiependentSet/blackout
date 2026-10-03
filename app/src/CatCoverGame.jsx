@@ -11,7 +11,10 @@ import { scoreRun, keepBest, totalScore } from './domain/scoring';
 import { isDirection, nearestInDirection } from './domain/navigation';
 import { shareText } from './domain/invoice';
 import { roomArt, ROOM_CATALOGUE } from './assets/rooms/index.js';
-import { supabase, displayName, ensureProfile, getProfile, recordClear } from './supabase.js';
+import { supabase } from './services/supabase/client';
+import { displayName } from './domain/profile';
+import { ensureProfile, getProfile } from './services/repositories/profiles';
+import { recordClear } from './services/repositories/siteClears';
 import AccountScreen from './AccountScreen.jsx';
 import HowToPlay from './HowToPlay.jsx';
 
@@ -182,7 +185,7 @@ export default class CatCoverGame extends Component {
     this.setState({ account: user ? user.email : null, userId: user ? user.id : null, handle: null });
     if (user) {
       ensureProfile(user).then(() => getProfile(user.id))
-        .then(p => this.setState({ handle: displayName(p) }));
+        .then(r => this.setState({ handle: r.ok ? displayName(r.data) : '' }));
     }
   }
   /* a visitor with no staff login gets the orientation once per browser
@@ -365,9 +368,9 @@ export default class CatCoverGame extends Component {
       results[this.state.idx] = keepBest(prev, run);
       if (this.state.userId) {
         this.setState({ cardSave: 'saving' });
-        recordClear(this.state.userId, this.day(), this.state.idx, placed.length, lv.k, lv.stars).then(({ error }) => {
-          if (error) this.setState({ msg: 'SCORE NOT SAVED — ' + error });
-          this.setState({ cardSave: error || 'saved' });
+        recordClear(this.state.userId, this.day(), this.state.idx, placed.length, lv.k, lv.stars).then(r => {
+          if (!r.ok) this.setState({ msg: 'SCORE NOT SAVED — ' + r.error });
+          this.setState({ cardSave: r.ok ? 'saved' : r.error });
         });
       } else if (this.state.account) {
         this.setState({ msg: 'SCORE NOT SAVED — SIGNED IN BUT NO USER ID', cardSave: 'SIGNED IN BUT NO USER ID' });

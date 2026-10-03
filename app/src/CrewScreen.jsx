@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import {
-  getProfile, displayName, searchPlayers, getFriendships, requestFriend, acceptFriend,
-  removeFriendship, getMySquads, createSquad, joinSquadByCode, leaveSquad, getSquadMembers,
-  getPlayerScore, getBoardFor,
-} from './supabase.js';
+import { displayName, initial } from './domain/profile';
+import { getProfile, searchPlayers } from './services/repositories/profiles';
+import { getFriendships, requestFriend, acceptFriend, removeFriendship } from './services/repositories/friendships';
+import { getMySquads, createSquad, joinSquadByCode, leaveSquad, getSquadMembers } from './services/repositories/squads';
+import { getPlayerScore, getBoardFor } from './services/repositories/leaderboards';
 
 const luckiest = "'Luckiest Guy', cursive";
 
@@ -16,11 +16,6 @@ const row = active => ({ display: 'flex', alignItems: 'center', gap: 10, backgro
 const primaryBtn = (bg, disabled) => ({ minHeight: 50, background: bg, border: '3px solid #2A1524', borderRadius: 12, boxShadow: '0 4px 0 #2A1524', color: '#3E2718', fontFamily: luckiest, fontSize: 14, letterSpacing: '.04em', cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.6 : 1 });
 const smallBtn = (bg, color) => ({ minHeight: 38, padding: '0 13px', background: bg, border: '2.5px solid #2A1524', borderRadius: 10, color: color || '#3E2718', fontSize: 11.5, fontWeight: 900, letterSpacing: '.05em', cursor: 'pointer' });
 const fieldInput = { minHeight: 48, border: '3px solid #2A1524', borderRadius: 12, padding: '0 14px', fontSize: 14.5, fontWeight: 700, color: '#3E2718', background: '#FFF7E6', boxSizing: 'border-box' };
-
-function initial(p) {
-  const n = displayName(p).replace('@', '');
-  return (n[0] || 'S').toUpperCase();
-}
 
 /* Crew Roster & Squads — the social layer opened from the account screen's
    STAFF ID CARD. Own view-stack (crew/squads at top level; profile,
@@ -51,30 +46,33 @@ export default function CrewScreen({ userId, onClose }) {
   const [copied, setCopied] = useState(false);
 
   const loadCrew = useCallback((t) => {
-    getFriendships(userId).then(r => {
+    getFriendships(userId).then(res => {
+      if (!res.ok) return;
+      const r = res.data;
       setFriends(r.friends); setIncoming(r.incoming); setOutgoing(r.outgoing);
       const ids = r.friends.map(f => f.person.id).concat([userId]);
-      getBoardFor(ids, t || tab).then(setFriendBoard);
+      getBoardFor(ids, t || tab).then(b => { if (b.ok) setFriendBoard(b.data); });
     });
   }, [userId, tab]);
 
   const loadSquads = useCallback(() => {
-    getMySquads(userId).then(r => setSquads(r.rows));
+    getMySquads(userId).then(r => { if (r.ok) setSquads(r.data); });
   }, [userId]);
 
   const loadSquadBoard = useCallback((sq, t) => {
     if (!sq) return;
     getSquadMembers(sq.id).then(r => {
-      setSquadMembers(r.rows);
-      getBoardFor(r.rows.map(m => m.user_id), t || tab).then(setSquadBoard);
+      if (!r.ok) return;
+      setSquadMembers(r.data);
+      getBoardFor(r.data.map(m => m.user_id), t || tab).then(b => { if (b.ok) setSquadBoard(b.data); });
     });
   }, [tab]);
 
   useEffect(() => {
-    getProfile(userId).then(setMe);
+    getProfile(userId).then(r => { if (r.ok) setMe(r.data); });
     loadCrew();
     loadSquads();
-    getPlayerScore(userId).then(setMeScore);
+    getPlayerScore(userId).then(r => { if (r.ok) setMeScore(r.data); });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
@@ -86,7 +84,7 @@ export default function CrewScreen({ userId, onClose }) {
 
   function runSearch() {
     setSearching(true);
-    searchPlayers(query, userId).then(r => { setResults(r.rows); setSearching(false); });
+    searchPlayers(query, userId).then(r => { setResults(r.ok ? r.data : []); setSearching(false); });
   }
 
   function relationTo(id) {
@@ -106,24 +104,24 @@ export default function CrewScreen({ userId, onClose }) {
   }
   function openProfile(person) {
     setView('profile'); setViewing(person); setViewScore(null);
-    getPlayerScore(person.id).then(setViewScore);
+    getPlayerScore(person.id).then(r => { if (r.ok) setViewScore(r.data); });
   }
 
   function doCreateSquad() {
     createSquad(userId, newSquadName).then(r => {
-      if (r.error) return setSquadErrorMsg(r.error);
+      if (!r.ok) return setSquadErrorMsg(r.error);
       setNewSquadName(''); setSquadErrorMsg('');
-      const sq = { ...r.squad, role: 'foreman', members: 1 };
+      const sq = { ...r.data, role: 'foreman', members: 1 };
       setView('squad'); setSquad(sq);
       loadSquads(); loadSquadBoard(sq);
     });
   }
   function doJoinSquad() {
     joinSquadByCode(userId, joinCode).then(r => {
-      if (r.error) return setSquadErrorMsg(r.error);
+      if (!r.ok) return setSquadErrorMsg(r.error);
       setJoinCode(''); setSquadErrorMsg('');
-      setView('squad'); setSquad(r.squad);
-      loadSquads(); loadSquadBoard(r.squad);
+      setView('squad'); setSquad(r.data);
+      loadSquads(); loadSquadBoard(r.data);
     });
   }
   function doLeaveSquad() {

@@ -66,3 +66,26 @@ export interface SiteResult {
   stars: Stars;
   rows: ScoreRow[];
 }
+
+/** The columns of `profiles` that are safe to read for other users. */
+export interface Profile { id: string; username?: string | null; invite_code?: string | null }
+
+export type BoardScope = 'week' | 'allTime';
+
+/** A row of the player_scores view. */
+export interface PlayerScore { user_id: string; name: string; score: number; week_score: number }
+export interface BoardRow { user_id: string; name: string; score: number }
+
+export interface Friendship {
+  id: string;
+  requester_id: string;
+  addressee_id: string;
+  status: 'pending' | 'accepted';
+}
+export interface FriendLink { row: Friendship; person: Profile }
+export interface Friendships { friends: FriendLink[]; incoming: FriendLink[]; outgoing: FriendLink[] }
+
+export type SquadRole = 'foreman' | 'member';
+export interface Squad { id: string; name: string; invite_code: string; created_by: string }
+export interface MySquad extends Squad { role: SquadRole; members: number }
+export interface SquadMember { user_id: string; role: SquadRole }
