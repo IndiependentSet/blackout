@@ -190,9 +190,15 @@ export default class CatCoverGame extends Component {
         .then(p => this.setState({ handle: displayName(p) }));
     }
   }
-  /* a visitor with no staff login gets the orientation once per page load */
+  /* a visitor with no staff login gets the orientation once per browser
+     session (sessionStorage, so it survives a reload but not a closed tab);
+     HOW IT WORKS on the work order reopens it any time */
   orient(session) {
-    if (!session && this.state.screen === 'intro' && !this.state.howtoSeen) this.setState({ howto: true, howtoSeen: true });
+    let seen = this.state.howtoSeen;
+    try { seen = seen || sessionStorage.getItem('cc-howto-seen') === '1'; } catch { /* storage blocked: fall back to once per page load */ }
+    if (session || seen || this.state.screen !== 'intro') return;
+    try { sessionStorage.setItem('cc-howto-seen', '1'); } catch { /* ignore */ }
+    this.setState({ howto: true, howtoSeen: true });
   }
   openAccount(from) { this.setState({ screen: 'account', acctFrom: from }); }
   closeAccount() { this.setState({ screen: this.state.acctFrom || 'intro' }); }
