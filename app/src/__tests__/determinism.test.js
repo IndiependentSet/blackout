@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import * as E from '../engine.js';
-import { buildHouse, houseSeed } from '../house.js';
+import * as E from '../domain/engine';
+import { buildHouse, houseSeed } from '../domain/house';
 import manifest from '../assets/rooms/manifest.json';
 
 /* Characterization tests: the same day must give every player the same puzzles

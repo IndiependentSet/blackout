@@ -74,15 +74,6 @@ export async function getProfile(userId) {
   return data;
 }
 
-/* The client-side mirror of site_clears.score, the generated column in
-   app/sql/2026-09-07-weighted-score.sql:28-31. Kept here, next to the call
-   that writes the row, so the number the score card shows and the number
-   the leaderboard banks can never drift apart — change one, change both. */
-export function siteScore(stars, catsUsed, par) {
-  return Math.max(0, stars * 10 - (catsUsed - par) * 5);
-}
-export function siteBest(stars) { return stars * 10; }
-
 /* stars is the level's own difficulty rating (engine.js's difficulty(), 1-3
    — the same number the ✦✦✦ under SITE N shows). The leaderboard score
    itself is computed in the DB (see app/sql/…-weighted-score.sql) from

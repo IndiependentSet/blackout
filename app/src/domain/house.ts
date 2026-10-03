@@ -21,7 +21,11 @@
  *
  * Paths cross walls freely; nothing in the puzzle depends on this file.
  */
-import { rngFromSeed } from './engine.js';
+import { rngFromSeed } from './engine';
+import type { CatalogueEntry, HousePlan, Level, Point, Rect, Rng } from './types';
+
+/** A room while the BSP is still cutting; `type`/`art` are dealt afterwards. */
+interface BspRoom { rect: Rect; ids: number[]; mids: Point[]; pts: Point[]; type?: string; art?: string }
 
 export const HOUSE = {
   MIN_ROOM: 2,    // cells: a room is 2 or 3 cells a side, so furniture drawn
@@ -42,7 +46,7 @@ export const HOUSE = {
 const H = HOUSE;
 
 /* which smashables belong in which room */
-export const ROOM_THINGS = {
+export const ROOM_THINGS: Record<string, string[]> = {
   kitchen: ['mug', 'can', 'pot', 'plant', 'clock'],
   dining: ['mug', 'vase', 'can', 'books', 'clock'],
   bath: ['toilet-paper', 'vase', 'fishbowl', 'mug'],
@@ -58,17 +62,17 @@ export const ROOM_THINGS = {
   storage: ['box', 'crate', 'can', 'yarn', 'petbed'],
 };
 /* stands in for the catalogue when no art has been prepared yet */
-const PLAIN = [
+const PLAIN: CatalogueEntry[] = [
   { key: 'living', type: 'living', aspect: 1 }, { key: 'kitchen', type: 'kitchen', aspect: 1 },
   { key: 'bedroom', type: 'bedroom', aspect: 1 }, { key: 'bath', type: 'bath', aspect: 0.7 },
   { key: 'study', type: 'study', aspect: 1 }, { key: 'hall', type: 'hall', aspect: 0.7 },
 ];
 
-const aspectOf = r => r.w / r.h;
+const aspectOf = (r: Rect) => r.w / r.h;
 
 /* where each path hangs its smashable, in lattice units — a room earns its
    place by holding at least one of these */
-function midpoints(lv, pts, spacing) {
+function midpoints(lv: Level, pts: Point[], spacing: number): Point[] {
   return lv.edges.map(([u, v]) => ({
     x: (pts[u].x + pts[v].x) / 2,
     y: (pts[u].y + pts[v].y) / 2
@@ -76,7 +80,7 @@ function midpoints(lv, pts, spacing) {
   }));
 }
 
-export function latticeOrigin(lv) {
+export function latticeOrigin(lv: Level) {
   let c0 = Infinity, r0 = Infinity, c1 = -Infinity, r1 = -Infinity;
   for (const n of lv.nodes) {
     if (n.c < c0) c0 = n.c;
@@ -90,9 +94,9 @@ export function latticeOrigin(lv) {
 /* a seed from the level's own contents: layout() runs during render and for
    levels other than the current one, so it can't reach for the day or the
    site index without becoming order-dependent */
-export function houseSeed(lv) {
+export function houseSeed(lv: Level): number {
   let h = 0x811c9dc5;
-  const mix = v => { h = Math.imul(h ^ (v & 0xffff), 0x01000193) >>> 0; };
+  const mix = (v: number) => { h = Math.imul(h ^ (v & 0xffff), 0x01000193) >>> 0; };
   mix(lv.nodes.length); mix(lv.edges.length); mix(lv.k);
   for (const n of lv.nodes) { mix(n.c + 512); mix(n.r + 512); }
   for (const [a, b] of lv.edges) { mix(a); mix(b); }
@@ -102,15 +106,15 @@ export function houseSeed(lv) {
 /* ---------- the partition ---------- */
 /* wall lines sit on half-integers, and every room they leave behind is at
    least MIN_ROOM cells wide, so a pad is never closer than half a cell */
-function candidates(lo, len) {
-  const out = [];
+function candidates(lo: number, len: number) {
+  const out: number[] = [];
   for (let k = H.MIN_ROOM; k <= len - H.MIN_ROOM; k++) out.push(lo + k);
   return out;
 }
 
 /* how many paths straddle a line — walls prefer to fall where the graph is
    sparse, which is what makes rooms hold clusters of pads */
-function crossings(pts, edges, vert, t, o0, o1) {
+function crossings(pts: Point[], edges: [number, number][], vert: boolean, t: number, o0: number, o1: number) {
   let n = 0;
   for (const [a, b] of edges) {
     const pa = vert ? pts[a].x : pts[a].y, pb = vert ? pts[b].x : pts[b].y;
@@ -123,7 +127,7 @@ function crossings(pts, edges, vert, t, o0, o1) {
 
 /* how far a room's shape is from the nearest picture that could fill it —
  * this is what keeps the art from being stretched */
-function shapeMiss(shapes, w, h) {
+function shapeMiss(shapes: number[], w: number, h: number) {
   let best = Infinity;
   const a = w / h;
   for (const s of shapes) best = Math.min(best, Math.abs(Math.log(s / a)));
@@ -132,10 +136,10 @@ function shapeMiss(shapes, w, h) {
 
 /* `keep` is what both halves of a cut have to end up with: the objects on the
    paths, or — only for a room too big to leave alone — at least a pad each */
-function pickLine(rect, ids, mids, pts, edges, vert, rng, shapes, keep) {
+function pickLine(rect: Rect, ids: number[], mids: Point[], pts: Point[], edges: [number, number][], vert: boolean, rng: Rng, shapes: number[], keep: 'object' | 'pad') {
   const lo = vert ? rect.x : rect.y, len = vert ? rect.w : rect.h;
   const o0 = vert ? rect.y : rect.x, o1 = o0 + (vert ? rect.h : rect.w);
-  let best = null;
+  let best: { t: number; s: number } | null = null;
   for (const t of candidates(lo, len)) {
     /* a room with nothing in it has no reason to exist, so a cut that leaves
        one side empty is not a cut we can make */
@@ -161,9 +165,9 @@ function pickLine(rect, ids, mids, pts, edges, vert, rng, shapes, keep) {
   return best;
 }
 
-function partition(foot, pts, mids, edges, rng, shapes) {
-  const rooms = [];
-  const rec = (rect, ids, mine) => {
+function partition(foot: Rect, pts: Point[], mids: Point[], edges: [number, number][], rng: Rng, shapes: number[]) {
+  const rooms: BspRoom[] = [];
+  const rec = (rect: Rect, ids: number[], mine: Point[]): void => {
     const leaf = () => rooms.push({ rect, ids, mids: mine, pts });
     const bigV = rect.w > H.MAX_ROOM, bigH = rect.h > H.MAX_ROOM;
     if (!bigV && !bigH) { leaf(); return; }
@@ -171,10 +175,10 @@ function partition(foot, pts, mids, edges, rng, shapes) {
        big to leave alone is worth splitting the short way if that is the only
        cut that keeps an object on both sides */
     const first = bigV && bigH ? (rect.w === rect.h ? rng() < 0.5 : rect.w > rect.h) : bigV;
-    let vert = first, best = null;
+    let vert = first, best: { t: number; s: number } | null = null;
     /* objects on both sides is what we want; a pad each is what we settle for
        rather than leave a room the size of four */
-    for (const keep of ['object', 'pad']) {
+    for (const keep of ['object', 'pad'] as const) {
       for (const v of [first, !first]) {
         best = pickLine(rect, ids, mine, pts, edges, v, rng, shapes, keep);
         if (best) { vert = v; break; }
@@ -187,7 +191,7 @@ function partition(foot, pts, mids, edges, rng, shapes) {
       : { x: rect.x, y: rect.y, w: rect.w, h: t - rect.y };
     const B = vert ? { x: t, y: rect.y, w: rect.x + rect.w - t, h: rect.h }
       : { x: rect.x, y: t, w: rect.w, h: rect.y + rect.h - t };
-    const side = p => (vert ? p.x : p.y) < t;
+    const side = (p: Point) => (vert ? p.x : p.y) < t;
     rec(A, ids.filter(i => side(pts[i])), mine.filter(side));
     rec(B, ids.filter(i => !side(pts[i])), mine.filter(m => !side(m)));
   };
@@ -200,9 +204,9 @@ function partition(foot, pts, mids, edges, rng, shapes) {
    actually holds — but only at a corner of the house, and only when there is
    a whole empty cell to win. Bite anywhere else and the missing floor reads
    as a hole in the middle of the building rather than an L-shaped plan. */
-function trimToContent(rooms, foot) {
+function trimToContent(rooms: BspRoom[], foot: Rect) {
   const eps = 1e-6;
-  const wallAt = v => Math.floor(v - 0.5) + 0.5;   // nearest half-integer below
+  const wallAt = (v: number) => Math.floor(v - 0.5) + 0.5;   // nearest half-integer below
   for (const r of rooms) {
     const held = r.ids.map(i => r.pts[i]).concat(r.mids);
     if (!held.length) continue;
@@ -234,24 +238,24 @@ function trimToContent(rooms, foot) {
 }
 
 /* ---------- which picture goes where ---------- */
-const touching = (a, b) =>
+const touching = (a: Rect, b: Rect) =>
   a.x < b.x + b.w + 1e-6 && b.x < a.x + a.w + 1e-6 &&
   a.y < b.y + b.h + 1e-6 && b.y < a.y + a.h + 1e-6;
 
 /* Two houses on two days shouldn't look like the same house: a picture is
    chosen for its shape first, then pushed away from its own kind next door,
    away from taking more than its share, and away from being used twice. */
-function dealArt(rooms, cat, rng) {
-  const used = {}, again = {};
+function dealArt(rooms: BspRoom[], cat: CatalogueEntry[], rng: Rng) {
+  const used: Record<string, number> = {}, again: Record<string, number> = {};
   const share = Math.max(1, rooms.length / 3);
   rooms.forEach((room, i) => {
-    const near = [];
+    const near: (string | undefined)[] = [];
     for (let j = 0; j < i; j++) if (touching(rooms[j].rect, room.rect)) near.push(rooms[j].type);
     const a = aspectOf(room.rect);
     /* shape first, and as a filter rather than a score: a bathroom squeezed
        into a room the wrong shape reads as a mistake, however varied it is */
     const fits = cat.filter(e => Math.abs(Math.log(e.aspect / a)) <= H.SHAPE_TOL);
-    let best = null;
+    let best: { s: number; e: CatalogueEntry } | null = null;
     for (const e of (fits.length ? fits : cat)) {
       const s = H.SHAPE_W * Math.abs(Math.log(e.aspect / a))
         + H.SHARE_W * ((used[e.type] || 0) / share)
@@ -260,6 +264,7 @@ function dealArt(rooms, cat, rng) {
         + rng() * 0.45;
       if (!best || s < best.s) best = { s, e };
     }
+    if (!best) throw new Error('house: empty room catalogue');
     room.type = best.e.type;
     room.art = best.e.key;
     used[best.e.type] = (used[best.e.type] || 0) + 1;
@@ -268,7 +273,7 @@ function dealArt(rooms, cat, rng) {
 }
 
 /* ---------- build ---------- */
-export function buildHouse(lv, seed, spacing, thingNames, catalogue) {
+export function buildHouse(lv: Level, seed: number, spacing: number, thingNames: string[] | null | undefined, catalogue?: CatalogueEntry[] | null): HousePlan {
   const rng = rngFromSeed(seed);
   const o = latticeOrigin(lv);
   const pts = lv.nodes.map(n => ({ x: n.c - o.c0, y: n.r - o.r0 }));
@@ -296,10 +301,10 @@ export function buildHouse(lv, seed, spacing, thingNames, catalogue) {
   const roomOfNode = new Int16Array(lv.nodes.length).fill(-1);
   rooms.forEach((r, id) => r.ids.forEach(i => { roomOfNode[i] = id; }));
 
-  const plan = {
+  const plan: HousePlan = {
     foot: shell, outer: shell,
     rooms: rooms.map((r, id) => ({
-      id, type: r.type, art: r.art,
+      id, type: r.type as string, art: r.art as string,
       /* mirroring a top-down room is free variety — the art is lit from
          above, so left-to-right is the one flip that stays believable */
       flip: rng() < 0.5,
@@ -307,7 +312,7 @@ export function buildHouse(lv, seed, spacing, thingNames, catalogue) {
       cx: (r.rect.x + r.rect.w / 2) * S, cy: (r.rect.y + r.rect.h / 2) * S,
     })),
     roomOfNode,
-    edgeThing: null,
+    edgeThing: new Int16Array(0),
   };
   plan.edgeThing = pickThings(plan, lv, pts, S, thingNames);
   return plan;
@@ -316,7 +321,7 @@ export function buildHouse(lv, seed, spacing, thingNames, catalogue) {
 
 /* which smashable sits on each path — the room it hangs in picks it, so the
    toilet roll stops turning up in the kitchen. Cosmetic only. */
-function pickThings(plan, lv, pts, S, thingNames) {
+function pickThings(plan: HousePlan, lv: Level, pts: Point[], S: number, thingNames: string[] | null | undefined) {
   const out = new Int16Array(lv.edges.length);
   const names = thingNames || [];
   lv.edges.forEach(([u, v], i) => {
@@ -337,7 +342,7 @@ function pickThings(plan, lv, pts, S, thingNames) {
   return out;
 }
 
-export function roomAt(plan, x, y) {
+export function roomAt(plan: Pick<HousePlan, 'rooms'>, x: number, y: number) {
   for (const r of plan.rooms)
     if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) return r.id;
   return -1;

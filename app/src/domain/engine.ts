@@ -1,7 +1,16 @@
-// BLACKOUT engine: seeded gadget-composition level generator + exact solver.
+// Level engine: seeded gadget-composition level generator + exact solver.
 // Graph = { nodes:[{c,r}], edges:[[a,b]], adj:[[..]] }  (lattice coords, planar, max degree 3)
+import type { Cell, Edge, Level, LevelFilter, Rng, Stars } from './types';
 
-export function rngFromSeed(seed) {
+/** Mutable builder graph used while generating a level. */
+interface Graph { nodes: Cell[]; edges: Edge[]; adj: number[][]; key: Map<string, number> }
+interface Snapshot { n: number; e: number; adj: number[] }
+interface Gadget { cells: [number, number][]; links: [number, number][]; conn: number; tag: string }
+type Id = number | string;
+type Neighbours = Map<Id, Set<Id>>;
+export interface SolveResult { k: number; count: number; sol: number[]; alt: number[] | null; visits: number }
+
+export function rngFromSeed(seed: number): Rng {
   let a = seed >>> 0;
   return function () {
     a = (a + 0x6d2b79f5) | 0;
@@ -10,11 +19,11 @@ export function rngFromSeed(seed) {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
-const pick = (rng, arr) => arr[Math.floor(rng() * arr.length) % arr.length];
-const ri = (rng, n) => Math.floor(rng() * n) % n;
+const pick = <T>(rng: Rng, arr: T[]): T => arr[Math.floor(rng() * arr.length) % arr.length];
+const ri = (rng: Rng, n: number) => Math.floor(rng() * n) % n;
 
 /* ---------- geometry ---------- */
-function distPtSeg(p, a, b) {
+function distPtSeg(p: Cell, a: Cell, b: Cell) {
   const vx = b.c - a.c, vy = b.r - a.r;
   const wx = p.c - a.c, wy = p.r - a.r;
   const L = vx * vx + vy * vy;
@@ -22,23 +31,23 @@ function distPtSeg(p, a, b) {
   t = Math.max(0, Math.min(1, t));
   return Math.hypot(a.c + t * vx - p.c, a.r + t * vy - p.r);
 }
-function ccw(a, b, c) { return (b.c - a.c) * (c.r - a.r) - (b.r - a.r) * (c.c - a.c); }
-function segCross(a, b, c, d) {
+function ccw(a: Cell, b: Cell, c: Cell) { return (b.c - a.c) * (c.r - a.r) - (b.r - a.r) * (c.c - a.c); }
+function segCross(a: Cell, b: Cell, c: Cell, d: Cell) {
   const d1 = ccw(a, b, c), d2 = ccw(a, b, d), d3 = ccw(c, d, a), d4 = ccw(c, d, b);
   return ((d1 > 0) !== (d2 > 0)) && ((d3 > 0) !== (d4 > 0));
 }
 
 /* ---------- builder ---------- */
-function newG() { return { nodes: [], edges: [], adj: [], key: new Map() }; }
-const ck = (c, r) => c + ',' + r;
+function newG(): Graph { return { nodes: [], edges: [], adj: [], key: new Map() }; }
+const ck = (c: number, r: number) => c + ',' + r;
 
-function addNode(g, c, r) {
+function addNode(g: Graph, c: number, r: number) {
   if (g.key.has(ck(c, r))) return -1;
   const i = g.nodes.length;
   g.nodes.push({ c, r }); g.adj.push([]); g.key.set(ck(c, r), i);
   return i;
 }
-function edgeOk(g, a, b) {
+function edgeOk(g: Graph, a: number, b: number) {
   if (a === b || g.adj[a].includes(b)) return false;
   if (g.adj[a].length >= 3 || g.adj[b].length >= 3) return false;
   const A = g.nodes[a], B = g.nodes[b];
@@ -51,13 +60,13 @@ function edgeOk(g, a, b) {
   }
   return true;
 }
-function addEdge(g, a, b) {
+function addEdge(g: Graph, a: number, b: number) {
   if (!edgeOk(g, a, b)) return false;
   g.edges.push([a, b]); g.adj[a].push(b); g.adj[b].push(a);
   return true;
 }
-function snapshot(g) { return { n: g.nodes.length, e: g.edges.length, adj: g.adj.map(l => l.length) }; }
-function restore(g, s) {
+function snapshot(g: Graph): Snapshot { return { n: g.nodes.length, e: g.edges.length, adj: g.adj.map(l => l.length) }; }
+function restore(g: Graph, s: Snapshot) {
   for (let i = s.n; i < g.nodes.length; i++) g.key.delete(ck(g.nodes[i].c, g.nodes[i].r));
   g.nodes.length = s.n; g.adj.length = s.n; g.edges.length = s.e;
   for (let i = 0; i < s.n; i++) g.adj[i].length = s.adj[i];
@@ -65,7 +74,7 @@ function restore(g, s) {
 
 /* ---------- gadgets ----------
    cells: relative lattice cells; links: internal edges; conn: index of cell wired to the anchor */
-const GADGETS = {
+const GADGETS: Record<string, Gadget> = {
   // degree-1 spur: one junction hanging off an existing one
   spur: { cells: [[0, 0]], links: [], conn: 0, tag: 'leaf' },
   // forced hub: a centre with two leaves -> the centre is forced
@@ -86,16 +95,16 @@ const GADGETS = {
     links: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 0]], conn: 0, tag: 'ring',
   },
 };
-const OFFS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+const OFFS: [number, number][] = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 
-function xform(cell, rot, flip) {
+function xform(cell: [number, number], rot: number, flip: boolean): [number, number] {
   let [c, r] = cell;
   if (flip) c = -c;
   for (let i = 0; i < rot; i++) { const t = c; c = -r; r = t; }
   return [c, r];
 }
 
-function placeGadget(g, rng, gname) {
+function placeGadget(g: Graph, rng: Rng, gname: string) {
   const G = GADGETS[gname];
   const anchors = g.nodes.map((_, i) => i).filter(i => g.adj[i].length < 3);
   if (!anchors.length) return false;
@@ -107,7 +116,7 @@ function placeGadget(g, rng, gname) {
     const target = [g.nodes[A].c + off[0], g.nodes[A].r + off[1]];
     const dx = target[0] - cells[G.conn][0], dy = target[1] - cells[G.conn][1];
     const snap = snapshot(g);
-    const ids = [];
+    const ids: number[] = [];
     let ok = true;
     for (const [c, r] of cells) {
       const id = addNode(g, c + dx, r + dy);
@@ -123,11 +132,11 @@ function placeGadget(g, rng, gname) {
 }
 
 /* ---------- exact solver: minimum cover + how many optimal solutions ---------- */
-export function solve(g) {
+export function solve(g: Pick<Graph, 'nodes' | 'edges' | 'adj'>): SolveResult {
   const n = g.nodes.length, adj = g.adj;
   const state = new Int8Array(n);
   const order = g.nodes.map((_, i) => i).sort((a, b) => adj[b].length - adj[a].length);
-  let best = n + 1, count = 0, sol = null, alt = null, visits = 0;
+  let best = n + 1, count = 0, sol: number[] | null = null, alt: number[] | null = null, visits = 0;
 
   const lb = () => {
     const used = new Uint8Array(n); let m = 0;
@@ -135,9 +144,9 @@ export function solve(g) {
       if (state[u] === 0 && state[v] === 0 && !used[u] && !used[v]) { used[u] = used[v] = 1; m++; }
     return m;
   };
-  const collect = () => { const s = []; for (let i = 0; i < n; i++) if (state[i] === 1) s.push(i); return s; };
+  const collect = () => { const s: number[] = []; for (let i = 0; i < n; i++) if (state[i] === 1) s.push(i); return s; };
 
-  function rec(taken) {
+  function rec(taken: number): void {
     if (++visits > 600000) throw new Error('search blew up');
     if (taken > best) return;
     let v = -1;
@@ -150,7 +159,7 @@ export function solve(g) {
     if (taken + lb() > best) return;
     state[v] = 1; rec(taken + 1); state[v] = 0;
     state[v] = 2;
-    const forced = []; let ok = true;
+    const forced: number[] = []; let ok = true;
     for (const u of adj[v]) {
       if (state[u] === 2) { ok = false; break; }
       if (state[u] === 0) { state[u] = 1; forced.push(u); }
@@ -160,16 +169,17 @@ export function solve(g) {
     state[v] = 0;
   }
   rec(0);
-  return { k: best, count, sol, alt, visits };
+  return { k: best, count, sol: sol ?? [], alt, visits };
 }
 
 /* ---------- difficulty: which technique clears the board ---------- */
-function asSets(g) {
-  const m = new Map();
+function asSets(g: Pick<Graph, 'nodes' | 'adj'>): Neighbours {
+  const m: Neighbours = new Map();
   g.nodes.forEach((_, i) => m.set(i, new Set(g.adj[i])));
   return m;
 }
-function reduce(m, allowFold) {
+function reduce(m: Neighbours, allowFold: boolean) {
+  const at = (id: Id) => m.get(id) as Set<Id>;   // present whenever the caller has just seen the id
   let moved = true;
   while (moved) {
     moved = false;
@@ -177,41 +187,41 @@ function reduce(m, allowFold) {
       if (ns.size === 0) { m.delete(v); moved = true; break; }
       if (ns.size === 1) {                       // leaf rule: take the neighbour
         const u = [...ns][0];
-        for (const w of m.get(u)) m.get(w) && m.get(w).delete(u);
+        for (const w of at(u)) m.get(w)?.delete(u);
         m.delete(u); m.delete(v); moved = true; break;
       }
       if (allowFold && ns.size === 2) {
         const [u, w] = [...ns];
-        if (m.get(u).has(w)) {                   // triangle: take both neighbours
-          for (const x of [u, w]) { for (const y of m.get(x)) m.get(y) && m.get(y).delete(x); m.delete(x); }
+        if (at(u).has(w)) {                      // triangle: take both neighbours
+          for (const x of [u, w]) { for (const y of at(x)) m.get(y)?.delete(x); m.delete(x); }
           m.delete(v); moved = true; break;
         }
-        const merged = new Set();                // degree-2 fold
-        for (const x of [u, w]) for (const y of m.get(x)) if (y !== v && y !== u && y !== w) merged.add(y);
-        for (const x of [v, u, w]) { for (const y of m.get(x) || []) m.get(y) && m.get(y).delete(x); m.delete(x); }
+        const merged = new Set<Id>();            // degree-2 fold
+        for (const x of [u, w]) for (const y of at(x)) if (y !== v && y !== u && y !== w) merged.add(y);
+        for (const x of [v, u, w]) { for (const y of m.get(x) || []) m.get(y)?.delete(x); m.delete(x); }
         const id = 'f' + v;
         m.set(id, merged);
-        for (const y of merged) m.get(y).add(id);
+        for (const y of merged) at(y).add(id);
         moved = true; break;
       }
     }
   }
   return m.size === 0;
 }
-export function difficulty(g) {
+export function difficulty(g: Pick<Graph, 'nodes' | 'adj'>): Stars {
   if (reduce(asSets(g), false)) return 1;
   if (reduce(asSets(g), true)) return 2;
   return 3;
 }
 
 /* ---------- generation ---------- */
-const MENU = {
+const MENU: Record<number, string[]> = {
   1: ['spur', 'spur', 'hub', 'hub', 'path3'],
   2: ['path3', 'path4', 'path5', 'spur', 'hub', 'ring4'],
   3: ['crown', 'crown', 'ring6', 'ring4', 'path4', 'path5', 'hub', 'spur'],
 };
 
-function grow(rng, target, diff) {
+function grow(rng: Rng, target: number, diff: number) {
   const g = newG();
   addNode(g, 0, 0);
   let fails = 0;
@@ -226,7 +236,7 @@ function grow(rng, target, diff) {
 
 // close nearby degree-2 junctions into rings/crowns: kills the leaf and fold rules,
 // which is what forces a crown reduction or a real branch.
-function densify(g, rng, rounds) {
+function densify(g: Graph, rng: Rng, rounds: number) {
   for (let t = 0; t < rounds; t++) {
     const open = g.nodes.map((_, i) => i).filter(i => g.adj[i].length < 3);
     if (open.length < 2) return;
@@ -237,7 +247,7 @@ function densify(g, rng, rounds) {
   }
 }
 
-function spurAt(g, v) {
+function spurAt(g: Graph, v: number) {
   if (g.adj[v].length >= 3) return false;
   for (const [dc, dr] of OFFS) {
     const id = addNode(g, g.nodes[v].c + dc, g.nodes[v].r + dr);
@@ -251,7 +261,7 @@ function spurAt(g, v) {
 
 // Targeted tie-break: two optimal covers differ somewhere, so pin one of those
 // junctions down with a spur (leaf rule then forces it) and the tie collapses.
-function repair(g, rng, r) {
+function repair(g: Graph, rng: Rng, r: SolveResult) {
   const A = new Set(r.sol), B = new Set(r.alt || []);
   const diffs = [...A].filter(v => !B.has(v)).concat([...B].filter(v => !A.has(v)));
   for (let t = diffs.length; t > 0; t--) {
@@ -260,7 +270,7 @@ function repair(g, rng, r) {
   }
   return densifyOnce(g, rng);
 }
-function densifyOnce(g, rng) {
+function densifyOnce(g: Graph, rng: Rng) {
   const open = g.nodes.map((_, i) => i).filter(i => g.adj[i].length < 3);
   for (let t = 0; t < 8 && open.length > 1; t++) {
     const a = pick(rng, open);
@@ -271,9 +281,9 @@ function densifyOnce(g, rng) {
   return false;
 }
 
-export function makeLevel(rng, target, diff, budgetMs, accept) {
+export function makeLevel(rng: Rng, target: number, diff: number, budgetMs?: number, accept?: LevelFilter | null): Level | null {
   const t0 = Date.now(), budget = budgetMs || 500;
-  let fallback = null;
+  let fallback: Level | null = null;
   for (let att = 0; att < 400; att++) {
     if (Date.now() - t0 > budget && fallback) break;
     const seedSize = Math.max(4, diff === 3 ? target - 3 : target - 1);
@@ -281,17 +291,17 @@ export function makeLevel(rng, target, diff, budgetMs, accept) {
     if (g.edges.length < 2 || g.nodes.some((_, i) => g.adj[i].length === 0)) continue;
     if (diff === 3) densify(g, rng, Math.ceil(target * 0.8));
     for (let fix = 0; fix < 18; fix++) {
-      let r;
-      try { r = solve(g); } catch (e) { break; }
+      let r: SolveResult;
+      try { r = solve(g); } catch { break; }
       if (r.count === 1) {
         const d = difficulty(g), n = g.nodes.length;
-        const lv = { nodes: g.nodes.map(p => ({ c: p.c, r: p.r })), edges: g.edges.map(e => e.slice()),
+        const lv: Level = { nodes: g.nodes.map(p => ({ c: p.c, r: p.r })), edges: g.edges.map(e => [e[0], e[1]] as Edge),
                      adj: g.adj.map(a => a.slice()), k: r.k, sol: r.sol, stars: d };
         const okShape = !accept || accept(lv);
         if (okShape && d === diff && n >= (target <= 8 ? target : target - 1) && n <= target + 2) return lv;
         if (!okShape) break;
         const score = Math.abs(d - diff) * 100 + Math.abs(n - target);
-        if (!fallback || score < fallback._score) { lv._score = score; fallback = lv; }
+        if (!fallback || score < (fallback._score ?? Infinity)) { lv._score = score; fallback = lv; }
         break;
       }
       if (g.nodes.length > target + 2) break;
@@ -302,28 +312,28 @@ export function makeLevel(rng, target, diff, budgetMs, accept) {
   return fallback;
 }
 
-export const RAMP = [
+export const RAMP: { n: number; d: number }[] = [
   { n: 4, d: 1 }, { n: 7, d: 1 }, { n: 10, d: 2 },
   { n: 14, d: 2 }, { n: 18, d: 3 }, { n: 24, d: 3 }, { n: 30, d: 3 },
 ];
 
-export function makeLevelForDay(seed, idx) {
+export function makeLevelForDay(seed: number, idx: number): Level {
   const step = RAMP[idx];
   const accept = idx === 0
-    ? lv => lv.nodes.length >= 4 && lv.adj.some(a => a.length === 3) && lv.k <= 2
+    ? (lv: Level) => lv.nodes.length >= 4 && lv.adj.some(a => a.length === 3) && lv.k <= 2
     : null;
   for (let salt = 0; salt < 6; salt++) {
     const lv = makeLevel(rngFromSeed(seed * 7919 + idx * 104729 + salt * 31), step.n, step.d, idx >= 4 ? 700 : 400, accept);
     if (lv) return lv;
   }
-  return makeLevel(rngFromSeed(seed + idx), step.n, 1, 900);
+  return makeLevel(rngFromSeed(seed + idx), step.n, 1, 900) as Level;
 }
-export function makeDay(seed) {
+export function makeDay(seed: number): Level[] {
   return RAMP.map((_, i) => makeLevelForDay(seed, i));
 }
 
 /* ---------- hints ---------- */
-export function hintLeaf(lv, placed) {
+export function hintLeaf(lv: Level, placed: Set<number>): { leaf: number; forced: number } | null {
   for (let i = 0; i < lv.nodes.length; i++) {
     if (lv.adj[i].length !== 1) continue;
     const nb = lv.adj[i][0];
@@ -331,14 +341,14 @@ export function hintLeaf(lv, placed) {
   }
   return null;
 }
-export function hintMatching(lv) {
-  const used = new Set(); const m = [];
+export function hintMatching(lv: Level): number[] {
+  const used = new Set<number>(); const m: number[] = [];
   for (let i = 0; i < lv.edges.length; i++) {
     const [u, v] = lv.edges[i];
     if (!used.has(u) && !used.has(v)) { used.add(u); used.add(v); m.push(i); }
   }
   return m;
 }
-export function hintReveal(lv, placed) {
+export function hintReveal(lv: Level, placed: Set<number>): number | null {
   return lv.sol.find(v => !placed.has(v)) ?? null;
 }

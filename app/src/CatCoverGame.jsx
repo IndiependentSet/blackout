@@ -1,11 +1,17 @@
 import { Component } from 'react';
-import * as E from './engine.js';
+import * as E from './domain/engine';
 import { BREEDS, CAT_BASELINE } from './assets/cats/index.js';
 import { THINGS, THING_BASELINE } from './assets/things/index.js';
 import { CRACKLES } from './assets/sfx/index.js';
-import { buildHouse, houseSeed, HOUSE as HZ } from './house.js';
+import { buildHouse, houseSeed } from './domain/house';
+import { SITES, SITE_COUNT, LAST_SITE, isSiteIndex } from './domain/sites';
+import { dayNumber, daySeed } from './domain/calendar';
+import { coveredEdges, isCleared } from './domain/cover';
+import { scoreRun, keepBest, totalScore } from './domain/scoring';
+import { isDirection, nearestInDirection } from './domain/navigation';
+import { shareText } from './domain/invoice';
 import { roomArt, ROOM_CATALOGUE } from './assets/rooms/index.js';
-import { supabase, displayName, ensureProfile, getProfile, recordClear, siteScore, siteBest } from './supabase.js';
+import { supabase, displayName, ensureProfile, getProfile, recordClear } from './supabase.js';
 import AccountScreen from './AccountScreen.jsx';
 import HowToPlay from './HowToPlay.jsx';
 
@@ -13,10 +19,7 @@ const SOUND_ON = true;
 const CRACKLE_GAIN = 0.3;   // recorded takes are normalised hot; this sits them
                             // alongside the synthesised chirps and crashes
 const CABLE_SAG = 0.1;
-const DAY_EPOCH = Date.UTC(2026, 3, 15);
 
-/* CATASTROPHE INC.: the "houses" are demolition sites on the weekly job sheet */
-const SITES = ['THE STUDIO FLAT', 'GRANDMA’S PARLOUR', 'THE OPEN-PLAN LOFT', 'SUBURBAN SEMI', 'THE MANOR ANNEXE', 'CORNER PENTHOUSE', 'THE OLD RECTORY'];
 const BRIEF = [
   { n: 1, head: 'READ THE FLOOR PLAN.', body: 'Dashed paths run between pads. Each one carries a fixture the client wants gone.' },
   { n: 2, head: 'DEPLOY ONTO A PAD.', body: 'A cat covers every path touching its pad — vases, lamps, fishbowls, all of it.' },
@@ -68,16 +71,8 @@ const HOUSE_DIM_LOW = 0.42;   // what the DIM button drops the house to
    keeps its edge over a dark study floor and a pale bathroom tile alike,
    without either layer having to know what it is sitting on. */
 const INK = '#241409', RIM = '#F6EAD3', DASH = '#FFF3D8';
-/* Grade thresholds against score/best (design's own cutoffs). The app's
-   scoring only has two player-controlled outcomes — on budget, or one cat
-   over — so only S (on budget) and B/C (one over, at 2-3★/1★) are actually
-   reachable today. A and D stay in the map so it still holds if the DB
-   formula (app/sql/2026-09-07-weighted-score.sql) ever gains a third term. */
+/* Grade badge colours; thresholds live in domain/scoring.ts. */
 const GRADE_BG = { S: '#8CE8B0', A: '#C877D8', B: '#FFD469', C: '#E8A34A', D: '#FF8FA8' };
-function siteGrade(score, best) {
-  const g = best ? score / best : 0;
-  return g >= 0.999 ? 'S' : g >= 0.86 ? 'A' : g >= 0.68 ? 'B' : g >= 0.45 ? 'C' : 'D';
-}
 /* the art's brightest pixels — lamp cores and window bays — sit around
    luminance 234, so the dash has to clear that or it loses wherever the room
    is lit; #FFF3D8 is 244 and warm, so it gains contrast without going cold */
@@ -128,10 +123,10 @@ export default class CatCoverGame extends Component {
     account: null,
     userId: null,
     handle: null,
-    levels: [null, null, null, null, null, null, null],
+    levels: Array(SITE_COUNT).fill(null),
     idx: 0,
     placed: [],
-    results: [null, null, null, null, null, null, null],
+    results: Array(SITE_COUNT).fill(null),
     hint: null,
     focus: 0,
     kbd: false,
@@ -207,16 +202,13 @@ export default class CatCoverGame extends Component {
   badgeLabel() { return this.state.account ? (this.state.handle || 'STAFF') : 'STAFF LOGIN'; }
   badgeSub() {
     if (!this.state.account) return 'SAVE YOUR SCORE';
-    return this.state.results.filter(r => r && r.status === 'perfect').length + '/7 PURR-FECT';
+    return this.state.results.filter(r => r && r.status === 'perfect').length + '/' + SITE_COUNT + ' PURR-FECT';
   }
 
-  seed() { return this.day() + 11; }
-  day() {
-    const d = Math.floor((Date.now() - DAY_EPOCH) / 86400000);
-    return Math.max(1, d);
-  }
+  seed() { return daySeed(this.day()); }
+  day() { return dayNumber(); }
   queue(i) {
-    if (i > 6) return;
+    if (i > LAST_SITE) return;
     setTimeout(() => {
       const levels = this.state.levels.slice();
       levels[i] = E.makeLevelForDay(this.seed(), i);
@@ -225,14 +217,9 @@ export default class CatCoverGame extends Component {
     }, 40);
   }
   lv() { return this.state.levels[this.state.idx]; }
-  litSet(lv, placed) {
-    const p = new Set(placed), s = new Set();
-    lv.edges.forEach(([u, v], i) => { if (p.has(u) || p.has(v)) s.add(i); });
-    return s;
-  }
   solved() {
     const lv = this.lv();
-    return !!lv && this.litSet(lv, this.state.placed).size === lv.edges.length;
+    return !!lv && isCleared(lv, this.state.placed);
   }
 
   /* ---- audio: crackle on hire, chirp on recall, crash on smash ---- */
@@ -353,7 +340,7 @@ export default class CatCoverGame extends Component {
     const lv = this.lv(); if (!lv) return;
     const placed = this.state.placed.slice();
     const at = placed.indexOf(i);
-    const before = this.litSet(lv, placed).size;
+    const before = coveredEdges(lv, placed).size;
     if (at >= 0) {
       placed.splice(at, 1);
       this.setState({ placed, msg: '', focus: i, hint: this.state.hint && this.state.hint.kind === 'reveal' ? null : this.state.hint });
@@ -367,17 +354,15 @@ export default class CatCoverGame extends Component {
       return;
     }
     placed.push(i);
-    const after = this.litSet(lv, placed).size;
+    const after = coveredEdges(lv, placed).size;
     const done = after === lv.edges.length;
     const results = this.state.results.slice();
     let run = null, prevScore = 0;
     if (done) {
-      run = this.scoreRun(lv, placed.length);
+      run = scoreRun(lv, placed.length);
       const prev = results[this.state.idx];
       prevScore = prev ? prev.score : 0;
-      /* mirrors the DB's keep-best trigger (site_clears_keep_best) — a
-         replay only overwrites the local record when it scores better */
-      results[this.state.idx] = prev && prev.score >= run.score ? prev : run;
+      results[this.state.idx] = keepBest(prev, run);
       if (this.state.userId) {
         this.setState({ cardSave: 'saving' });
         recordClear(this.state.userId, this.day(), this.state.idx, placed.length, lv.k, lv.stars).then(({ error }) => {
@@ -401,23 +386,14 @@ export default class CatCoverGame extends Component {
   }
   reset() { this.setState({ placed: [], hint: null, msg: '', focus: 0 }); this.pulse(); }
   go(i) {
-    if (i < 0 || i > 6 || !this.state.levels[i]) return;
+    if (!isSiteIndex(i) || !this.state.levels[i]) return;
     this.clearCard();
     this.setState({ idx: i, placed: [], hint: null, msg: '', focus: 0, copied: false, card: null, cardStep: 0, cardTotal: 0 });
     this.frame(i);
   }
-  next() { if (this.solved() && this.state.idx < 6) this.go(this.state.idx + 1); }
+  next() { if (this.solved() && this.state.idx < LAST_SITE) this.go(this.state.idx + 1); }
 
-  /* ---- scoring: the score card shown right after a clear, and the record
-     kept per site so the plaque can show it again on revisit ---- */
-  scoreRun(lv, used) {
-    const score = siteScore(lv.stars, used, lv.k);
-    const best = siteBest(lv.stars);
-    const rows = [{ label: 'SITE DIFFICULTY', note: '✦'.repeat(lv.stars) + ' × 10', v: lv.stars * 10 }];
-    if (used <= lv.k) rows.push({ label: 'ON BUDGET', note: used + '/' + lv.k + ' CATS', v: 0 });
-    else rows.push({ label: 'OVER BUDGET', note: '+' + (used - lv.k) + ' CAT × 5', v: -5 * (used - lv.k) });
-    return { status: used <= lv.k ? 'perfect' : 'over', score, best, grade: siteGrade(score, best), used, par: lv.k, stars: lv.stars, rows };
-  }
+  /* ---- the score card shown right after a clear (scoring lives in domain/scoring.ts) ---- */
   openCard(run, prevScore) {
     this.clearCard();
     this.setState({ card: run, cardStep: 0, cardTotal: 0, cardPrev: prevScore || 0 });
@@ -450,7 +426,7 @@ export default class CatCoverGame extends Component {
   cardNext() {
     this.clearCard();
     this.setState({ card: null });
-    if (this.state.idx < 6) this.go(this.state.idx + 1);
+    if (this.state.idx < LAST_SITE) this.go(this.state.idx + 1);
   }
   hint(tier) {
     const lv = this.lv(); if (!lv) return;
@@ -497,19 +473,9 @@ export default class CatCoverGame extends Component {
     if (k === '-' || k === '_') { e.preventDefault(); return this.zoomBy(0.8); }
     if (k === '1' || k === '2' || k === '3') { e.preventDefault(); return this.hint(+k); }
     if (k === 'Enter' || k === ' ') { e.preventDefault(); return this.tap(this.state.focus); }
-    const dirs = { ArrowRight: [1, 0], ArrowLeft: [-1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
-    if (!dirs[k]) return;
+    if (!isDirection(k)) return;
     e.preventDefault();
-    const [dx, dy] = dirs[k], cur = lv.nodes[this.state.focus] || lv.nodes[0];
-    let best = -1, bestScore = Infinity;
-    lv.nodes.forEach((n, i) => {
-      if (i === this.state.focus) return;
-      const vx = n.c - cur.c, vy = n.r - cur.r;
-      const along = vx * dx + vy * dy, off = Math.abs(vx * dy - vy * dx);
-      if (along <= 0) return;
-      const s = along + off * 2.5;
-      if (s < bestScore) { bestScore = s; best = i; }
-    });
+    const best = nearestInDirection(lv.nodes, this.state.focus, k);
     if (best >= 0) this.setState({ focus: best }, () => this.follow(best));
   }
 
@@ -740,13 +706,7 @@ export default class CatCoverGame extends Component {
     return { d: 'M ' + A.x + ' ' + A.y + ' Q ' + mx + ' ' + (my + sag) + ' ' + B.x + ' ' + B.y, mx, my: my + sag / 2 };
   }
 
-  share() {
-    const r = this.state.results;
-    const glyphs = r.map(x => (x && x.status === 'perfect' ? '🐾' : '⬜')).join('');
-    const grades = r.map(x => (x ? x.grade : '–')).join('');
-    const total = r.reduce((a, x) => a + (x ? x.score : 0), 0);
-    return 'CATASTROPHE INC. #' + this.day() + '\n' + glyphs + '\n' + grades + '  ' + total.toLocaleString() + ' pts';
-  }
+  share() { return shareText(this.day(), this.state.results); }
   copyShare() {
     const t = this.share();
     const done = () => { this.setState({ copied: true }); setTimeout(() => this.setState({ copied: false }), 1800); };
@@ -777,7 +737,7 @@ export default class CatCoverGame extends Component {
         tier: t, label: ['SURVEY', 'ESTIMATE', 'INSIDER'][t - 1],
         bg: active(t) ? '#FFD469' : '#F4E4C4', ink: '#3E2718',
       })),
-      pips: [0, 1, 2, 3, 4, 5, 6].map(i => {
+      pips: SITES.map((_, i) => {
         const r = st.results[i];
         return {
           i, n: i + 1, grade: r ? r.grade : '',
@@ -804,16 +764,16 @@ export default class CatCoverGame extends Component {
         { k: 'dim', t: 'DIM', label: st.dim ? 'turn the house lights back up' : 'dim the house',
           bg: st.dim ? '#FFD469' : '#F4E4C4', go: () => this.setState(s => ({ dim: !s.dim })) },
       ],
-      totalScore: st.results.reduce((a, r) => a + (r ? r.score : 0), 0).toLocaleString(),
-      totalDone: st.results.filter(Boolean).length + '/7 SCORED',
-      showShare: st.results.filter(Boolean).length === 7,
+      totalScore: totalScore(st.results).toLocaleString(),
+      totalDone: st.results.filter(Boolean).length + '/' + SITE_COUNT + ' SCORED',
+      showShare: st.results.filter(Boolean).length === SITE_COUNT,
       shareText: this.share(), copyLabel: st.copied ? 'COPIED!' : 'COPY INVOICE',
       banner: '', bannerBg: 'rgba(255,255,255,.08)', bannerInk: '#F4E4C4',
       nextBg: 'rgba(255,255,255,.22)', nextLabel: 'NEXT', nextO: 0.45,
       hasScore: !!st.results[st.idx], scoreLine: '', scoreGrade: '', scoreNote: '', scoreGradeBg: '#FFD469',
       showCard: !!st.card, cardRows: [], cardTotal: '0', cardGrade: '', cardGradeBg: '#FFD469',
       cardTitle: '', cardSite: '', cardHeadBg: '#C877D8', cardBest: '', cardSaveNote: '',
-      cardNextLabel: st.idx < 6 ? 'NEXT SITE' : 'WEEK DONE',
+      cardNextLabel: st.idx < LAST_SITE ? 'NEXT SITE' : 'WEEK DONE',
     };
     vals.msgColor = st.msg && (st.msg.indexOf('PAYROLL') === 0 || st.msg.indexOf('SCORE NOT SAVED') === 0) ? '#FF8FA8' : '#FFD469';
 
@@ -869,7 +829,7 @@ export default class CatCoverGame extends Component {
     vals.house = P;
     vals.rooms = P.rooms.filter(r => seen(r.x, r.y, r.x + r.w, r.y + r.h));
 
-    const litE = this.litSet(lv, st.placed);
+    const litE = coveredEdges(lv, st.placed);
     vals.litCount = litE.size;
     vals.usedColor = st.placed.length > lv.k ? '#FF8FA8' : st.placed.length === lv.k ? '#8CE8B0' : '#FFF3D8';
 
@@ -973,10 +933,10 @@ export default class CatCoverGame extends Component {
       vals.bannerBg = perfect ? '#C877D8' : '#E8A34A';
       vals.bannerInk = '#2A1524';
       vals.nextBg = '#F4E4C4';
-      vals.nextO = st.idx < 6 ? 1 : 0.45;
-      vals.nextLabel = st.idx < 6 ? 'NEXT SITE' : 'WEEK DONE';
+      vals.nextO = st.idx < LAST_SITE ? 1 : 0.45;
+      vals.nextLabel = st.idx < LAST_SITE ? 'NEXT SITE' : 'WEEK DONE';
     } else {
-      vals.banner = 'SITE ' + (st.idx + 1) + '/7 · BUDGET ' + lv.k + ' CATS';
+      vals.banner = 'SITE ' + (st.idx + 1) + '/' + SITE_COUNT + ' · BUDGET ' + lv.k + ' CATS';
       if (!st.msg && st.placed.length && st.placed.length >= lv.k) vals.msg = 'SOMETHING IS STILL STANDING…';
     }
     return vals;
