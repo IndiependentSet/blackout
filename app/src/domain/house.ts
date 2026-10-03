@@ -40,8 +40,8 @@ export const HOUSE = {
   SHARE_W: 1.6,   // ...how hard one room type is stopped from taking over
   REPEAT_W: 1.3,  // ...and pushed away from its own neighbours
   AGAIN_W: 1.4,   // ...and the same picture from being used twice
-  SAG_K: 0.1,     // mirrors CABLE_SAG in CatCoverGame.jsx
-  SAG_C: 3,       // mirrors the +3 in cable(); world units
+  SAG_K: 0.1,     // how far a drawn path sags per unit of width — game/scene/cable.ts
+  SAG_C: 3,       // ...and the constant on top of it; world units
 };
 const H = HOUSE;
 

@@ -89,3 +89,10 @@ export type SquadRole = 'foreman' | 'member';
 export interface Squad { id: string; name: string; invite_code: string; created_by: string }
 export interface MySquad extends Squad { role: SquadRole; members: number }
 export interface SquadMember { user_id: string; role: SquadRole }
+
+/** What a consultant has pointed out on the board. */
+export type Hint =
+  | { kind: 'leaf'; leaf: number; forced: number }
+  | { kind: 'proof'; edges: number[] }
+  | { kind: 'reveal'; node: number };
+export type HintTier = 1 | 2 | 3;

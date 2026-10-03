@@ -1,0 +1,7 @@
+.map {
+  position: absolute; z-index: 4;
+  right: calc(12px * var(--k)); bottom: calc(12px * var(--k));
+  background: rgba(26, 12, 8, .82);
+  border: var(--bd); border-radius: 10px; box-shadow: var(--lift-sm);
+  cursor: pointer; touch-action: none;
+}
