@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import * as E from '../domain/engine';
-import { buildHouse, houseSeed } from '../domain/house';
+import * as E from './engine';
+import type { CatalogueEntry, Level } from './types';
+import { buildHouse, houseSeed } from './house';
 import manifest from '../assets/rooms/manifest.json';
 
 /* Characterization tests: the same day must give every player the same puzzles
@@ -16,10 +17,11 @@ beforeAll(() => { vi.spyOn(Date, 'now').mockReturnValue(0); });
 afterAll(() => { vi.restoreAllMocks(); });
 const SEEDS = [12, 40, 97];
 const THINGS = ['mug', 'vase', 'lamp', 'plant', 'clock', 'bowl'];
-const CATALOGUE = Object.keys(manifest).sort()
-  .map(key => ({ key, type: manifest[key].type, aspect: manifest[key].w / manifest[key].h }));
+const entries = manifest as Record<string, { type: string; w: number; h: number }>;
+const CATALOGUE: CatalogueEntry[] = Object.keys(entries).sort()
+  .map(key => ({ key, type: entries[key].type, aspect: entries[key].w / entries[key].h }));
 
-const summary = lv => ({
+const summary = (lv: Level) => ({
   nodes: lv.nodes, edges: lv.edges, k: lv.k, stars: lv.stars, sol: lv.sol,
 });
 
