@@ -1,10 +1,19 @@
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import * as E from '../domain/engine';
 import { buildHouse, houseSeed } from '../domain/house';
 import manifest from '../assets/rooms/manifest.json';
 
 /* Characterization tests: the same day must give every player the same puzzles
-   and the same house. If a snapshot here changes, the puzzles changed. */
+   and the same house. If a snapshot here changes, the puzzles changed.
+
+   The clock is frozen on purpose. makeLevel() has a wall-clock search budget
+   (Date.now()), so with a live clock a slower or busier machine gives up
+   earlier and can settle on a different level — which made this snapshot
+   flaky under parallel load. Frozen, generation is purely attempt-limited and
+   the snapshot is machine-independent. (Production still runs on the live
+   clock; see CLAUDE.md.) */
+beforeAll(() => { vi.spyOn(Date, 'now').mockReturnValue(0); });
+afterAll(() => { vi.restoreAllMocks(); });
 const SEEDS = [12, 40, 97];
 const THINGS = ['mug', 'vase', 'lamp', 'plant', 'clock', 'bowl'];
 const CATALOGUE = Object.keys(manifest).sort()

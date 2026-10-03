@@ -13,29 +13,33 @@
  * generator starts dealing it out.
  */
 import manifest from './manifest.json';
+import type { CatalogueEntry } from '../../domain/types';
 
-const urls = import.meta.glob('./*.png', { eager: true, query: '?url', import: 'default' });
+interface ManifestEntry { type: string; w: number; h: number }
+const entries = manifest as Record<string, ManifestEntry>;
 
-const byKey = {};
+const urls = import.meta.glob<string>('./*.png', { eager: true, query: '?url', import: 'default' });
+
+const byKey: Record<string, string> = {};
 Object.keys(urls).forEach(path => {
   byKey[path.replace(/^\.\//, '').replace(/\.png$/i, '').toLowerCase()] = urls[path];
 });
 
 /* what the generator gets to choose from: only rooms that have both a picture
    and a measured shape */
-export const ROOM_CATALOGUE = Object.keys(manifest)
-  .filter(key => byKey[key] && manifest[key].h > 0)
+export const ROOM_CATALOGUE: CatalogueEntry[] = Object.keys(entries)
+  .filter(key => byKey[key] && entries[key].h > 0)
   .sort()
   .map(key => ({
-    key, type: manifest[key].type,
-    aspect: manifest[key].w / manifest[key].h,
+    key, type: entries[key].type,
+    aspect: entries[key].w / entries[key].h,
     url: byKey[key],
   }));
 
-const ART = {};
-ROOM_CATALOGUE.forEach(e => { ART[e.key] = e.url; });
+const ART: Record<string, string> = {};
+ROOM_CATALOGUE.forEach(e => { ART[e.key] = e.url as string; });
 
 /* the picture a room shows; null while there is no art for it */
-export function roomArt(key) {
+export function roomArt(key: string): string | null {
   return ART[key] || null;
 }

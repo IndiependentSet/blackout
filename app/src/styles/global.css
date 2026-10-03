@@ -33,8 +33,7 @@ button { font-family: inherit; }
   100% { transform: translateY(0) scale(1); }
 }
 
-/* sticker cats: dozing cats breathe, woken cats hop between their two poses */
-@keyframes cc-snooze { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(1.045); } }
+/* sticker cats: woken cats hop between their two poses */
 @keyframes cc-pounce {
   0%, 100% { transform: translateY(0) rotate(-2.5deg); }
   25% { transform: translateY(-3px) rotate(0deg); }
@@ -43,12 +42,6 @@ button { font-family: inherit; }
 }
 @keyframes cc-frame-a { 0%, 49.9% { opacity: 1; } 50%, 100% { opacity: 0; } }
 @keyframes cc-frame-b { 0%, 49.9% { opacity: 0; } 50%, 100% { opacity: 1; } }
-@keyframes cc-zzz {
-  0% { opacity: 0; transform: translate(0, 3px) scale(.6); }
-  20% { opacity: 1; }
-  60% { opacity: .9; }
-  100% { opacity: 0; transform: translate(5px, -11px) scale(1.12); }
-}
 
 /* smashables: an untouched thing teeters, a smashed one plays its four
    sticker frames once and holds the wreckage */

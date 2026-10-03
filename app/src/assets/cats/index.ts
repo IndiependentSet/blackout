@@ -28,7 +28,9 @@ import divaWakeB from './diva-wakeB.png';
 /* where the cats' feet sit on the sprite canvas, as a fraction of its side */
 export const CAT_BASELINE = 182 / 192;
 
-export const BREEDS = [
+export interface Breed { name: string; sleep: string; wakeA: string; wakeB: string }
+
+export const BREEDS: Breed[] = [
   { name: 'MR. WHISKERS', sleep: whiskersSleep, wakeA: whiskersWakeA, wakeB: whiskersWakeB },
   { name: 'NINJA', sleep: ninjaSleep, wakeA: ninjaWakeA, wakeB: ninjaWakeB },
   { name: 'PRINCESS FLUFF', sleep: fluffSleep, wakeA: fluffWakeA, wakeB: fluffWakeB },

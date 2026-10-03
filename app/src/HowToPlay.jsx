@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { BREEDS, CAT_BASELINE } from './assets/cats/index.js';
-import { THINGS, THING_BASELINE } from './assets/things/index.js';
+import { BREEDS } from './assets/cats';
+import { THINGS } from './assets/things';
+import { CatFlipbook, PadSprite, PathLit, PathWeb, ThingSprite, SpriteDefs, CONTACT_SHADOW, CAT_FOOT, PAD_HIT_R, THING_D } from './sprites';
 
 /* ---- CATASTROPHE INC. orientation: the "how it works" slideshow ----
    Shown over the work order. Every illustration is a tiny live board drawn
@@ -10,50 +11,20 @@ import { THINGS, THING_BASELINE } from './assets/things/index.js';
    crew ({hub, D}) is unique, same as every real level. */
 
 const luckiest = "'Luckiest Guy', cursive";
-const CAT_D = 56, CAT_FOOT = 18, CAT_TOP = CAT_FOOT - CAT_D * CAT_BASELINE;
-const THING_D = 46, THING_FOOT = 10, THING_TOP = THING_FOOT - THING_D * THING_BASELINE;
 const thing = n => THINGS.find(t => t.name === n) || THINGS[0];
 const breed = i => BREEDS[i % BREEDS.length];
+/* the smashables are drawn a touch smaller on these little boards */
+const THING_SCALE = 46 / THING_D;
+const PATH_SCALE = 0.6;
 
 /* -------- the board pieces -------- */
 
 function Pad({ x, y, cat, b = 0, onTap, pulse }) {
-  const br = breed(b);
   return (
     <g transform={`translate(${x} ${y})`} onClick={onTap} style={{ cursor: onTap ? 'pointer' : 'default' }}>
-      <ellipse cx={0} cy={CAT_FOOT + 2} rx={24} ry={7} fill="#000" opacity={.3} />
-      {pulse && !cat && (
-        <circle cx={0} cy={4} r={26} fill="none" stroke="#FFD469" strokeWidth={3} style={{ animation: 'cc-pulse 1.15s ease-in-out infinite' }} />
-      )}
-      {!cat && (
-        <>
-          <circle cx={0} cy={4} r={23.5} fill="none" stroke="#1A0E06" strokeWidth={4.5} opacity={.9} />
-          <circle cx={0} cy={4} r={20} fill="rgba(10,5,3,.62)" stroke="#FFD469" strokeWidth={3.4} strokeDasharray="9 8"
-            opacity={.9} style={{ animation: 'cc-slotspin 3.6s linear infinite' }} />
-          <g fill="#FFE49A" opacity={.9} transform="translate(0 4)">
-            <ellipse cx={0} cy={3} rx={5.6} ry={4.4} />
-            <circle cx={-5.2} cy={-4.4} r={2.2} />
-            <circle cx={-1.8} cy={-7.4} r={2.2} />
-            <circle cx={1.8} cy={-7.4} r={2.2} />
-            <circle cx={5.2} cy={-4.4} r={2.2} />
-          </g>
-        </>
-      )}
-      {cat && (
-        <>
-          <circle cx={0} cy={-2} r={27} fill="#F06BFF" opacity={.2} style={{ animation: 'cc-glow 1.8s ease-in-out infinite' }} />
-          <ellipse cx={0} cy={17} rx={22} ry={7} fill="none" stroke="#F06BFF" strokeWidth={3.5} />
-          <g style={{ animation: 'cc-drop 480ms cubic-bezier(.2,1.2,.3,1) both', transformOrigin: `0px ${CAT_FOOT}px` }}>
-            <g style={{ animation: 'cc-pounce .7s ease-in-out infinite', transformOrigin: `0px ${CAT_FOOT}px` }}>
-              <image href={br.wakeA} x={-CAT_D / 2} y={CAT_TOP} width={CAT_D} height={CAT_D} style={{ animation: 'cc-frame-a .7s steps(1, end) infinite' }} />
-              <image href={br.wakeB} x={-CAT_D / 2} y={CAT_TOP} width={CAT_D} height={CAT_D} opacity={0} style={{ animation: 'cc-frame-b .7s steps(1, end) infinite' }} />
-            </g>
-          </g>
-          <path d="M -26 -18 l 3.6 1.4 l 1.4 3.6 l 1.4 -3.6 l 3.6 -1.4 l -3.6 -1.4 l -1.4 -3.6 l -1.4 3.6 Z" fill="#FFD469" style={{ animation: 'cc-spark 1.2s ease-in-out infinite' }} />
-        </>
-      )}
+      <PadSprite breed={breed(b)} hired={cat} pulsing={pulse} />
       {/* a fat invisible target, so a thumb never misses the pad */}
-      {onTap && <circle cx={0} cy={0} r={32} fill="transparent" />}
+      {onTap && <circle cx={0} cy={0} r={PAD_HIT_R} fill="transparent" />}
     </g>
   );
 }
@@ -61,41 +32,17 @@ function Pad({ x, y, cat, b = 0, onTap, pulse }) {
 function Path({ a, b, lit }) {
   const d = `M ${a.x} ${a.y} L ${b.x} ${b.y}`;
   return (
-    <g>
-      <path d={d} stroke="#150C06" strokeWidth={20} strokeLinecap="round" opacity={.55} />
-      <path d={d} stroke="#F6EAD3" strokeWidth={13} strokeLinecap="round" />
-      <path d={d} stroke="#241409" strokeWidth={9} strokeLinecap="round" />
-      {lit ? (
-        <>
-          <path d={d} stroke="#F06BFF" strokeWidth={18} strokeLinecap="round" opacity={.25} />
-          <path d={d} stroke="#C64BE8" strokeWidth={8} strokeLinecap="round" />
-          <path d={d} stroke="#FFEFFF" strokeWidth={2.6} strokeLinecap="round" strokeDasharray="5 16" style={{ animation: 'cc-dash .8s linear infinite' }} />
-        </>
-      ) : (
-        <path d={d} stroke="#FFF3D8" strokeWidth={3.6} strokeLinecap="round" strokeDasharray="13 9" />
-      )}
-    </g>
+    <>
+      <PathWeb d={d} scale={PATH_SCALE} />
+      <PathLit d={d} on={lit} scale={PATH_SCALE} />
+    </>
   );
 }
 
 function Thing({ x, y, t, smashed, i = 0 }) {
   return (
-    <g transform={`translate(${x} ${y})`}>
-      <ellipse cx={0} cy={THING_FOOT + 1} rx={15} ry={5} fill="#000" opacity={.3} />
-      {smashed ? (
-        <g key="s" style={{ animation: 'cc-tumble .5s ease-out forwards', transformOrigin: `0px ${THING_FOOT}px` }}>
-          {['idle', 'wobble', 'hit', 'broken'].map((p, k) => (
-            <image key={p} href={t[p]} x={-THING_D / 2} y={THING_TOP} width={THING_D} height={THING_D}
-              opacity={0} style={{ animation: `cc-break-${k} .5s steps(1, end) forwards` }} />
-          ))}
-          <circle cx={-17} cy={-2} r={2.6} fill="#FFE9C4" style={{ animation: 'cc-dust .7s ease-out forwards' }} />
-          <circle cx={16} cy={-6} r={2.2} fill="#FFE9C4" style={{ animation: 'cc-dust .8s .1s ease-out forwards' }} />
-        </g>
-      ) : (
-        <g key="i" style={{ animation: `cc-teeter 4.2s ease-in-out ${-0.7 * i}s infinite`, transformOrigin: `0px ${THING_FOOT}px` }}>
-          <image href={t.idle} x={-THING_D / 2} y={THING_TOP} width={THING_D} height={THING_D} />
-        </g>
-      )}
+    <g transform={`translate(${x} ${y}) scale(${THING_SCALE})`}>
+      <ThingSprite thing={t} smashed={smashed} index={i} marked={false} />
     </g>
   );
 }
@@ -106,6 +53,7 @@ function Board({ nodes, edges, placed, onTap, pulse, viewBox, label }) {
   return (
     <svg viewBox={viewBox} width="100%" role="img" aria-label={label}
       style={{ display: 'block', touchAction: 'manipulation', userSelect: 'none' }}>
+      <defs><SpriteDefs /></defs>
       {edges.map(([u, v], i) => <Path key={'e' + i} a={nodes[u]} b={nodes[v]} lit={on.has(u) || on.has(v)} />)}
       {edges.map(([u, v, t], i) => (
         <Thing key={'t' + i} i={i} t={thing(t)} smashed={on.has(u) || on.has(v)}
@@ -151,14 +99,12 @@ function CrewDemo() {
   return (
     <Floor>
       <svg viewBox="0 0 330 150" width="100%" role="img" aria-label="the crew, and the client's belongings" style={{ display: 'block' }}>
+        <defs><SpriteDefs /></defs>
         <text x={8} y={16} fontFamily="Luckiest Guy, cursive" fontSize={12} fill="#F06BFF" letterSpacing={2}>THE CREW</text>
         {BREEDS.map((b, i) => (
           <g key={b.name} transform={`translate(${30 + i * 54} 48)`}>
-            <ellipse cx={0} cy={CAT_FOOT + 2} rx={20} ry={6} fill="#000" opacity={.3} />
-            <g style={{ animation: `cc-pounce .7s ${-i * 0.13}s ease-in-out infinite`, transformOrigin: `0px ${CAT_FOOT}px` }}>
-              <image href={b.wakeA} x={-CAT_D / 2} y={CAT_TOP} width={CAT_D} height={CAT_D} style={{ animation: `cc-frame-a .7s ${-i * 0.2}s steps(1, end) infinite` }} />
-              <image href={b.wakeB} x={-CAT_D / 2} y={CAT_TOP} width={CAT_D} height={CAT_D} opacity={0} style={{ animation: `cc-frame-b .7s ${-i * 0.2}s steps(1, end) infinite` }} />
-            </g>
+            <ellipse cx={0} cy={CAT_FOOT + 2} rx={20} ry={6} fill={CONTACT_SHADOW} />
+            <CatFlipbook breed={b} pounceDelay={-i * 0.13} frameDelay={-i * 0.2} />
           </g>
         ))}
         <text x={8} y={94} fontFamily="Luckiest Guy, cursive" fontSize={12} fill="#FFD469" letterSpacing={2}>THE CLIENT’S STUFF</text>

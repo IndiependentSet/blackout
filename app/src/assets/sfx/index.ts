@@ -13,6 +13,6 @@
  * The file name is the contract: `crackle-<n>.wav`. Drop another take in
  * `raw/`, re-run prep-sfx.py, and the game starts dealing it out.
  */
-const urls = import.meta.glob('./crackle-*.wav', { eager: true, query: '?url', import: 'default' });
+const urls = import.meta.glob<string>('./crackle-*.wav', { eager: true, query: '?url', import: 'default' });
 
 export const CRACKLES = Object.keys(urls).sort().map(path => urls[path]);

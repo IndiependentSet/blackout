@@ -1,0 +1,54 @@
+/* Design tokens. The only place raw colours, font stacks and the chunky
+   "sticker" border/shadow recipe are defined — everything else uses var(--…). */
+:root {
+  /* ink & surfaces */
+  --ink: #2A1524;
+  --ink-deep: #1E1208;
+  --paper: #FFF7E6;
+  --cream: #F4E4C4;
+  --parchment-top: #F6E8CA;
+  --parchment-bottom: #EBD8AE;
+  --parchment: linear-gradient(var(--parchment-top), var(--parchment-bottom));
+
+  /* brand */
+  --gold: #FFD469;
+  --amber: #F7B32B;
+  --purple: #6E3FA3;
+  --violet: #8A3FC0;
+  --orchid: #C877D8;
+  --pink: #F06BFF;
+  --mint: #8CE8B0;
+  --rose: #FF8FA8;
+  --danger: #C0405A;
+
+  /* text */
+  --text: #3E2718;
+  --text-2: #5A3E27;
+  --text-3: #6A4A30;
+  --text-4: #7A5638;
+  --lavender: #C9B8E0;
+  --muted: #8E7AAE;
+  --on-dark: #F4E4C4;
+
+  /* page */
+  --page: radial-gradient(120% 90% at 50% 0%, #2A1B3D 0%, #170F22 55%, #100A18 100%);
+  --glass: rgba(255, 255, 255, .08);
+
+  /* grades */
+  --grade-s: #8CE8B0;
+  --grade-a: #C877D8;
+  --grade-b: #FFD469;
+  --grade-c: #E8A34A;
+  --grade-d: #FF8FA8;
+
+  /* type */
+  --font-display: 'Luckiest Guy', cursive;
+  --font-body: 'Nunito', ui-rounded, system-ui, sans-serif;
+
+  /* the sticker recipe */
+  --bd: 3px solid var(--ink);
+  --lift-sm: 0 3px 0 var(--ink);
+  --lift: 0 4px 0 var(--ink);
+  --lift-lg: 0 6px 0 var(--ink);
+  --card-inset: inset 0 0 36px rgba(150, 110, 60, .24);
+}

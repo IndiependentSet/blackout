@@ -1,0 +1,17 @@
+.logo { display: flex; flex-direction: column; line-height: .82; }
+.word, .inc {
+  font-family: var(--font-display);
+  -webkit-text-stroke: var(--stroke) var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 0 var(--drop) 0 var(--ink);
+}
+.word { color: var(--amber); }
+.inc { color: #EADDF7; letter-spacing: .04em; }
+
+.lg { --stroke: min(8px, 1.5vw); --drop: 7px; }
+.lg .word { font-size: min(74px, 13vw); }
+.lg .inc { font-size: min(50px, 9vw); }
+
+.sm { --stroke: 6px; --drop: 5px; line-height: .84; padding-top: 2px; }
+.sm .word { font-size: 40px; letter-spacing: .01em; }
+.sm .inc { font-size: 34px; }

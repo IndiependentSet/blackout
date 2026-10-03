@@ -273,6 +273,11 @@ rules; don't add to the old patterns (god components, inline styles, copy-paste)
   pure module gets unit tests. The determinism snapshots in
   `src/__tests__/determinism.test.js` must pass unchanged — if one changes,
   the day's puzzles changed, which is a bug unless explicitly intended.
+  The tests freeze `Date.now()` because `makeLevel()` has a wall-clock search
+  budget: with a live clock, a slower device can settle on a different level
+  than a faster one for the same day. That is a known, pre-existing gap in the
+  "same puzzles for everyone" promise — don't paper over it in tests, and ask
+  the user before changing generation (any fix changes the days' puzzles).
 - Keep this file in sync with the structure when you move things.
 
 ## Working in `app/`

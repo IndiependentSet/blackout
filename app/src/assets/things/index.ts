@@ -10,14 +10,20 @@
  * contract, `<name>-<pose>.png`. Add an item by dropping its four frames in
  * here and adding it to ITEMS.
  */
-const urls = import.meta.glob('./*.png', { eager: true, query: '?url', import: 'default' });
+const urls = import.meta.glob<string>('./*.png', { eager: true, query: '?url', import: 'default' });
 
 /* where an item's base sits on the sprite canvas, as a fraction of its side */
 export const THING_BASELINE = 158 / 168;
 
-const POSES = ['idle', 'wobble', 'hit', 'broken'];
+const POSES = ['idle', 'wobble', 'hit', 'broken'] as const;
 
-const ITEMS = [
+export interface Thing {
+  name: string;
+  label: string;
+  idle: string; wobble: string; hit: string; broken: string;
+}
+
+const ITEMS: [string, string][] = [
   ['toilet-paper', 'toilet paper'], ['vase', 'vase of flowers'], ['mug', 'mug of coffee'],
   ['can', 'tin of fish'], ['ball', 'bouncy ball'], ['pot', 'terracotta pot'],
   ['lamp', 'lamp'], ['fishbowl', 'fish bowl'], ['box', 'cardboard box'],
@@ -26,12 +32,14 @@ const ITEMS = [
   ['pillow', 'pillow'], ['crate', 'wooden crate'], ['fishtoy', 'rubber fish'],
 ];
 
-export const THINGS = ITEMS.map(([name, label]) => {
-  const item = { name, label };
-  POSES.forEach(pose => {
-    const url = urls['./' + name + '-' + pose + '.png'];
-    if (!url) throw new Error('missing thing sprite: ' + name + '-' + pose + '.png');
-    item[pose] = url;
-  });
-  return item;
-});
+function poseUrl(name: string, pose: (typeof POSES)[number]): string {
+  const url = urls['./' + name + '-' + pose + '.png'];
+  if (!url) throw new Error('missing thing sprite: ' + name + '-' + pose + '.png');
+  return url;
+}
+
+export const THINGS: Thing[] = ITEMS.map(([name, label]) => ({
+  name, label,
+  idle: poseUrl(name, 'idle'), wobble: poseUrl(name, 'wobble'),
+  hit: poseUrl(name, 'hit'), broken: poseUrl(name, 'broken'),
+}));
