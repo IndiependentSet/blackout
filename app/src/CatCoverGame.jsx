@@ -7,6 +7,7 @@ import { buildHouse, houseSeed, HOUSE as HZ } from './house.js';
 import { roomArt, ROOM_CATALOGUE } from './assets/rooms/index.js';
 import { supabase, displayName, ensureProfile, getProfile, recordClear, siteScore, siteBest } from './supabase.js';
 import AccountScreen from './AccountScreen.jsx';
+import HowToPlay from './HowToPlay.jsx';
 
 const SOUND_ON = true;
 const CRACKLE_GAIN = 0.3;   // recorded takes are normalised hot; this sits them
@@ -120,6 +121,10 @@ export default class CatCoverGame extends Component {
   state = {
     screen: 'intro',
     acctFrom: 'intro',
+    /* the orientation slideshow over the work order; opened by itself only for
+       someone with no staff login, who is most likely new on the job */
+    howto: false,
+    howtoSeen: false,
     account: null,
     userId: null,
     handle: null,
@@ -155,7 +160,7 @@ export default class CatCoverGame extends Component {
     this.setState({ levels }, () => this.frame(0));
     this.queue(1);
     this.loadCrackles();
-    supabase.auth.getSession().then(({ data }) => this.applySession(data.session));
+    supabase.auth.getSession().then(({ data }) => { this.applySession(data.session); this.orient(data.session); });
     this.authSub = supabase.auth.onAuthStateChange((_e, session) => this.applySession(session)).data.subscription;
   }
   componentWillUnmount() {
@@ -184,6 +189,10 @@ export default class CatCoverGame extends Component {
       ensureProfile(user).then(() => getProfile(user.id))
         .then(p => this.setState({ handle: displayName(p) }));
     }
+  }
+  /* a visitor with no staff login gets the orientation once per page load */
+  orient(session) {
+    if (!session && this.state.screen === 'intro' && !this.state.howtoSeen) this.setState({ howto: true, howtoSeen: true });
   }
   openAccount(from) { this.setState({ screen: 'account', acctFrom: from }); }
   closeAccount() { this.setState({ screen: this.state.acctFrom || 'intro' }); }
@@ -460,6 +469,7 @@ export default class CatCoverGame extends Component {
 
   onKey(e) {
     const k = e.key;
+    if (this.state.howto) return;
     if (this.state.screen === 'intro') {
       if (k === 'Enter' || k === ' ') { e.preventDefault(); this.setState({ screen: 'game' }); }
       return;
@@ -1058,11 +1068,17 @@ export default class CatCoverGame extends Component {
           </div>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
+            <button type="button" onClick={() => this.setState({ howto: true, howtoSeen: true })}
+              style={{ minHeight: 68, padding: '0 22px', background: '#C877D8', border: '4px solid #2A1524', borderRadius: 16, boxShadow: '0 6px 0 #2A1524', color: '#2A1524', fontFamily: luckiest, fontSize: 20, letterSpacing: '.05em', cursor: 'pointer' }}>HOW IT WORKS</button>
             <button type="button" onClick={() => this.setState({ screen: 'game' })}
               style={{ minHeight: 68, padding: '0 34px', background: '#FFD469', border: '4px solid #2A1524', borderRadius: 16, boxShadow: '0 6px 0 #2A1524', color: '#3E2718', fontFamily: luckiest, fontSize: 26, letterSpacing: '.05em', cursor: 'pointer' }}>CLOCK IN</button>
             <span style={{ fontSize: 12.5, fontWeight: 900, letterSpacing: '.1em', color: '#8E7AAE' }}>OR PRESS ENTER · SITE {this.state.idx + 1} IS WAITING</span>
           </div>
         </div>
+        {this.state.howto && (
+          <HowToPlay sites={SITES} onClose={() => this.setState({ howto: false })}
+            onStart={() => this.setState({ howto: false, screen: 'game' })} />
+        )}
       </div>
     );
   }
