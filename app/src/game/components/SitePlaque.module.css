@@ -1,0 +1,16 @@
+.wrap { display: flex; flex-direction: column; align-items: center; }
+.tag { position: relative; z-index: 2; }
+.stars { color: var(--pink); }
+.plaque {
+  margin-top: -6px; width: 92%; box-sizing: border-box; text-align: center; color: var(--text);
+  background: linear-gradient(var(--parchment-top), #E8D3A6);
+  border: var(--bd); border-radius: 3px 3px 10px 10px; box-shadow: 0 5px 0 var(--ink);
+  padding: 9px 12px 6px;
+}
+.name { font-family: var(--font-display); font-size: 20px; letter-spacing: .02em; }
+.best {
+  margin: 7px -4px -2px; padding-top: 6px; border-top: 2.5px dashed rgba(62, 39, 24, .28);
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.score { font-family: var(--font-display); font-size: 17px; color: var(--violet); }
+.note { font-size: 11px; font-weight: 900; letter-spacing: .1em; color: var(--text-4); }

@@ -1,0 +1,10 @@
+.badge {
+  display: flex; align-items: center; justify-content: center; box-sizing: border-box;
+  border: 2.5px solid var(--ink); font-family: var(--font-display); color: var(--ink);
+}
+.sm { width: 24px; height: 24px; border-radius: 7px; font-size: 13px; }
+.S { background: var(--grade-s); }
+.A { background: var(--grade-a); }
+.B { background: var(--grade-b); }
+.C { background: var(--grade-c); }
+.D { background: var(--grade-d); }

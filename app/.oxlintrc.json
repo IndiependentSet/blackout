@@ -1,8 +1,132 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "oxc"],
+  "plugins": [
+    "react",
+    "oxc",
+    "typescript"
+  ],
   "rules": {
     "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
+    "react/only-export-components": [
+      "warn",
+      {
+        "allowConstantExport": true
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": [
+        "src/domain/**"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "react",
+                  "react-dom",
+                  "react/*",
+                  "@supabase/*"
+                ],
+                "message": "domain/ is pure: no React or Supabase."
+              },
+              {
+                "group": [
+                  "**/game/**",
+                  "**/services/**",
+                  "**/screens/**",
+                  "**/app/**",
+                  "**/ui/**",
+                  "**/sprites/**",
+                  "**/assets/**",
+                  "**/hooks/**"
+                ],
+                "message": "domain/ is the bottom layer: it imports nothing from the layers above it."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "src/domain/**/*.test.ts"
+      ],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    },
+    {
+      "files": [
+        "src/services/**"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "**/game/**",
+                  "**/screens/**",
+                  "**/app/**",
+                  "**/ui/**",
+                  "**/sprites/**"
+                ],
+                "message": "services/ must not depend on the UI layers."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "src/ui/**",
+        "src/sprites/**"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "**/game/**",
+                  "**/services/**",
+                  "**/screens/**",
+                  "**/app/**"
+                ],
+                "message": "ui/ and sprites/ are leaf layers: styles, assets and domain types only."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "src/game/**"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "**/screens/**",
+                  "**/app/**"
+                ],
+                "message": "game/ must not depend on screens or the app shell."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
 }

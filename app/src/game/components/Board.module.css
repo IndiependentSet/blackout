@@ -1,0 +1,12 @@
+.frame {
+  position: relative; box-sizing: border-box; max-height: 76vh;
+  background: #3A2416; border: 6px solid #34200F; border-radius: 18px;
+  box-shadow: 0 8px 0 var(--ink-deep), inset 0 0 70px rgba(0, 0, 0, .55);
+  padding: 6px;
+}
+.vignette {
+  position: absolute; inset: 6px; border-radius: 12px; pointer-events: none; z-index: 3;
+  box-shadow: inset 0 0 70px rgba(20, 8, 2, .72), inset 0 0 22px rgba(20, 8, 2, .5);
+}
+.svg { display: block; touch-action: none; outline: none; border-radius: 12px; cursor: grab; }
+.grabbing { cursor: grabbing; }

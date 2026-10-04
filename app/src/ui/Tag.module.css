@@ -1,0 +1,11 @@
+.tag {
+  display: inline-block; box-sizing: border-box;
+  border: var(--bd); box-shadow: var(--lift);
+  font-family: var(--font-display); white-space: nowrap;
+}
+.purple { background: var(--purple); color: var(--gold); }
+.orchid { background: var(--orchid); color: #3E1B4A; }
+
+.sm { border-radius: 8px; padding: 4px 14px; font-size: 14px; letter-spacing: .06em; }
+.md { border-radius: 9px; padding: 4px 18px; font-size: 15px; letter-spacing: .05em; }
+.lg { border-radius: 10px; padding: 3px 22px; font-size: 17px; letter-spacing: .05em; }

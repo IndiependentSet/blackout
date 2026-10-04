@@ -1,0 +1,31 @@
+.stack { display: flex; flex-direction: column; gap: 18px; }
+.loading { text-align: center; padding: 40px 0; font-size: 13px; font-weight: 800; letter-spacing: .1em; color: var(--muted); }
+
+/* sign-in */
+.signin { padding: 22px 22px 20px; border-radius: 4px 16px 16px 16px; }
+.headline { font-family: var(--font-display); font-size: 22px; line-height: 1.22; color: var(--text); text-wrap: pretty; }
+.sent { font-size: 20px; }
+.accent { color: var(--violet); }
+.copy { font-size: 14px; font-weight: 700; line-height: 1.5; color: var(--text-2); }
+.again { font-size: 12.5px; font-weight: 800; letter-spacing: .05em; color: var(--violet); }
+.divider { display: flex; align-items: center; gap: 10px; margin: 2px 0; }
+.rule { flex: 1; height: 2px; background: #D8C49C; }
+.or { font-size: 11px; font-weight: 900; letter-spacing: .08em; color: #8A7350; }
+.soon { background: #B8ABA0; color: #6E6259; opacity: .7; cursor: not-allowed; }
+
+/* ID card */
+.who { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.identity { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.name { display: flex; align-items: center; gap: 8px; }
+.handle { font-family: var(--font-display); font-size: 20px; color: var(--text); }
+.edit { display: flex; flex-direction: column; gap: 5px; }
+.editButtons { display: flex; gap: 6px; }
+.email { font-size: 12.5px; font-weight: 700; color: var(--text-3); }
+.error { font-size: 11px; font-weight: 800; color: var(--danger); }
+.clockOut { margin-left: auto; }
+.stats { display: flex; gap: 8px; flex-wrap: wrap; }
+.crewLink { display: flex; align-items: center; justify-content: space-between; }
+.chevron { font-family: var(--font-display); font-size: 16px; color: var(--violet); }
+
+/* leaderboard */
+.boardHead { display: flex; gap: 6px; align-items: flex-end; }

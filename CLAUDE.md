@@ -39,29 +39,56 @@ the current theme — read them for the underlying puzzle rules (par/K, hint
 tiers, generation approach), but don't treat their neon/city theme language
 as the current spec. `project/CATASTROPHE_INC.dc.html` is the current design
 source of truth for story/copy; it is NOT the source of truth for cat/thing
-visuals — `app/src/assets/` and the camera system in `CatCoverGame.jsx` are.
+visuals — `app/src/assets/` and the camera system in `app/src/game/camera/` are.
 
 ## Layout
 
 - `project/` — Claude Design prototype files (`.dc.html`, `engine.js`,
   `support.js`). These are exported prototypes, not the app; don't edit them
   to fix bugs — port fixes into `app/` instead. `project/engine.js` and
-  `app/src/engine.js` are (currently) identical copies of the same solver;
+  `app/src/domain/engine.ts` are (currently) the same solver (the app's is
+  typed); 
   if you change one for a real fix, check whether the other needs it too, or
   whether `project/` can just be left as a historical snapshot.
-- `app/` — the actual React app (Vite + React 19, JS not TS). This is what
-  ships and what you should be editing for any real feature/bug work.
-  - `src/CatCoverGame.jsx` — the entire game (single class component): state,
-    level queueing, input handling, audio (Web Audio chirps/crashes plus the
-    recorded crackles in `src/assets/sfx/`), share
-    card, keyboard support, and the camera (below).
-  - `src/engine.js` — pure, framework-free: seeded RNG, gadget-based level
-    generator (leaf chains, degree-2 paths, cycles, hubs, crowns), exact
-    branch-and-bound solver, hint helpers (`hintLeaf`, `hintMatching`,
-    `hintReveal`). No React imports — keep it that way if you touch it.
-  - `src/house.js` — the building the puzzle sits in (below). Pure like
-    `engine.js`: no React, seeded by the level's own coordinates, and every
-    number it returns is precomputed once per level.
+- `app/` — the actual React app (Vite + React 19, **TypeScript strict**, CSS
+  Modules). This is what ships and what you should be editing for any real
+  feature/bug work. See *Engineering standards* below for the layer rules.
+  - `src/domain/` — pure TypeScript, no React/DOM/Supabase (lint-enforced):
+    `engine.ts` (seeded RNG, gadget-based level generator — leaf chains,
+    degree-2 paths, cycles, hubs, crowns — exact branch-and-bound solver, and
+    the hint helpers `hintLeaf`/`hintMatching`/`hintReveal`), `house.ts` (the
+    building the puzzle sits in, below; seeded by the level's own
+    coordinates, every number precomputed once per level), plus the small
+    rules the UI used to carry inline: `cover.ts`, `scoring.ts` (the one
+    mirror of the SQL score), `calendar.ts`, `sites.ts`, `navigation.ts`,
+    `invoice.ts`, `profile.ts`, and the shared `types.ts`.
+  - `src/services/` — `supabase/client.ts`, `result.ts` (`Result<T>`),
+    `logger.ts`, one repository per aggregate in `repositories/`, and
+    `auth/` (`AuthProvider` + `useAuth`: the app's single session source).
+  - `src/game/` — the playable board. `state/` (pure reducer that turns taps
+    into numbered events, selectors, hints, score-card copy), `camera/` (pure
+    maths + `useCamera`), `layout/layout.ts` (lattice → world, memoized per
+    level), `scene/` (`buildScene`/minimap/`cable`: the pure replacement for
+    the old `renderVals`), `input/` (pointer hook, keymap), `audio/`
+    (`AudioService`: Web Audio chirps/crashes/fanfare plus the recorded
+    crackles in `src/assets/sfx/`), `hooks/` (levels queue, score card),
+    `fx.ts` (one-shot Web Animations), `components/` (Board — which owns the
+    camera — and its layers, HUD, score card, side rails), `GameScreen.tsx`
+    and `useGameSession.ts` (what has to outlive a screen).
+  - `src/screens/` — `WorkOrder/`, `StaffOffice/` (sign-in, ID card,
+    leaderboard), `Crew/` (roster, squads, profiles), `HowToPlay/`.
+  - `src/app/` — `App.tsx` (screen routing, `AuthProvider`), the staff badge
+    and the once-per-session orientation (`useOrientation`).
+  - `src/ui/` (Button, Panel/TabHeader, Tag, Logo, Screen, StaffBadge, Stat,
+    Avatar, Field, ListRow/RankRow, ScopeTabs, Message, GradeBadge) and
+    `src/sprites/` (PadSprite, CatFlipbook, ThingSprite, PathWeb/PathLit and
+    the two-tone path theme): shared presentation used by the board, the
+    work order and the orientation alike — never re-draw a pad, cat or path
+    somewhere else. `src/hooks/` holds generic hooks (`useResource`,
+    `useWindowKey`, `useClipboard`, `useCulled`).
+  - `src/styles/tokens.css` — the only home of raw colours, font stacks and
+    the sticker border/shadow recipe. `styles/global.css` holds the `cc-*`
+    keyframes.
   - `src/assets/rooms/` — the drawn rooms the house is filled with, plus the
     `raw/` originals they are trimmed from. Filename is the contract and
     `manifest.json` is generated; see its README.
@@ -70,7 +97,7 @@ visuals — `app/src/assets/` and the camera system in `CatCoverGame.jsx` are.
     `wakeB`). Every sprite is baked onto the same 192x192 canvas at the same
     scale with the cat's feet on the same baseline (y = 182, exported as
     `CAT_BASELINE`), so a node can swap poses without the cat shifting.
-    `index.js` is the only thing the game imports. If you add a breed, cut it
+    `index.ts` is the only thing the game imports. If you add a breed, cut it
     to the same canvas convention — don't rescale sprites individually, or
     the cats stop looking like one cast. Since the CATASTROPHE INC. pivot, an
     empty node renders as a drawn "deployment pad" (dashed ring + paw
@@ -90,18 +117,19 @@ visuals — `app/src/assets/` and the camera system in `CatCoverGame.jsx` are.
     `app/tools/prep-sfx.py` trims the room tone off a raw take and levels it —
     untrimmed, a recording starts up to half a second after the tap that
     caused it. See the README there.
-  - `src/index.css` / `index.html` — global styles, fonts (Luckiest Guy +
-    Nunito from Google Fonts), page title/meta. The `cc-*` keyframes live
-    here; an empty pad uses `cc-slotspin` (the turning dashed ring), a hired
+  - `src/styles/global.css` / `index.html` — global styles, fonts (Luckiest
+    Guy + Nunito from Google Fonts), page title/meta. The `cc-*` keyframes
+    live in `global.css`; an empty pad uses `cc-slotspin` (the turning dashed ring), a hired
     cat plays `cc-drop` once (the landing bounce) then loops
     `cc-pounce` + `cc-frame-a`/`cc-frame-b` (a two-frame flip-book) while
     it's out causing chaos, and the smashables use `cc-teeter` when
     untouched and `cc-tumble` + `cc-break-0..3` (a one-shot four-frame
-    sequence that holds on the wreckage) when a cat gets to them. `cc-snooze`
-    and `cc-zzz` are unused leftovers from the CAT COVER sleeping-cat state.
-  - No backend, no persistence layer (by design — see the original brief:
-    "no backend, no localStorage"). Don't add either without checking with
-    the user first; it's a deliberate constraint, not an oversight.
+    sequence that holds on the wreckage) when a cat gets to them. (The old
+    `cc-snooze`/`cc-zzz` leftovers are gone.)
+  - Supabase backs optional sign-in, the leaderboard, crews and squads
+    (`src/services/`; SQL in `app/sql/`). The puzzle itself still needs no
+    backend, and a signed-out player gets the whole game. Don't add other
+    persistence (localStorage etc.) without checking with the user first.
 
 ## The board is a camera, not a fit
 
@@ -110,10 +138,10 @@ graphs grew (150 world units per lattice step in house 1, 40 in the worst house
 7 — where a smashable ended up wider than the cable it sat on). Instead:
 
 - **One fixed `SPACING` (130) for every house.** A cat is the same size in
-  house 7 as in house 1. `layout()` maps lattice → world at that scale and
-  memoizes per level object.
+  house 7 as in house 1. `layoutFor()` (`game/layout/layout.ts`) maps
+  lattice → world at that scale and memoizes per level object.
 - **The board is a camera over that world**, `{x, y, z}` driving the SVG's
-  **viewBox**. Keep it in the viewBox: `pick()` maps client → world through
+  **viewBox**. Keep it in the viewBox: `useBoardPointer` maps client → world through
   `getScreenCTM().inverse()`, which an inner `<g transform>` would break.
 - `CAM_H` (520) is fixed and the camera's *width* follows the board's real
   aspect (a `ResizeObserver` on the SVG keeps `state.aspect` current), so the
@@ -132,13 +160,13 @@ graphs grew (150 world units per lattice step in house 1, 40 in the worst house
   `CAT_S`/`THING_S` are plain constants. Tune the feel through the constant
   block at the top of the file, not by reintroducing per-level scaling.
 
-None of this touched `engine.js` — seeded generation, the uniqueness check and
+None of this touched `domain/engine.ts` — seeded generation, the uniqueness check and
 day-determinism are exactly as they were.
 
 ## The house is generated from the graph
 
 The board used to be one endless plank floor with a wallpaper band at the back,
-then a procedurally-drawn floorplan. It is now a real cutaway house: `house.js`
+then a procedurally-drawn floorplan. It is now a real cutaway house: `domain/house.ts`
 cuts the level into rooms and fills each one with a drawn room from
 `src/assets/rooms/`.
 
@@ -167,13 +195,14 @@ cuts the level into rooms and fills each one with a drawn room from
   catalogue is thinnest.
 - The room a path hangs in picks its smashable (`plan.edgeThing`), so the
   toilet roll stops turning up in the kitchen. Cosmetic only.
-- `buildHouse()` runs **once per level**, inside `layout()` (memoized in a
-  `WeakMap`), and a frame only ever filters the result against the same `seen()`
-  cull the sprites use. Nothing in `house.js` may be reached from `renderVals()`.
+- `buildHouse()` runs **once per level**, inside `layoutFor()` (memoized in a
+  `WeakMap`), and a frame only ever filters the result against the same
+  `makeSeen()` cull the sprites use. Nothing in `house.ts` may be reached from
+  the per-frame render path (`Board`).
 - Determinism is the one hard rule: seeds come from `houseSeed(lv)` — the
-  level's own contents, never the day or the site index, because `layout()`
+  level's own contents, never the day or the site index, because `layoutFor()`
   runs during render and for levels other than the current one — and the only
-  randomness is `engine.js`'s seeded RNG (no `Math.random()`, no random sort
+  randomness is `domain/engine.ts`'s seeded RNG (no `Math.random()`, no random sort
   comparators).
 
 ### The room art
@@ -199,7 +228,7 @@ The art brackets the puzzle on both sides of the value scale — `music-1`'s dar
 wood is as dark as the paths' casing, and lamp cores and window bays are
 *brighter* than the old bone dash was. No single tone can win against both, so
 every piece of the puzzle layer is drawn **two-tone**: a near-black core with a
-light rim outside it (`INK` / `RIM` / `DASH` at the top of `CatCoverGame.jsx`).
+light rim outside it (`PATH_INK` / `PATH_RIM` / `PATH_DASH` in `src/sprites/theme.ts`).
 Whichever half loses against a given room, the other one carries the edge.
 
 - Paths: a `#150C06` scrim, a cream rim, the dark casing, then dashes brighter
@@ -222,12 +251,69 @@ raster pass per frame. Everything above is plain strokes.
 ## Naming note
 
 Code comments, variable names (`BLACKOUT engine`, `bo-*` CSS classes in the
-old prototype), the `cc-*` CSS keyframe prefix, the `CatCoverGame.jsx`
-filename/class name, and this repo's own name (`blackout`) are all leftovers
+old prototype), the `cc-*` CSS keyframe prefix, the `CatCoverGame`
+name in old commits, and this repo's own name (`blackout`) are all leftovers
 from earlier pivots (BLACKOUT, then CAT COVER). Don't be misled by them —
 the shipped app is now CATASTROPHE INC. When adding new code, use
 CATASTROPHE INC.-appropriate naming (SITES, pads, hire/recall, budget); you
 don't need to rename existing leftovers unless asked.
+
+## Engineering standards (the default for ALL new work)
+
+The codebase follows the layered structure above. New code follows these rules;
+don't reintroduce the old patterns (god components, inline styles, copy-paste,
+side effects inside render).
+
+**Layers and dependency direction** — `domain` ← `game` / `services` ←
+`screens` / `app`. `ui` and `sprites` depend only on `styles`, `assets` and
+`domain/types`.
+
+- `src/domain/` — pure TypeScript: engine, house, cover rules, scoring,
+  calendar, sites, share text. No React, DOM, Supabase or `Math.random()`.
+- `src/services/` — Supabase client, repositories (one file per aggregate:
+  profiles, siteClears, leaderboards, friendships, squads), auth provider.
+  Repositories return `Result<T>` and log through one shared logger. Components
+  never call Supabase directly; they use repositories via hooks.
+- `src/game/` — reducer + selectors, pure camera maths, scene building, input
+  hooks, audio service, and the board components.
+- `src/screens/`, `src/ui/`, `src/sprites/`, `src/styles/` — screens, shared
+  primitives (Button, Card, TabHeader, Logo, GradeBadge), the cat/pad/thing
+  sprite components, and design tokens.
+
+**Rules**
+
+- Function components + hooks only. One responsibility per component, aim for
+  < 200 lines. No business rules in JSX; derive view data with pure functions
+  (never write instance fields during render). Memoize expensive static layers.
+- Multi-field state machines use a reducer. Side effects live in hooks/effects,
+  are explicit, and are cleaned up (timers, rAF, subscriptions, in-flight
+  requests — ignore stale responses).
+- DRY: one source for every constant (tokens, `SITE_COUNT`, sprite geometry);
+  scoring has exactly one implementation, mirroring the SQL. Before writing
+  something, look for the existing helper/component; before copying, extract.
+- Styling: CSS Modules + `styles/tokens.css`. Inline `style` only for genuinely
+  dynamic values (positions, per-frame opacity, animation strings). No new hex
+  literals or font stacks outside token files.
+- TypeScript strict. No `any` without a comment saying why. Shared types live
+  in `domain/types.ts`. New files are `.ts`/`.tsx`; touch a `.js` file and
+  you're expected to convert it if it is small.
+- Tests: Vitest (+ React Testing Library for components with logic). Every
+  pure module gets unit tests. The determinism snapshots in
+  `src/domain/determinism.test.ts` must pass unchanged — if one changes,
+  the day's puzzles changed, which is a bug unless explicitly intended.
+  The tests freeze `Date.now()` because `makeLevel()` has a wall-clock search
+  budget: with a live clock, a slower device can settle on a different level
+  than a faster one for the same day. That is a known, pre-existing gap in the
+  "same puzzles for everyone" promise — don't paper over it in tests, and ask
+  the user before changing generation (any fix changes the days' puzzles).
+- The layer rules are enforced by `no-restricted-imports` overrides in
+  `app/.oxlintrc.json` — fix the dependency, don't disable the rule.
+- New board behaviour: put the rule in `game/state/gameReducer.ts` (pure,
+  returns an event), react to the event in `GameScreen` (sound, saving, UI
+  effects), and draw it from `buildScene`. Don't mutate instance fields or
+  query the DOM from render. New server data: a repository returning
+  `Result<T>`, consumed through `useResource`, never a bare `.then(setState)`.
+- Keep this file in sync with the structure when you move things.
 
 ## Working in `app/`
 
@@ -240,9 +326,10 @@ npm run lint       # oxlint
 ```
 
 - Lint is `oxlint` (`.oxlintrc.json`), not ESLint — don't add ESLint config.
-- No test suite exists yet. If asked to add tests, ask which runner the user
-  wants rather than assuming.
-- The puzzle generator (`engine.js`) is deterministic per day via a seed
+- `npm run check` = lint + `tsc --noEmit` + Vitest + build. It must be green
+  before any change is considered done. Tests live beside the code
+  (`*.test.ts[x]`) or in `src/__tests__/`.
+- The puzzle generator (`domain/engine.ts`) is deterministic per day via a seed
   derived from `Date.UTC` epoch + day offset — the same puzzle set must be
   reproducible for all players on a given day. Be careful not to break that
   determinism (e.g. don't introduce `Math.random()` outside the seeded RNG).

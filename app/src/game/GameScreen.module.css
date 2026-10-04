@@ -1,0 +1,4 @@
+.page { min-height: 100vh; box-sizing: border-box; padding: 18px 14px 30px; color: var(--on-dark); background: var(--page); }
+.cols { max-width: 1240px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: flex-start; gap: 16px; }
+.main { flex: 5 1 460px; min-width: 300px; max-width: 780px; display: flex; flex-direction: column; gap: 11px; }
+.wide { max-width: none; }

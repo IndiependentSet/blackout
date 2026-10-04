@@ -1,0 +1,38 @@
+.btn {
+  border: var(--bd);
+  box-shadow: var(--lift);
+  color: var(--text);
+  cursor: pointer;
+  font-family: var(--font-display);
+  letter-spacing: .04em;
+  box-sizing: border-box;
+}
+.btn:disabled { cursor: default; }
+.btn[aria-disabled='true'] { cursor: default; }
+
+/* colour */
+.primary { background: var(--gold); }
+.secondary { background: var(--cream); }
+.paper { background: var(--paper); }
+.accent { background: var(--orchid); color: var(--ink); }
+.mint { background: var(--mint); }
+.muted { background: #E4D7BC; }
+.glass { background: var(--glass); color: var(--on-dark); box-shadow: none; }
+
+/* size */
+.chip {
+  min-height: 38px; padding: 0 13px; border-width: 2.5px; border-radius: 10px;
+  font-family: var(--font-body); font-size: 11.5px; font-weight: 900; letter-spacing: .05em; box-shadow: none;
+}
+.mini {
+  min-height: 26px; padding: 0 11px; border-width: 2px; border-radius: 7px; box-shadow: none;
+  font-family: var(--font-body); font-size: 10px; font-weight: 900; letter-spacing: .05em;
+}
+.nav {
+  min-height: 44px; padding: 0 16px; border-radius: 12px;
+  font-family: var(--font-body); font-size: 12.5px; font-weight: 900; letter-spacing: .08em;
+}
+.md { min-height: 48px; padding: 0 20px; border-radius: 12px; font-size: 14px; }
+.lg { min-height: 56px; padding: 0 22px; border-radius: 14px; font-size: 16px; }
+.xl { min-height: 68px; padding: 0 22px; border: 4px solid var(--ink); border-radius: 16px; box-shadow: var(--lift-lg); font-size: 20px; letter-spacing: .05em; }
+.block { width: 100%; }

@@ -1,0 +1,37 @@
+.aside { flex: 1 1 250px; min-width: 250px; display: flex; flex-direction: column; gap: 14px; }
+.hidden { display: none; }
+
+.tag { align-self: center; position: relative; z-index: 2; }
+.card {
+  margin-top: -20px; display: flex; flex-direction: column; box-sizing: border-box;
+  background: var(--parchment); border: var(--bd); border-radius: 14px;
+}
+.procedure { gap: 12px; padding: 22px 15px 14px; box-shadow: 0 5px 0 var(--ink), inset 0 0 30px rgba(150, 110, 60, .22); }
+.invoice { gap: 9px; padding: 22px 12px 12px; box-shadow: 0 5px 0 var(--ink); }
+
+.step { display: flex; gap: 9px; }
+.stepNo {
+  flex: none; width: 22px; height: 22px; border-radius: 50%; box-sizing: border-box;
+  background: var(--purple); border: 2px solid var(--ink); color: var(--gold);
+  font-family: var(--font-display); font-size: 12px; display: flex; align-items: center; justify-content: center;
+}
+.stepHead { font-family: var(--font-display); font-size: 14px; color: var(--text); line-height: 1.2; }
+.stepBody { font-size: 12.5px; font-weight: 700; color: var(--text-3); line-height: 1.35; }
+
+.total { display: flex; align-items: baseline; gap: 8px; padding-bottom: 8px; border-bottom: 2.5px dashed rgba(62, 39, 24, .28); }
+.points { font-family: var(--font-display); font-size: 26px; color: var(--text); }
+.small { font-size: 11.5px; font-weight: 900; letter-spacing: .1em; color: var(--text-4); }
+.done { margin-left: auto; color: var(--violet); }
+.budgets { display: flex; gap: 8px; }
+.budget { flex: 1; border: 2.5px solid var(--ink); border-radius: 10px; padding: 9px 10px; background: var(--paper); }
+.budgetOn { background: #EBD4F5; }
+.budgetHead { font-family: var(--font-display); font-size: 13px; color: var(--text); }
+.budgetOn .budgetHead { color: #3E1B4A; }
+.budgetBody { font-size: 11.5px; font-weight: 800; color: var(--text-4); line-height: 1.3; }
+.budgetOn .budgetBody { color: var(--purple); }
+
+.share { gap: 9px; padding: 13px; box-shadow: 0 5px 0 var(--ink); margin-top: 0; }
+.shareHead { font-family: var(--font-display); font-size: 13px; letter-spacing: .08em; color: var(--violet); }
+.shareText { font-size: 15px; font-weight: 800; line-height: 1.55; color: var(--text); white-space: pre-wrap; }
+
+.legend { font-size: 11px; font-weight: 800; line-height: 1.7; letter-spacing: .04em; color: var(--muted); }

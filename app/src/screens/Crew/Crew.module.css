@@ -1,0 +1,60 @@
+.stack { display: flex; flex-direction: column; gap: 16px; }
+.switch { display: flex; gap: 8px; }
+.switchBtn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 15px; }
+.badge {
+  min-width: 20px; height: 20px; padding: 0 5px; box-sizing: border-box; display: flex; align-items: center; justify-content: center;
+  background: var(--pink); border: 2px solid var(--ink); border-radius: 10px; font-size: 11px; font-weight: 900; color: var(--ink);
+}
+.boardHead { display: flex; gap: 6px; align-items: flex-end; flex-wrap: wrap; }
+.boardCard { border-radius: 4px 16px 16px 16px; }
+.pad16 { padding: 16px; box-shadow: var(--lift-lg); }
+.pad15 { padding: 15px; box-shadow: var(--lift-lg); }
+.pad10 { padding: 10px; box-shadow: var(--lift-lg); }
+.searchRow { display: flex; gap: 8px; flex-wrap: wrap; }
+.grow { flex: 1 1 200px; }
+.fine { font-size: 11.5px; font-weight: 800; letter-spacing: .04em; color: var(--text-4); line-height: 1.5; }
+.code { color: var(--violet); }
+.results { display: flex; flex-direction: column; gap: 6px; border-top: 2.5px dashed rgba(62, 39, 24, .3); padding-top: 12px; }
+.none { border-top: 2.5px dashed rgba(62, 39, 24, .3); padding-top: 14px; text-align: center; font-size: 12.5px; font-weight: 800; color: var(--text-4); }
+.person { flex: 1; text-align: left; background: transparent; border: none; padding: 0; cursor: pointer; font-family: inherit; font-size: 14px; font-weight: 900; color: var(--text); }
+.request { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: #FFE9B0; border: 2.5px solid var(--ink); border-radius: 10px; padding: 8px 10px 8px 12px; }
+.requestName { flex: 1 1 120px; font-size: 14px; font-weight: 900; color: var(--text); }
+.pending { font-size: 11.5px; font-weight: 800; letter-spacing: .05em; color: var(--muted); line-height: 1.6; }
+.empty { text-align: center; padding: 18px 10px; font-size: 12.5px; font-weight: 800; color: var(--text-4); line-height: 1.5; }
+
+.who { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.whoName { display: flex; flex-direction: column; gap: 2px; }
+.nameLg { font-family: var(--font-display); font-size: 22px; color: var(--text); }
+.standing { font-size: 12px; font-weight: 800; letter-spacing: .05em; color: var(--text-3); }
+.stats, .buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.versus { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; }
+.side { flex: 1; }
+.left { text-align: left; }
+.right { text-align: right; }
+.sideName { font-family: var(--font-display); font-size: 17px; color: var(--text); }
+.sideNote { font-size: 11px; font-weight: 800; color: var(--text-4); }
+.vs { font-family: var(--font-display); font-size: 15px; color: var(--violet); padding-bottom: 4px; }
+.compare { display: flex; flex-direction: column; gap: 6px; }
+.numbers { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.num { font-family: var(--font-display); font-size: 20px; color: var(--text-4); }
+.lead { color: var(--violet); }
+.scope { font-size: 11px; font-weight: 900; letter-spacing: .1em; color: var(--text-4); }
+.track { height: 14px; background: var(--paper); border: 2.5px solid var(--ink); border-radius: 8px; overflow: hidden; display: flex; }
+.mine { background: var(--violet); }
+.rest { flex: 1; background: #FFE9B0; }
+.theirs { background: var(--orchid); }
+.result { font-family: var(--font-display); font-size: 16px; color: var(--violet); text-align: center; }
+
+.squadRow { display: flex; align-items: center; gap: 10px; text-align: left; background: var(--paper); border: 2.5px solid var(--ink); border-radius: 10px; padding: 10px 12px; cursor: pointer; font-family: inherit; }
+.squadName { flex: 1; font-family: var(--font-display); font-size: 16px; color: var(--text); }
+.squadMeta { font-size: 11px; font-weight: 900; letter-spacing: .05em; color: var(--text-4); }
+.chevron { font-family: var(--font-display); font-size: 16px; color: var(--violet); }
+.forms { display: flex; flex-wrap: wrap; gap: 14px; }
+.form { flex: 1 1 260px; }
+.small { font-size: 14px; padding: 5px 18px; }
+.invite { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.inviteBox { flex: 1 1 150px; background: var(--paper); border: 2.5px dashed var(--ink); border-radius: 10px; padding: 10px 14px; }
+.inviteLabel { font-size: 10.5px; font-weight: 900; letter-spacing: .12em; color: var(--text-4); }
+.inviteCode { font-family: var(--font-display); font-size: 22px; letter-spacing: .08em; color: var(--violet); }
+.leave { align-self: flex-start; color: var(--danger); }

@@ -1,0 +1,12 @@
+.bar {
+  position: absolute; z-index: 4; display: flex;
+  right: calc(12px * var(--k)); top: calc(12px * var(--k)); gap: calc(6px * var(--k));
+}
+.tool {
+  min-width: calc(34px * var(--k) + 2px); height: calc(34px * var(--k)); box-sizing: border-box;
+  padding: 0 calc(8px * var(--k));
+  background: var(--cream); border: var(--bd); border-radius: 9px; box-shadow: var(--lift-sm);
+  color: var(--text); font-family: var(--font-display); font-size: max(10px, calc(14px * var(--k)));
+  line-height: 1; cursor: pointer;
+}
+.on { background: var(--gold); }

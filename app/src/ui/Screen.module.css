@@ -1,0 +1,12 @@
+.screen {
+  min-height: 100vh; box-sizing: border-box;
+  padding: 22px 16px 40px; color: var(--on-dark);
+  background: var(--page); font-family: var(--font-body);
+}
+.inner { margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+
+.header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.title {
+  font-family: var(--font-display); font-size: 20px; letter-spacing: .03em; color: var(--amber);
+  -webkit-text-stroke: 4px var(--ink); paint-order: stroke fill;
+}

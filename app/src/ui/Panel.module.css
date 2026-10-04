@@ -1,0 +1,19 @@
+.wrap { display: flex; flex-direction: column; }
+.tab {
+  align-self: flex-start;
+  border: var(--bd); border-radius: 9px 9px 0 0; box-shadow: var(--lift);
+  padding: 5px 20px; font-family: var(--font-display); font-size: 15px; letter-spacing: .06em;
+  position: relative; z-index: 2;
+}
+.purple { background: var(--purple); color: var(--gold); }
+.orchid { background: var(--orchid); color: #3E1B4A; }
+
+.card {
+  background: var(--parchment);
+  border: var(--bd); border-radius: 4px 16px 16px 16px;
+  box-shadow: var(--lift-lg), var(--card-inset);
+  padding: 20px 20px 18px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.flush { box-shadow: var(--lift-lg); }
+.tight { padding: 8px; gap: 6px; }
