@@ -76,7 +76,18 @@ visuals — `app/src/assets/` and the camera system in `app/src/game/camera/` ar
     camera — and its layers, HUD, score card, side rails), `GameScreen.tsx`
     and `useGameSession.ts` (what has to outlive a screen).
   - `src/screens/` — `WorkOrder/`, `StaffOffice/` (sign-in, ID card,
-    leaderboard), `Crew/` (roster, squads, profiles), `HowToPlay/`.
+    leaderboard), `Crew/` (roster, squads, profiles), `HowToPlay/`, and the
+    dev-only `Playground/` (below).
+  - **Generator playground** (dev only): `npm run dev`, then open
+    `/playground.html`. Its entry is `src/playground.tsx`; it is not a build
+    input, so it never ships. It drives `generate()` — the generator with every
+    former hard-coded rule exposed as `GenOptions` (max/min degree, edge reach,
+    clearance, crossings, gadget mix, extra edges, uniqueness, search limits) —
+    in a Web Worker, and shows the result as a schematic (cover, second
+    optimum, crossings) or on the real `Board`, with `domain/graphStats.ts`
+    and the generator's `GenReport` (why candidates were rejected) alongside.
+    Settings live only in the URL hash. `makeLevel()` is `generate()` under
+    `DEFAULT_GEN`, which must keep reproducing the determinism snapshots.
   - `src/app/` — `App.tsx` (screen routing, `AuthProvider`), the staff badge
     and the once-per-session orientation (`useOrientation`).
   - `src/ui/` (Button, Panel/TabHeader, Tag, Logo, Screen, StaffBadge, Stat,

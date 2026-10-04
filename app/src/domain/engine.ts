@@ -1,9 +1,10 @@
 // Level engine: seeded gadget-composition level generator + exact solver.
-// Graph = { nodes:[{c,r}], edges:[[a,b]], adj:[[..]] }  (lattice coords, planar, max degree 3)
-import type { Cell, Edge, Level, LevelFilter, Rng, Stars } from './types';
+// Graph = { nodes:[{c,r}], edges:[[a,b]], adj:[[..]] }  (lattice coords; by default
+// planar with max degree 3 — DEFAULT_GEN is what the game plays, the playground bends it)
+import type { Cell, Edge, GenOptions, GenReport, Level, LevelFilter, Rng, Stars } from './types';
 
-/** Mutable builder graph used while generating a level. */
-interface Graph { nodes: Cell[]; edges: Edge[]; adj: number[][]; key: Map<string, number> }
+/** Mutable builder graph used while generating a level, and the rules it is built under. */
+interface Graph { nodes: Cell[]; edges: Edge[]; adj: number[][]; key: Map<string, number>; cfg: GenOptions }
 interface Snapshot { n: number; e: number; adj: number[] }
 interface Gadget { cells: [number, number][]; links: [number, number][]; conn: number; tag: string }
 type Id = number | string;
@@ -32,13 +33,13 @@ function distPtSeg(p: Cell, a: Cell, b: Cell) {
   return Math.hypot(a.c + t * vx - p.c, a.r + t * vy - p.r);
 }
 function ccw(a: Cell, b: Cell, c: Cell) { return (b.c - a.c) * (c.r - a.r) - (b.r - a.r) * (c.c - a.c); }
-function segCross(a: Cell, b: Cell, c: Cell, d: Cell) {
+export function segCross(a: Cell, b: Cell, c: Cell, d: Cell) {
   const d1 = ccw(a, b, c), d2 = ccw(a, b, d), d3 = ccw(c, d, a), d4 = ccw(c, d, b);
   return ((d1 > 0) !== (d2 > 0)) && ((d3 > 0) !== (d4 > 0));
 }
 
 /* ---------- builder ---------- */
-function newG(): Graph { return { nodes: [], edges: [], adj: [], key: new Map() }; }
+function newG(cfg: GenOptions): Graph { return { nodes: [], edges: [], adj: [], key: new Map(), cfg }; }
 const ck = (c: number, r: number) => c + ',' + r;
 
 function addNode(g: Graph, c: number, r: number) {
@@ -48,12 +49,14 @@ function addNode(g: Graph, c: number, r: number) {
   return i;
 }
 function edgeOk(g: Graph, a: number, b: number) {
+  const { maxDegree, reach, clearance, crossings } = g.cfg;
   if (a === b || g.adj[a].includes(b)) return false;
-  if (g.adj[a].length >= 3 || g.adj[b].length >= 3) return false;
+  if (g.adj[a].length >= maxDegree || g.adj[b].length >= maxDegree) return false;
   const A = g.nodes[a], B = g.nodes[b];
-  if (Math.hypot(B.c - A.c, B.r - A.r) > 1.5) return false;
+  if (Math.hypot(B.c - A.c, B.r - A.r) > reach) return false;
   for (let i = 0; i < g.nodes.length; i++)
-    if (i !== a && i !== b && distPtSeg(g.nodes[i], A, B) < 0.4) return false;
+    if (i !== a && i !== b && distPtSeg(g.nodes[i], A, B) < clearance) return false;
+  if (crossings) return true;
   for (const [u, v] of g.edges) {
     if (u === a || u === b || v === a || v === b) continue;
     if (segCross(A, B, g.nodes[u], g.nodes[v])) return false;
@@ -74,7 +77,7 @@ function restore(g: Graph, s: Snapshot) {
 
 /* ---------- gadgets ----------
    cells: relative lattice cells; links: internal edges; conn: index of cell wired to the anchor */
-const GADGETS: Record<string, Gadget> = {
+const GADGETS = {
   // degree-1 spur: one junction hanging off an existing one
   spur: { cells: [[0, 0]], links: [], conn: 0, tag: 'leaf' },
   // forced hub: a centre with two leaves -> the centre is forced
@@ -94,7 +97,10 @@ const GADGETS: Record<string, Gadget> = {
     cells: [[0, 0], [1, 0], [2, 0], [2, 1], [1, 1], [0, 1]],
     links: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 0]], conn: 0, tag: 'ring',
   },
-};
+} satisfies Record<string, Gadget>;
+export type GadgetName = keyof typeof GADGETS;
+export const GADGET_NAMES = Object.keys(GADGETS) as GadgetName[];
+const isGadget = (k: string): k is GadgetName => Object.hasOwn(GADGETS, k);
 const OFFS: [number, number][] = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 
 function xform(cell: [number, number], rot: number, flip: boolean): [number, number] {
@@ -104,9 +110,9 @@ function xform(cell: [number, number], rot: number, flip: boolean): [number, num
   return [c, r];
 }
 
-function placeGadget(g: Graph, rng: Rng, gname: string) {
-  const G = GADGETS[gname];
-  const anchors = g.nodes.map((_, i) => i).filter(i => g.adj[i].length < 3);
+function placeGadget(g: Graph, rng: Rng, gname: GadgetName) {
+  const G: Gadget = GADGETS[gname];
+  const anchors = openNodes(g);
   if (!anchors.length) return false;
   for (let att = 0; att < 24; att++) {
     const A = pick(rng, anchors);
@@ -132,7 +138,7 @@ function placeGadget(g: Graph, rng: Rng, gname: string) {
 }
 
 /* ---------- exact solver: minimum cover + how many optimal solutions ---------- */
-export function solve(g: Pick<Graph, 'nodes' | 'edges' | 'adj'>): SolveResult {
+export function solve(g: Pick<Graph, 'nodes' | 'edges' | 'adj'>, cap = 600000): SolveResult {
   const n = g.nodes.length, adj = g.adj;
   const state = new Int8Array(n);
   const order = g.nodes.map((_, i) => i).sort((a, b) => adj[b].length - adj[a].length);
@@ -147,7 +153,7 @@ export function solve(g: Pick<Graph, 'nodes' | 'edges' | 'adj'>): SolveResult {
   const collect = () => { const s: number[] = []; for (let i = 0; i < n; i++) if (state[i] === 1) s.push(i); return s; };
 
   function rec(taken: number): void {
-    if (++visits > 600000) throw new Error('search blew up');
+    if (++visits > cap) throw new Error('search blew up');
     if (taken > best) return;
     let v = -1;
     for (const x of order) if (state[x] === 0) { v = x; break; }
@@ -215,18 +221,31 @@ export function difficulty(g: Pick<Graph, 'nodes' | 'adj'>): Stars {
 }
 
 /* ---------- generation ---------- */
-const MENU: Record<number, string[]> = {
+const MENU: Record<number, GadgetName[]> = {
   1: ['spur', 'spur', 'hub', 'hub', 'path3'],
   2: ['path3', 'path4', 'path5', 'spur', 'hub', 'ring4'],
   3: ['crown', 'crown', 'ring6', 'ring4', 'path4', 'path5', 'hub', 'spur'],
 };
+/** The gadget menu a difficulty grows from (duplicates are weights). */
+export const menuFor = (diff: number): GadgetName[] => MENU[diff].slice();
 
-function grow(rng: Rng, target: number, diff: number) {
-  const g = newG();
+/** The rules the game's levels are generated under. Every field here is a
+    constant the generator used to hard-code; the playground overrides them. */
+export const DEFAULT_GEN: GenOptions = {
+  maxDegree: 3, minDegree: 0, reach: 1.5, clearance: 0.4, crossings: false,
+  menu: null, extraEdges: null, unique: true, matchStars: true,
+  attempts: 400, repairs: 18, budgetMs: 500, solverCap: 600000, clock: true,
+};
+
+const openNodes = (g: Graph) => g.nodes.map((_, i) => i).filter(i => g.adj[i].length < g.cfg.maxDegree);
+const near = (g: Graph, a: number, b: number) =>
+  Math.hypot(g.nodes[b].c - g.nodes[a].c, g.nodes[b].r - g.nodes[a].r) <= g.cfg.reach;
+
+function grow(rng: Rng, target: number, menu: GadgetName[], cfg: GenOptions) {
+  const g = newG(cfg);
   addNode(g, 0, 0);
   let fails = 0;
   while (g.nodes.length < target - 1 && fails < 40) {
-    const menu = MENU[diff];
     const cand = menu.filter(k => g.nodes.length + GADGETS[k].cells.length <= target + 1);
     if (!cand.length) break;
     if (!placeGadget(g, rng, pick(rng, cand))) fails++;
@@ -234,21 +253,33 @@ function grow(rng: Rng, target: number, diff: number) {
   return g;
 }
 
-// close nearby degree-2 junctions into rings/crowns: kills the leaf and fold rules,
+// close nearby open junctions into rings/crowns: kills the leaf and fold rules,
 // which is what forces a crown reduction or a real branch.
 function densify(g: Graph, rng: Rng, rounds: number) {
   for (let t = 0; t < rounds; t++) {
-    const open = g.nodes.map((_, i) => i).filter(i => g.adj[i].length < 3);
+    const open = openNodes(g);
     if (open.length < 2) return;
     const a = pick(rng, open);
-    const near = open.filter(b => b !== a && !g.adj[a].includes(b) &&
-      Math.hypot(g.nodes[b].c - g.nodes[a].c, g.nodes[b].r - g.nodes[a].r) <= 1.5);
-    if (near.length) addEdge(g, a, pick(rng, near));
+    const cand = open.filter(b => b !== a && !g.adj[a].includes(b) && near(g, a, b));
+    if (cand.length) addEdge(g, a, pick(rng, cand));
+  }
+}
+
+// raise every junction below the minimum degree by wiring it to an open
+// neighbour within reach. Best effort: the lattice may simply not allow it.
+function liftDegrees(g: Graph, rng: Rng, min: number) {
+  for (let v = 0; v < g.nodes.length; v++) {
+    while (g.adj[v].length < min) {
+      const cand = openNodes(g).filter(b => b !== v && !g.adj[v].includes(b) && near(g, v, b));
+      let linked = false;
+      while (cand.length && !linked) linked = addEdge(g, v, cand.splice(ri(rng, cand.length), 1)[0]);
+      if (!linked) break;
+    }
   }
 }
 
 function spurAt(g: Graph, v: number) {
-  if (g.adj[v].length >= 3) return false;
+  if (g.adj[v].length >= g.cfg.maxDegree) return false;
   for (const [dc, dr] of OFFS) {
     const id = addNode(g, g.nodes[v].c + dc, g.nodes[v].r + dr);
     if (id < 0) continue;
@@ -261,7 +292,9 @@ function spurAt(g: Graph, v: number) {
 
 // Targeted tie-break: two optimal covers differ somewhere, so pin one of those
 // junctions down with a spur (leaf rule then forces it) and the tie collapses.
+// A spur is a leaf, so with a minimum degree only the densify fallback is left.
 function repair(g: Graph, rng: Rng, r: SolveResult) {
+  if (g.cfg.minDegree > 1) return densifyOnce(g, rng);
   const A = new Set(r.sol), B = new Set(r.alt || []);
   const diffs = [...A].filter(v => !B.has(v)).concat([...B].filter(v => !A.has(v)));
   for (let t = diffs.length; t > 0; t--) {
@@ -271,45 +304,81 @@ function repair(g: Graph, rng: Rng, r: SolveResult) {
   return densifyOnce(g, rng);
 }
 function densifyOnce(g: Graph, rng: Rng) {
-  const open = g.nodes.map((_, i) => i).filter(i => g.adj[i].length < 3);
+  const open = openNodes(g);
   for (let t = 0; t < 8 && open.length > 1; t++) {
     const a = pick(rng, open);
-    const near = open.filter(b => b !== a && !g.adj[a].includes(b) &&
-      Math.hypot(g.nodes[b].c - g.nodes[a].c, g.nodes[b].r - g.nodes[a].r) <= 1.5);
-    if (near.length && addEdge(g, a, pick(rng, near))) return true;
+    const cand = open.filter(b => b !== a && !g.adj[a].includes(b) && near(g, a, b));
+    if (cand.length && addEdge(g, a, pick(rng, cand))) return true;
   }
   return false;
 }
 
-export function makeLevel(rng: Rng, target: number, diff: number, budgetMs?: number, accept?: LevelFilter | null): Level | null {
-  const t0 = Date.now(), budget = budgetMs || 500;
+const minDegreeOf = (g: Graph) => g.adj.reduce((m, a) => Math.min(m, a.length), Infinity);
+
+/** The generator with every rule exposed, plus an account of how it went.
+    With DEFAULT_GEN (and the game's arguments) it makes exactly the levels
+    makeLevel() always has: same rng draws, in the same order. */
+export function generate(rng: Rng, target: number, diff: number, opts: Partial<GenOptions> = {},
+  accept?: LevelFilter | null): { level: Level | null; report: GenReport; alt: number[] | null } {
+  const cfg: GenOptions = { ...DEFAULT_GEN, ...opts };
+  /* clock off: generation is purely attempt-limited, so a seed always gives the same level */
+  const now = cfg.clock ? () => Date.now() : () => 0;
+  const t0 = now(), started = Date.now();
+  const menu = cfg.menu ? cfg.menu.filter(isGadget) : MENU[diff];
+  const extra = cfg.extraEdges ?? (diff === 3 ? 0.8 : 0);
+  const report: GenReport = {
+    attempts: 0, repairs: 0, ms: 0, fallback: false, optima: 0, visits: 0,
+    rejected: { degenerate: 0, blowup: 0, unresolved: 0, filter: 0, minDegree: 0, stars: 0, size: 0 },
+  };
   let fallback: Level | null = null;
-  for (let att = 0; att < 400; att++) {
-    if (Date.now() - t0 > budget && fallback) break;
+  let fbAlt: number[] | null = null, fbOptima = 0, fbVisits = 0;
+  const done = (level: Level | null, alt: number[] | null, optima: number, visits: number) => {
+    Object.assign(report, { ms: Date.now() - started, optima, visits });
+    return { level, report, alt };
+  };
+  if (!menu.length) return done(null, null, 0, 0);
+
+  for (let att = 0; att < cfg.attempts; att++) {
+    if (now() - t0 > cfg.budgetMs && fallback) break;
+    report.attempts++;
     const seedSize = Math.max(4, diff === 3 ? target - 3 : target - 1);
-    const g = grow(rng, seedSize, diff);
-    if (g.edges.length < 2 || g.nodes.some((_, i) => g.adj[i].length === 0)) continue;
-    if (diff === 3) densify(g, rng, Math.ceil(target * 0.8));
-    for (let fix = 0; fix < 18; fix++) {
+    const g = grow(rng, seedSize, menu, cfg);
+    if (g.edges.length < 2 || g.nodes.some((_, i) => g.adj[i].length === 0)) { report.rejected.degenerate++; continue; }
+    if (extra > 0) densify(g, rng, Math.ceil(target * extra));
+    if (cfg.minDegree > 1) liftDegrees(g, rng, cfg.minDegree);
+    for (let fix = 0; fix < cfg.repairs; fix++) {
       let r: SolveResult;
-      try { r = solve(g); } catch { break; }
-      if (r.count === 1) {
+      try { r = solve(g, cfg.solverCap); } catch { report.rejected.blowup++; break; }
+      if (r.count === 1 || !cfg.unique) {
         const d = difficulty(g), n = g.nodes.length;
         const lv: Level = { nodes: g.nodes.map(p => ({ c: p.c, r: p.r })), edges: g.edges.map(e => [e[0], e[1]] as Edge),
                      adj: g.adj.map(a => a.slice()), k: r.k, sol: r.sol, stars: d };
-        const okShape = !accept || accept(lv);
-        if (okShape && d === diff && n >= (target <= 8 ? target : target - 1) && n <= target + 2) return lv;
-        if (!okShape) break;
-        const score = Math.abs(d - diff) * 100 + Math.abs(n - target);
-        if (!fallback || score < (fallback._score ?? Infinity)) { lv._score = score; fallback = lv; }
+        if (accept && !accept(lv)) { report.rejected.filter++; break; }
+        const degOk = minDegreeOf(g) >= cfg.minDegree;
+        const starsOk = !cfg.matchStars || d === diff;
+        const sizeOk = n >= (target <= 8 ? target : target - 1) && n <= target + 2;
+        if (degOk && starsOk && sizeOk) return done(lv, r.alt, r.count, r.visits);
+        if (!degOk) report.rejected.minDegree++;
+        else if (!starsOk) report.rejected.stars++;
+        else report.rejected.size++;
+        const score = (degOk ? 0 : 1000) + (starsOk ? 0 : Math.abs(d - diff) * 100) + Math.abs(n - target);
+        if (!fallback || score < (fallback._score ?? Infinity)) {
+          lv._score = score; fallback = lv; fbAlt = r.alt; fbOptima = r.count; fbVisits = r.visits;
+        }
         break;
       }
-      if (g.nodes.length > target + 2) break;
+      if (g.nodes.length > target + 2) { report.rejected.size++; break; }
 
-      if (!repair(g, rng, r)) break;
+      if (!repair(g, rng, r)) { report.rejected.unresolved++; break; }
+      report.repairs++;
     }
   }
-  return fallback;
+  report.fallback = !!fallback;
+  return done(fallback, fbAlt, fbOptima, fbVisits);
+}
+
+export function makeLevel(rng: Rng, target: number, diff: number, budgetMs?: number, accept?: LevelFilter | null): Level | null {
+  return generate(rng, target, diff, { budgetMs: budgetMs || 500 }, accept).level;
 }
 
 export const RAMP: { n: number; d: number }[] = [
