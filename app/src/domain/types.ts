@@ -22,6 +22,53 @@ export interface Level {
 
 export type LevelFilter = (lv: Level) => boolean;
 
+/** The rules the level generator works under (see DEFAULT_GEN for the game's). */
+export interface GenOptions {
+  /** most paths a junction may have */
+  maxDegree: number;
+  /** fewest paths a junction may have; 0 or 1 means no constraint */
+  minDegree: number;
+  /** longest path, in lattice steps (1 = orthogonal, 1.5 = diagonals, 2.3 = knight moves) */
+  reach: number;
+  /** how close (in lattice steps) a path may pass to a junction it doesn't join */
+  clearance: number;
+  /** allow paths to cross each other (the drawing is then no longer planar) */
+  crossings: boolean;
+  /** gadget names to grow from, duplicates as weights; null = the difficulty's menu */
+  menu: string[] | null;
+  /** extra edges to close, as a fraction of the target size; null = 0.8 at difficulty 3, else 0 */
+  extraEdges: number | null;
+  /** require exactly one optimal cover */
+  unique: boolean;
+  /** require the solving technique (stars) to equal the difficulty asked for */
+  matchStars: boolean;
+  attempts: number;
+  /** tie-break edits per attempt */
+  repairs: number;
+  budgetMs: number;
+  /** branch-and-bound visits before the solver gives up on a graph */
+  solverCap: number;
+  /** honour budgetMs (true) or be purely attempt-limited and so seed-reproducible (false) */
+  clock: boolean;
+}
+
+/** How a generate() run went: what it tried, and why candidates were thrown away. */
+export interface GenReport {
+  attempts: number;
+  repairs: number;
+  ms: number;
+  /** nothing met every rule; the level is the closest miss */
+  fallback: boolean;
+  /** optimal covers the returned level has */
+  optima: number;
+  /** solver visits for the returned level */
+  visits: number;
+  rejected: {
+    degenerate: number; blowup: number; unresolved: number; filter: number;
+    minDegree: number; stars: number; size: number;
+  };
+}
+
 export interface Point { x: number; y: number }
 export interface Rect { x: number; y: number; w: number; h: number }
 
