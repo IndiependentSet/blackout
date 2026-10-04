@@ -13,7 +13,16 @@
   grid-template-columns: 300px minmax(0, 1fr) 260px; align-items: start;
 }
 @media (max-width: 1100px) { .layout { grid-template-columns: 280px minmax(0, 1fr); } }
-@media (max-width: 760px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+/* phone: the graph first, then the knobs, then the numbers; one page scroll */
+@media (max-width: 760px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  .main { order: -1; }
+  .panel { max-height: none; overflow: visible; }
+  .hint { display: none; }
+  .schematic { max-height: 70vh; }
+  .row { min-height: 38px; }
+  .row input[type='checkbox'] { width: 20px; height: 20px; }
+}
 
 .panel {
   background: var(--glass); border-radius: 12px; padding: 4px 12px 12px; font-size: 13px;
