@@ -79,8 +79,10 @@ visuals — `app/src/assets/` and the camera system in `app/src/game/camera/` ar
     leaderboard), `Crew/` (roster, squads, profiles), `HowToPlay/`, and the
     dev-only `Playground/` (below).
   - **Generator playground** (dev only): `npm run dev`, then open
-    `/playground.html`. Its entry is `src/playground.tsx`; it is not a build
-    input, so it never ships. It drives `generate()` — the generator with every
+    `/playground.html`. Its entry is `src/playground.tsx`. `vite.config.ts`
+    adds it as a build input only on Vercel *preview* deployments
+    (`VERCEL_ENV=preview`, i.e. every PR) or with `PLAYGROUND=1`, so it can be
+    tried on a phone from a PR but never ships to production. It drives `generate()` — the generator with every
     former hard-coded rule exposed as `GenOptions` (max/min degree, edge reach,
     clearance, crossings, gadget mix, extra edges, uniqueness, search limits) —
     in a Web Worker, and shows the result as a schematic (cover, second

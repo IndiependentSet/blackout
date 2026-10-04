@@ -46,6 +46,7 @@ export function PlaygroundScreen() {
           <div className={styles.toolbar}>
             <Button size="mini" variant={view === 'schematic' ? 'primary' : 'secondary'} onClick={() => setView('schematic')}>Schematic</Button>
             <Button size="mini" variant={view === 'board' ? 'primary' : 'secondary'} onClick={() => setView('board')}>Board</Button>
+            <Button size="mini" variant="mint" onClick={reroll} title="random seed (r)">🎲 seed {params.seed}</Button>
             <label><input type="checkbox" checked={showSol} onChange={e => setShowSol(e.target.checked)} /> solution</label>
             {view === 'schematic' && <>
               <label title="Dashed: in a second optimal cover but not the first. Dotted: the reverse">
