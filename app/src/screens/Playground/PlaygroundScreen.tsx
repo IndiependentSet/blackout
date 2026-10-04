@@ -2,6 +2,7 @@ import { useEffect, useReducer, useState } from 'react';
 import { Button, cx } from '../../ui';
 import { useWindowKey } from '../../hooks/useWindowKey';
 import { ParamsPanel } from './ParamsPanel';
+import { Info } from './Info';
 import { decodeParams, encodeParams, paramsReducer } from './params';
 import { PlayPreview } from './PlayPreview';
 import { SchematicView, type LabelMode } from './SchematicView';
@@ -47,15 +48,15 @@ export function PlaygroundScreen() {
             <Button size="mini" variant={view === 'schematic' ? 'primary' : 'secondary'} onClick={() => setView('schematic')}>Schematic</Button>
             <Button size="mini" variant={view === 'board' ? 'primary' : 'secondary'} onClick={() => setView('board')}>Board</Button>
             <Button size="mini" variant="mint" onClick={reroll} title="random seed (r)">🎲 seed {params.seed}</Button>
-            <label><input type="checkbox" checked={showSol} onChange={e => setShowSol(e.target.checked)} /> solution</label>
+            <span className={styles.toggle}><label><input type="checkbox" checked={showSol} onChange={e => setShowSol(e.target.checked)} /> solution</label><Info k="solution" /></span>
             {view === 'schematic' && <>
-              <label title="Dashed: in a second optimal cover but not the first. Dotted: the reverse">
-                <input type="checkbox" checked={showAlt} onChange={e => setShowAlt(e.target.checked)} /> 2nd optimum</label>
-              <select value={labels} onChange={e => setLabels(e.target.value as LabelMode)}>
+              <span className={styles.toggle}><label>
+                <input type="checkbox" checked={showAlt} onChange={e => setShowAlt(e.target.checked)} /> 2nd optimum</label><Info k="secondOptimum" /></span>
+              <span className={styles.toggle}><select value={labels} onChange={e => setLabels(e.target.value as LabelMode)} aria-label="node labels">
                 <option value="degree">label: degree</option>
                 <option value="index">label: index</option>
                 <option value="none">no labels</option>
-              </select>
+              </select><Info k="labels" /></span>
             </>}
             {level && <Button size="mini" variant="muted" title="copy the level as JSON"
               onClick={() => navigator.clipboard?.writeText(JSON.stringify(level))}>Copy JSON</Button>}
