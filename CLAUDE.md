@@ -61,7 +61,10 @@ visuals — `app/src/assets/` and the camera system in `app/src/game/camera/` ar
     coordinates, every number precomputed once per level), plus the small
     rules the UI used to carry inline: `cover.ts`, `scoring.ts` (the one
     mirror of the SQL score), `calendar.ts`, `sites.ts`, `navigation.ts`,
-    `invoice.ts`, `profile.ts`, and the shared `types.ts`.
+    `invoice.ts`, `profile.ts`, `graphStats.ts` and `graphIdentity.ts` (when
+    two levels are the same: `drawingKey` up to moving/rotating/mirroring,
+    `shapeKey` up to node order — an exact canonical labelling), and the
+    shared `types.ts`.
   - `src/services/` — `supabase/client.ts`, `result.ts` (`Result<T>`),
     `logger.ts`, one repository per aggregate in `repositories/`, and
     `auth/` (`AuthProvider` + `useAuth`: the app's single session source).
@@ -89,6 +92,9 @@ visuals — `app/src/assets/` and the camera system in `app/src/game/camera/` ar
     optimum, crossings) or on the real `Board` — tap nodes in either view to
     play-test it against par (the placed cats are shared by both) — with `domain/graphStats.ts`
     and the generator's `GenReport` (why candidates were rejected) alongside.
+    Its **Variety** panel sweeps N consecutive seeds in a second worker and
+    counts distinct graphs and drawings (with Chao1 estimates of the total,
+    a repeat chance and the most common graphs, each loadable by seed).
     Settings live only in the URL hash. `makeLevel()` is `generate()` under
     `DEFAULT_GEN`, which must keep reproducing the determinism snapshots.
   - `src/app/` — `App.tsx` (screen routing, `AuthProvider`), the staff badge
