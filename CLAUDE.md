@@ -86,7 +86,8 @@ visuals — `app/src/assets/` and the camera system in `app/src/game/camera/` ar
     former hard-coded rule exposed as `GenOptions` (max/min degree, edge reach,
     clearance, crossings, gadget mix, extra edges, uniqueness, search limits) —
     in a Web Worker, and shows the result as a schematic (cover, second
-    optimum, crossings) or on the real `Board`, with `domain/graphStats.ts`
+    optimum, crossings) or on the real `Board` — tap nodes in either view to
+    play-test it against par (the placed cats are shared by both) — with `domain/graphStats.ts`
     and the generator's `GenReport` (why candidates were rejected) alongside.
     Settings live only in the URL hash. `makeLevel()` is `generate()` under
     `DEFAULT_GEN`, which must keep reproducing the determinism snapshots.

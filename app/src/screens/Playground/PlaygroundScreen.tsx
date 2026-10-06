@@ -4,10 +4,13 @@ import { useWindowKey } from '../../hooks/useWindowKey';
 import { ParamsPanel } from './ParamsPanel';
 import { Info } from './Info';
 import { decodeParams, encodeParams, paramsReducer } from './params';
+import { playStatus } from './play';
+import { PlayBar } from './PlayBar';
 import { PlayPreview } from './PlayPreview';
 import { SchematicView, type LabelMode } from './SchematicView';
 import { StatsPanel } from './StatsPanel';
 import { useGenerator } from './useGenerator';
+import { usePlacement } from './usePlacement';
 import styles from './Playground.module.css';
 
 type View = 'schematic' | 'board';
@@ -33,6 +36,10 @@ export function PlaygroundScreen() {
   });
 
   const level = outcome?.level ?? null;
+  /* play-testing works in both views; "solution" shows the answer instead */
+  const play = usePlacement(outcomeKey);
+  const shown = level && showSol ? level.sol : play.placed;
+  const onTapNode = showSol ? undefined : play.toggle;
 
   return (
     <div className={styles.page}>
@@ -65,10 +72,11 @@ export function PlaygroundScreen() {
             {error && <p className={styles.warn}>{error}</p>}
             {level && view === 'schematic' && outcome && (
               <SchematicView level={level} alt={outcome.alt} crossings={outcome.crossings}
-                showSol={showSol} showAlt={showAlt} labels={labels} />
+                placed={shown} dimRest={showSol} showAlt={showAlt} labels={labels} onTapNode={onTapNode} />
             )}
-            {level && view === 'board' && <PlayPreview key={outcomeKey} level={level} showSol={showSol} />}
+            {level && view === 'board' && <PlayPreview key={outcomeKey} level={level} placed={shown} onTapNode={onTapNode} />}
             {!level && !running && !error && <p className={styles.warn}>No level satisfied these rules. See the rejection counts.</p>}
+            {level && <PlayBar status={playStatus(level, shown)} showSol={showSol} onClear={play.clear} />}
           </div>
         </main>
         {outcome && <StatsPanel outcome={outcome} wallMs={wallMs} />}
