@@ -71,6 +71,8 @@
 .outSol { stroke: var(--muted); }
 .inAlt { fill: none; stroke: var(--pink); stroke-width: 3; stroke-dasharray: 6 5; }
 .notAlt { fill: none; stroke: var(--pink); stroke-width: 2; stroke-dasharray: 1 4; stroke-linecap: round; }
+.playable g { cursor: pointer; }
+.hit { fill: transparent; }
 .nodeLabel { fill: var(--on-dark); font-size: 14px; font-weight: 900; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
 .inSol + .nodeLabel, .inSol ~ .nodeLabel { fill: var(--ink); }
 
@@ -85,7 +87,6 @@
 .hist i { display: block; width: 100%; background: var(--orchid); border-radius: 3px 3px 0 0; min-height: 1px; }
 .hist span { font-size: 10px; color: var(--muted); }
 
-.play { display: flex; flex-direction: column; gap: 8px; }
-.playBar { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; font-size: 13px; }
+.playBar { margin-top: 8px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap; font-size: 13px; }
 .playBar b { color: var(--gold); }
 .link { background: none; border: 0; color: var(--amber); cursor: pointer; text-decoration: underline; font: inherit; }

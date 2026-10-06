@@ -16,7 +16,7 @@ export interface HelpEntry {
 
 type ParamKey = Exclude<keyof PlaygroundParams, 'weights' | 'budgetMs'>;
 type GadgetKey = `gadget.${GadgetName}`;
-type ViewKey = 'presets' | 'solution' | 'secondOptimum' | 'labels';
+type ViewKey = 'presets' | 'play' | 'solution' | 'secondOptimum' | 'labels';
 type StatKey = 'stat.par' | 'stat.optima' | 'stat.stars' | 'stat.degree' | 'stat.crossings' | 'stat.euler'
   | 'stat.bipartite' | 'stat.triangles' | 'stat.components' | 'stat.attempts' | 'stat.repairs' | 'stat.visits'
   | 'stat.time' | 'stat.rejected';
@@ -168,10 +168,15 @@ export const HELP: Record<HelpKey, HelpEntry> = {
     what: 'Load the settings the game uses for site N (node count, difficulty, time budget). The seed is kept.',
     effect: 'The daily level itself also re-tries with salted seeds and requires site 1 to have a degree-3 node and par ≤ 2, so a preset reproduces the rules, not that exact level.',
   },
+  play: {
+    title: 'Play-test',
+    what: 'Tap a node, in either view, to place a cat on it; tap again to take it away. A path is covered once a cat sits at either end. Clear every path with as few cats as you can.',
+    effect: 'Par is the size of the minimum cover. "Perfect" means you cleared it with exactly par cats; more is "over par" (the game takes 5 points off per extra cat). Your cats carry over when you switch between Schematic and Board, and reset when a new graph is generated.',
+  },
   solution: {
     title: 'Solution',
     what: 'Highlight the minimum vertex cover: the fewest nodes such that every edge touches at least one. Shortcut: s.',
-    effect: 'In the schematic, cover nodes are gold and edges turn green. On the board, cats are placed on them.',
+    effect: 'In the schematic, cover nodes are gold, their edges green and everything else muted; on the board, cats are placed on them. While it is on, tapping nodes does nothing; your own cats come back when you turn it off.',
   },
   secondOptimum: {
     title: '2nd optimum',
