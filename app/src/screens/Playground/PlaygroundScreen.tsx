@@ -11,6 +11,7 @@ import { SchematicView, type LabelMode } from './SchematicView';
 import { StatsPanel } from './StatsPanel';
 import { useGenerator } from './useGenerator';
 import { usePlacement } from './usePlacement';
+import { VarietyPanel } from './VarietyPanel';
 import styles from './Playground.module.css';
 
 type View = 'schematic' | 'board';
@@ -78,6 +79,8 @@ export function PlaygroundScreen() {
             {!level && !running && !error && <p className={styles.warn}>No level satisfied these rules. See the rejection counts.</p>}
             {level && <PlayBar status={playStatus(level, shown)} showSol={showSol} onClear={play.clear} />}
           </div>
+          {/* the clock goes off too: a sweep's seeds are reproducible, so loading one shows that exact level */}
+          <VarietyPanel params={params} onLoadSeed={seed => dispatch({ type: 'set', patch: { seed, clock: false } })} />
         </main>
         {outcome && <StatsPanel outcome={outcome} wallMs={wallMs} />}
       </div>

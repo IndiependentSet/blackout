@@ -17,10 +17,11 @@ export interface HelpEntry {
 type ParamKey = Exclude<keyof PlaygroundParams, 'weights' | 'budgetMs'>;
 type GadgetKey = `gadget.${GadgetName}`;
 type ViewKey = 'presets' | 'play' | 'solution' | 'secondOptimum' | 'labels';
+type VarietyKey = 'variety' | 'varietyGraphs' | 'varietyDrawings' | 'varietyRepeat' | 'varietyFound' | 'varietyTop';
 type StatKey = 'stat.par' | 'stat.optima' | 'stat.stars' | 'stat.degree' | 'stat.crossings' | 'stat.euler'
   | 'stat.bipartite' | 'stat.triangles' | 'stat.components' | 'stat.attempts' | 'stat.repairs' | 'stat.visits'
   | 'stat.time' | 'stat.rejected';
-export type HelpKey = ParamKey | 'weights' | GadgetKey | ViewKey | StatKey;
+export type HelpKey = ParamKey | 'weights' | GadgetKey | ViewKey | VarietyKey | StatKey;
 
 export const HELP: Record<HelpKey, HelpEntry> = {
   /* ---------- settings ---------- */
@@ -186,6 +187,36 @@ export const HELP: Record<HelpKey, HelpEntry> = {
   labels: {
     title: 'Labels',
     what: 'What to write inside each node: its degree (number of edges), its index in the level data (handy against Copy JSON), or nothing.',
+  },
+
+  /* ---------- variety ---------- */
+  variety: {
+    title: 'Variety',
+    what: 'Generates a level for each of N consecutive seeds, starting at the current one, under the current settings, and counts how many are genuinely different. Answers "how many different puzzles can these settings produce?".',
+    effect: 'It runs in the background and can be stopped at any time. The time budget is always off during a sweep, so every seed it lists reproduces exactly when loaded. Exact counting would mean trying all ~4.3 billion seeds, so the totals are estimates from the sample.',
+  },
+  varietyGraphs: {
+    title: 'Distinct graphs',
+    what: 'How many different abstract graphs were found: the same connections count as one graph, whatever the node numbering, position or layout. This is exact graph isomorphism, via a canonical labelling.',
+    effect: '"≈ total" is the Chao1 estimate of how many exist including ones not yet seen. It is based on how many graphs were seen only once or twice: lots of one-offs means lots still unseen. The estimate firms up as the sample grows.',
+  },
+  varietyDrawings: {
+    title: 'Distinct drawings',
+    what: 'How many different pictures were found: the same graph drawn in a different layout counts again, but moving, rotating or mirroring the same picture does not. This is closer to what a player sees, though the house around it differs too.',
+  },
+  varietyRepeat: {
+    title: 'Repeat chance',
+    what: 'The estimated chance that the next generated level is a graph already seen (the Good–Turing estimate: the share of the sample made of graphs seen more than once).',
+    effect: 'Near 100% means the settings are exhausted: almost every new level repeats one you have had. For a daily game that is the number to watch.',
+  },
+  varietyFound: {
+    title: 'Levels found',
+    what: 'Seeds that produced a level. A seed gives none when every attempt was rejected; the playground then shows nothing for it. Fallbacks (closest misses) count as found.',
+  },
+  varietyTop: {
+    title: 'Most common graphs',
+    what: 'The abstract graphs that came up most often, with their share of the sample, size, par, stars and how many different drawings of them appeared.',
+    effect: 'The seed button loads the first seed that produced it (time budget switched off, so it reproduces exactly).',
   },
 
   /* ---------- stats ---------- */
