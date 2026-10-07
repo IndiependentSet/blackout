@@ -19,7 +19,7 @@ type View = 'schematic' | 'board';
 /* UI-only randomness: picking the next seed, never inside generation */
 const randomSeed = () => Math.floor(Math.random() * 1e6);
 
-/** Dev-only: bend the level generator's rules and see what comes out. */
+/** Admin-only: bend the level generator's rules and see what comes out. */
 export function PlaygroundScreen() {
   const [params, dispatch] = useReducer(paramsReducer, undefined, () => decodeParams(window.location.hash));
   const [view, setView] = useState<View>('schematic');
@@ -51,7 +51,7 @@ export function PlaygroundScreen() {
     <div className={styles.page}>
       <header className={styles.header}>
         <h1>Generator playground</h1>
-        <span className={styles.hint}>dev only · <kbd>r</kbd> new seed · <kbd>s</kbd> solution</span>
+        <span className={styles.hint}><kbd>r</kbd> new seed · <kbd>s</kbd> solution</span>
         <span className={cx(styles.status, running && styles.busy)}>{running ? 'generating…' : error ? 'error' : 'ready'}</span>
       </header>
       <div className={styles.layout}>

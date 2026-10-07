@@ -2,8 +2,9 @@
    how it round-trips through the URL hash (the only place it is kept). Pure. */
 import {
   DEFAULT_GEN, DEFAULT_SCHEDULE, GADGET_NAMES, STRATEGIES, menuFor, resolveOptions,
-  type GadgetName, type GenerateRequest, type GenOptions, type Strategy,
+  type GadgetName, type GenerateRequest, type GenerationSchedule, type GenOptions, type LevelConstraints, type SiteRule, type Strategy,
 } from '../../domain/generation';
+import type { Stars } from '../../domain/types';
 
 export type Weights = Record<GadgetName, number>;
 
@@ -54,6 +55,39 @@ export function toRequest(p: PlaygroundParams): GenerateRequest {
   return { seed: p.seed, size: p.size, diff: p.diff, options: toGenOptions(p) };
 }
 
+/** A schedule's site rule as playground params (its constraints have no knob here). */
+export function siteToParams(site: Pick<SiteRule, 'size' | 'diff' | 'options'>, seed: number): PlaygroundParams {
+  const o = resolveOptions(site.options);
+  return { ...DEFAULT_PARAMS, seed, size: site.size, diff: site.diff, ...passed(o), weights: o.menu ? weightsOf(o.menu) : null };
+}
+
+const toStars = (n: number): Stars => Math.min(3, Math.max(1, Math.round(n))) as Stars;
+
+/** Only the options that differ from DEFAULT_GEN, the way DEFAULT_SCHEDULE is written. */
+function optionsDiff(p: PlaygroundParams): Partial<GenOptions> {
+  const full = toGenOptions(p);
+  const out: Partial<GenOptions> = {};
+  for (const k of Object.keys(full) as (keyof GenOptions)[]) {
+    if (JSON.stringify(full[k]) !== JSON.stringify(DEFAULT_GEN[k])) (out as Record<string, unknown>)[k] = full[k];  // k is a GenOptions key
+  }
+  return out;
+}
+
+/** The inverse of siteToParams: the site rule these params describe (the seed is not part of it). */
+export function paramsToSite(p: PlaygroundParams, constraints?: LevelConstraints): SiteRule {
+  const site: SiteRule = { size: p.size, diff: toStars(p.diff), options: optionsDiff(p) };
+  if (constraints && Object.keys(constraints).length) site.constraints = constraints;
+  return site;
+}
+
+/** A schedule's fallback as params; it runs at each site's own size, so `size` is only for previewing. */
+export const fallbackToParams = (fb: GenerationSchedule['fallback'], size: number): PlaygroundParams =>
+  siteToParams({ size, diff: fb.diff, options: fb.options }, 0);
+
+export function paramsToFallback(p: PlaygroundParams): GenerationSchedule['fallback'] {
+  return { diff: toStars(p.diff), options: optionsDiff(p) };
+}
+
 export type ParamsAction =
   | { type: 'set'; patch: Partial<PlaygroundParams> }
   | { type: 'weight'; gadget: GadgetName; value: number }
@@ -68,12 +102,7 @@ export function paramsReducer(p: PlaygroundParams, a: ParamsAction): PlaygroundP
        (a site's level constraints, e.g. site 1's, have no knob here) */
     case 'site': {
       const site = DEFAULT_SCHEDULE.sites[a.idx];
-      if (!site) return p;
-      const o = resolveOptions(site.options);
-      return {
-        ...DEFAULT_PARAMS, seed: p.seed, size: site.size, diff: site.diff, ...passed(o),
-        weights: o.menu ? weightsOf(o.menu) : null, clock: DEFAULT_PARAMS.clock,
-      };
+      return site ? { ...siteToParams(site, p.seed), clock: DEFAULT_PARAMS.clock } : p;
     }
     case 'reset': return { ...DEFAULT_PARAMS, seed: p.seed };
   }

@@ -2,6 +2,7 @@ import { useCallback, useReducer, useState, type Dispatch } from 'react';
 import { dayNumber, daySeed } from '../domain/calendar';
 import type { Level } from '../domain/types';
 import { prefersMoreContrast } from './env';
+import { useDailySchedule } from './hooks/useDailySchedule';
 import { useLevels } from './hooks/useLevels';
 import { gameReducer, initialGameState, type GameAction, type GameState } from './state/gameReducer';
 
@@ -10,6 +11,9 @@ export interface GameSession {
   day: number;
   /** the week's levels; null while one is still being generated */
   levels: (Level | null)[];
+  /** false when today's generation config couldn't be loaded and the default
+      week is being played: clears then stay off the leaderboard */
+  onSchedule: boolean;
   /** the open site's level */
   level: Level | null;
   state: GameState;
@@ -23,7 +27,8 @@ export interface GameSession {
    the work order, the game and the account screens so none of them loses it. */
 export function useGameSession(): GameSession {
   const [day] = useState(() => dayNumber());
-  const levels = useLevels(daySeed(day));
+  const { schedule, onSchedule } = useDailySchedule(day);
+  const levels = useLevels(daySeed(day), schedule);
   const [state, dispatch] = useReducer(gameReducer, undefined, initialGameState);
   const [expanded, setExpanded] = useState(false);
   /* someone who has asked their system for more contrast gets the house
@@ -34,7 +39,7 @@ export function useGameSession(): GameSession {
   const toggleDim = useCallback(() => setDim(v => !v), []);
 
   return {
-    day, levels, level: levels[state.idx], state, dispatch,
+    day, levels, onSchedule, level: levels[state.idx], state, dispatch,
     view: { expanded, dim, toggleExpanded, toggleDim },
   };
 }

@@ -2,6 +2,11 @@
 export const DAY_EPOCH = Date.UTC(2026, 3, 15);
 const MS_PER_DAY = 86_400_000;
 
+/** When a puzzle day starts (UTC ms); the inverse of dayNumber() for days past 1. */
+export function dayStartUtc(day: number): number {
+  return DAY_EPOCH + day * MS_PER_DAY;
+}
+
 /** The puzzle day for a moment in time (never earlier than day 1). */
 export function dayNumber(now: number = Date.now()): number {
   return Math.max(1, Math.floor((now - DAY_EPOCH) / MS_PER_DAY));

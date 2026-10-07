@@ -8,7 +8,9 @@ export { GADGET_NAMES, menuFor, type GadgetName } from './gadgets';
 export type { LevelConstraints } from './constraints';
 
 // the game's week, as data
-export { DEFAULT_SCHEDULE, levelForSite, levelsForDay, type GenerationSchedule, type SiteRule } from './schedule';
+export {
+  DEFAULT_SCHEDULE, levelForSite, levelForSiteReport, levelsForDay, type GenerationSchedule, type SiteOutcome, type SiteRule,
+} from './schedule';
 export { parseOptions, parseSchedule, type ParseResult } from './parse';
 
 // on demand

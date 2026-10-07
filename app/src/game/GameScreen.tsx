@@ -22,7 +22,7 @@ import { bloom, flashScreen, pulseWeb } from './fx';
 import { useScoreCard } from './hooks/useScoreCard';
 import { keyAction } from './input/keymap';
 import { HINT_KIND } from './state/hints';
-import { SAVE_FAILED, type SaveStatus } from './state/scoreCopy';
+import { SAVE_FAILED, skipSave, type SaveStatus } from './state/scoreCopy';
 import { banner as bannerOf, hud as hudOf, pips as pipsOf, scoredCount, statusMessage } from './state/selectors';
 import type { GameEvent } from './state/gameReducer';
 import type { GameSession } from './useGameSession';
@@ -89,7 +89,8 @@ export function GameScreen({ session, userId, badge, onOpenAccount, onOpenWorkOr
   }
 
   function saveClear(e: Extract<GameEvent, { kind: 'cleared' }>) {
-    if (!userId) return setSave({ kind: 'anon' });
+    const skip = skipSave(userId, session.onSchedule);
+    if (skip || !userId) return setSave(skip);
     setSave({ kind: 'saving' });
     recordClear(userId, day, idx, e.run.used, e.run.par, e.run.stars).then(r => {
       if (r.ok) return setSave({ kind: 'saved' });
