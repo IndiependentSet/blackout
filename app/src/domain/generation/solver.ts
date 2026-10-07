@@ -5,14 +5,27 @@ import type { Level, Stars } from '../types';
 type Shape = Pick<Level, 'nodes' | 'edges' | 'adj'>;
 type Id = number | string;
 type Neighbours = Map<Id, Set<Id>>;
-export interface SolveResult { k: number; count: number; sol: number[]; alt: number[] | null; visits: number }
+/** How many optimal covers besides `sol` the solver keeps (it counts all of them). */
+export const KEPT_OPTIMA = 20;
+
+export interface SolveResult {
+  k: number;
+  /** how many optimal covers there are */
+  count: number;
+  sol: number[];
+  /** the first other optimal cover, if any */
+  alt: number[] | null;
+  /** other optimal covers, in the order found, up to KEPT_OPTIMA */
+  alts: number[][];
+  visits: number;
+}
 
 /* ---------- exact solver: minimum cover + how many optimal solutions ---------- */
 export function solve(g: Shape, cap = 600000): SolveResult {
   const n = g.nodes.length, adj = g.adj;
   const state = new Int8Array(n);
   const order = g.nodes.map((_, i) => i).sort((a, b) => adj[b].length - adj[a].length);
-  let best = n + 1, count = 0, sol: number[] | null = null, alt: number[] | null = null, visits = 0;
+  let best = n + 1, count = 0, sol: number[] | null = null, alts: number[][] = [], visits = 0;
 
   const lb = () => {
     const used = new Uint8Array(n); let m = 0;
@@ -28,8 +41,8 @@ export function solve(g: Shape, cap = 600000): SolveResult {
     let v = -1;
     for (const x of order) if (state[x] === 0) { v = x; break; }
     if (v < 0) {
-      if (taken < best) { best = taken; count = 1; sol = collect(); alt = null; }
-      else if (taken === best) { count++; if (!alt) alt = collect(); }
+      if (taken < best) { best = taken; count = 1; sol = collect(); alts = []; }
+      else if (taken === best) { count++; if (alts.length < KEPT_OPTIMA) alts.push(collect()); }
       return;
     }
     if (taken + lb() > best) return;
@@ -45,7 +58,7 @@ export function solve(g: Shape, cap = 600000): SolveResult {
     state[v] = 0;
   }
   rec(0);
-  return { k: best, count, sol: sol ?? [], alt, visits };
+  return { k: best, count, sol: sol ?? [], alt: alts[0] ?? null, alts, visits };
 }
 
 /* ---------- difficulty: which technique clears the board ---------- */

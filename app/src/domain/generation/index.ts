@@ -13,5 +13,5 @@ export { parseOptions, parseSchedule, type ParseResult } from './parse';
 
 // on demand
 export { generate, type GenerateRequest, type GenerateResult } from './generate';
-export { difficulty, solve, type SolveResult } from './solver';
+export { KEPT_OPTIMA, difficulty, solve, type SolveResult } from './solver';
 export { greedyCover, matchingBound } from './hardness';

@@ -6,8 +6,8 @@ import { toRequest, type PlaygroundParams } from './params';
 
 export interface Outcome {
   level: Level | null;
-  /** a second optimal cover, when the level has more than one */
-  alt: number[] | null;
+  /** the level's other optimal covers, up to KEPT_OPTIMA */
+  alts: number[][];
   report: GenReport;
   stats: GraphStats | null;
   /** edge index pairs that cross in the drawing */
@@ -19,9 +19,9 @@ export interface Outcome {
 }
 
 /** Stats and crossings for a result (cheap next to generating it). */
-export function toOutcome({ level, report, alt }: GenerateResult): Outcome {
+export function toOutcome({ level, report, alts }: GenerateResult): Outcome {
   return {
-    level, alt, report,
+    level, alts, report,
     stats: level && graphStats(level),
     crossings: level ? crossingPairs(level) : [],
     greedy: level && greedyCover(level),
