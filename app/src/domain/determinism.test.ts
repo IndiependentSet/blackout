@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import * as E from './engine';
+import { DEFAULT_SCHEDULE, levelForSite, levelsForDay } from './generation';
 import type { CatalogueEntry, Level } from './types';
 import { buildHouse, houseSeed } from './house';
 import manifest from '../assets/rooms/manifest.json';
@@ -7,7 +7,7 @@ import manifest from '../assets/rooms/manifest.json';
 /* Characterization tests: the same day must give every player the same puzzles
    and the same house. If a snapshot here changes, the puzzles changed.
 
-   The clock is frozen on purpose. makeLevel() has a wall-clock search budget
+   The clock is frozen on purpose. The generator has a wall-clock search budget
    (Date.now()), so with a live clock a slower or busier machine gives up
    earlier and can settle on a different level — which made this snapshot
    flaky under parallel load. Frozen, generation is purely attempt-limited and
@@ -28,17 +28,17 @@ const summary = (lv: Level) => ({
 describe('level generation', () => {
   SEEDS.forEach(seed => {
     it('is stable for seed ' + seed, () => {
-      const day = E.makeDay(seed).map(summary);
+      const day = levelsForDay(DEFAULT_SCHEDULE, seed).map(summary);
       expect(day).toMatchSnapshot();
     });
   });
 
   it('is repeatable', () => {
-    expect(E.makeLevelForDay(40, 3).edges).toEqual(E.makeLevelForDay(40, 3).edges);
+    expect(levelForSite(DEFAULT_SCHEDULE, 40, 3).edges).toEqual(levelForSite(DEFAULT_SCHEDULE, 40, 3).edges);
   });
 
   it('yields a unique optimal cover of size k', () => {
-    E.makeDay(12).forEach(lv => {
+    levelsForDay(DEFAULT_SCHEDULE, 12).forEach(lv => {
       expect(lv.sol.length).toBe(lv.k);
       const covered = lv.edges.every(([u, v]) => lv.sol.includes(u) || lv.sol.includes(v));
       expect(covered).toBe(true);
@@ -49,7 +49,7 @@ describe('level generation', () => {
 describe('house plan', () => {
   SEEDS.forEach(seed => {
     it('is stable for seed ' + seed, () => {
-      const plans = E.makeDay(seed).map(lv => {
+      const plans = levelsForDay(DEFAULT_SCHEDULE, seed).map(lv => {
         const p = buildHouse(lv, houseSeed(lv), 130, THINGS, CATALOGUE);
         return { outer: p.outer, rooms: p.rooms, roomOfNode: [...p.roomOfNode], edgeThing: [...p.edgeThing] };
       });

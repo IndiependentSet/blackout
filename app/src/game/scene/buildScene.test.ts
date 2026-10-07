@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { makeLevelForDay } from '../../domain/engine';
+import { DEFAULT_SCHEDULE, levelForSite } from '../../domain/generation';
 import { layoutFor } from '../layout/layout';
 import { buildMinimap, buildScene, viewCoversContent } from './buildScene';
 import { cable } from './cable';
 import { makeSeen } from './view';
 
-const lv = makeLevelForDay(12, 2);
+const lv = levelForSite(DEFAULT_SCHEDULE, 12, 2);
 const layout = layoutFor(lv);
 const input = { layout, siteIdx: 2, placed: [] as number[], hint: null, focus: 0, kbd: false };
 
