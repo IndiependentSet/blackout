@@ -147,15 +147,17 @@ visuals — `app/src/assets/` and the camera system in `app/src/game/camera/` ar
     play-testable schematic), and saves it **from a future day on** (tomorrow
     at the earliest). The newest saved config is loaded on open; older ones
     can be loaded back, scheduled ones cancelled.
-  - **Admins and saved generation** (`app/sql/2026-10-07-admin-generation-config.sql`):
-    `public.admins` (filled in by hand in the SQL editor, unreadable from the
-    client), `is_admin()`, and `generation_configs` (`mode`,
+  - **Admins and saved generation** (`app/sql/2026-10-07-admin-generation-config.sql`,
+    guarded by `app/sql/ci/checks/admin-generation-config.sql`):
+    `public.admins` (rows added by hand in the SQL editor — data, not a
+    migration — and unreadable from the client), `is_admin()`, and `generation_configs` (`mode`,
     `effective_from_day`, `schedule` jsonb). Everyone may read the configs;
     only `save_generation_config`/`delete_generation_config` (security
     definer, admin-checked, refusing today or earlier) can write them. The
     admin gate in the app only decides what's shown — Postgres is the check.
     The game reads the config in force for today (`useDailySchedule`, 5 s
-    timeout) before generating anything. If that read fails or the stored
+    timeout) before generating anything; a missing table reads as "nothing
+    saved", since a deploy can go live just before its migration lands. If that read fails or the stored
     schedule doesn't parse, the game plays `DEFAULT_SCHEDULE` and **doesn't
     record clears** (`skipSave`: they may not be everyone's puzzles); with no
     config saved, `DEFAULT_SCHEDULE` *is* the schedule and clears count.

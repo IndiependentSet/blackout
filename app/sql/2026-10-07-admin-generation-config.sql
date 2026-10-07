@@ -1,9 +1,9 @@
--- Run once in the Supabase SQL editor (Database > SQL Editor) against the
--- live project. Not applied automatically — no DB tool available client-side.
+-- Applied to production automatically on merge to main (app/tools/migrate.sh;
+-- see app/sql/README.md). Safe to run twice.
 --
 -- Adds admins and admin-edited level generation:
 --   * admins — who may use /playground.html and /generation.html. Nobody can
---     read or write it from the client; add rows here, in the SQL editor.
+--     read or write it from the client; add rows in the SQL editor (section 4).
 --   * generation_configs — a GenerationSchedule (domain/generation/schedule.ts)
 --     per game mode, each taking effect from a given puzzle day. Every player,
 --     signed in or not, reads the row in force for today and generates the
