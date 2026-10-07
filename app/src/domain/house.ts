@@ -21,7 +21,7 @@
  *
  * Paths cross walls freely; nothing in the puzzle depends on this file.
  */
-import { rngFromSeed } from './engine';
+import { rngFromSeed } from './rng';
 import type { CatalogueEntry, HousePlan, Level, Point, Rect, Rng } from './types';
 
 /** A room while the BSP is still cutting; `type`/`art` are dealt afterwards. */

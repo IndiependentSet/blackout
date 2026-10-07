@@ -1,7 +1,7 @@
 /* What every playground setting and readout means, and what it does to the
-   generator (domain/engine.ts). Shown by the ⓘ popups; keep it in step with
-   the engine when either changes. */
-import type { GadgetName } from '../../domain/engine';
+   generator (domain/generation/). Shown by the ⓘ popups; keep it in step with
+   the generator when either changes. */
+import type { GadgetName } from '../../domain/generation';
 import type { PlaygroundParams } from './params';
 
 export interface HelpEntry {

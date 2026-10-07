@@ -46,17 +46,17 @@ visuals — `app/src/assets/` and the camera system in `app/src/game/camera/` ar
 - `project/` — Claude Design prototype files (`.dc.html`, `engine.js`,
   `support.js`). These are exported prototypes, not the app; don't edit them
   to fix bugs — port fixes into `app/` instead. `project/engine.js` and
-  `app/src/domain/engine.ts` are (currently) the same solver (the app's is
-  typed); 
+  `app/src/domain/generation/` (`solver.ts`, `generate.ts` and friends) are
+  (currently) the same generator and solver, the app's typed and split up;
   if you change one for a real fix, check whether the other needs it too, or
   whether `project/` can just be left as a historical snapshot.
 - `app/` — the actual React app (Vite + React 19, **TypeScript strict**, CSS
   Modules). This is what ships and what you should be editing for any real
   feature/bug work. See *Engineering standards* below for the layer rules.
   - `src/domain/` — pure TypeScript, no React/DOM/Supabase (lint-enforced):
-    `engine.ts` (seeded RNG, gadget-based level generator — leaf chains,
-    degree-2 paths, cycles, hubs, crowns — exact branch-and-bound solver, and
-    the hint helpers `hintLeaf`/`hintMatching`/`hintReveal`), `house.ts` (the
+    `generation/` (below), `rng.ts` (the seeded RNG everything random draws
+    from), `geometry.ts`, `hints.ts` (`hintLeaf`/`hintMatching`/`hintReveal`),
+    `house.ts` (the
     building the puzzle sits in, below; seeded by the level's own
     coordinates, every number precomputed once per level), plus the small
     rules the UI used to carry inline: `cover.ts`, `scoring.ts` (the one
@@ -67,7 +67,8 @@ visuals — `app/src/assets/` and the camera system in `app/src/game/camera/` ar
     shared `types.ts`.
   - `src/services/` — `supabase/client.ts`, `result.ts` (`Result<T>`),
     `logger.ts`, one repository per aggregate in `repositories/`, and
-    `auth/` (`AuthProvider` + `useAuth`: the app's single session source).
+    `auth/` (`AuthProvider` + `useAuth`: the app's single session source),
+    and `generation/` (the worker client for level generation on demand).
   - `src/game/` — the playable board. `state/` (pure reducer that turns taps
     into numbered events, selectors, hints, score-card copy), `camera/` (pure
     maths + `useCamera`), `layout/layout.ts` (lattice → world, memoized per
@@ -81,22 +82,41 @@ visuals — `app/src/assets/` and the camera system in `app/src/game/camera/` ar
   - `src/screens/` — `WorkOrder/`, `StaffOffice/` (sign-in, ID card,
     leaderboard), `Crew/` (roster, squads, profiles), `HowToPlay/`, and the
     dev-only `Playground/` (below).
+  - **`src/domain/generation/`** — level generation as its own module, with
+    **one public API, `index.ts`**: nothing outside the folder imports its
+    files (lint-enforced by `no-restricted-imports`). Inside: `options.ts`
+    (`DEFAULT_GEN`, `OPTION_LIMITS`, `resolveOptions`), `gadgets.ts` (the
+    building blocks — leaf chains, degree-2 paths, cycles, hubs, crowns — and
+    each difficulty's menu), `builder.ts`/`growth.ts` (the mutable graph and
+    how it grows), `solver.ts` (exact branch-and-bound `solve` — the
+    uniqueness check — and the star rating `difficulty`), `generate.ts`
+    (`generate(request)`: seed, size, difficulty, options, constraints in;
+    level, second optimum and a `GenReport` out), `schedule.ts` (the game's
+    week as data: `DEFAULT_SCHEDULE`, one `SiteRule` per site, retries and a
+    fallback; `levelForSite`/`levelsForDay` run it) and `parse.ts`
+    (`parseSchedule`/`parseOptions`: untrusted JSON → a schedule or a list of
+    errors). Every request and schedule is plain JSON, so it can be stored,
+    edited or posted to a worker. The seed mixing in `levelForSite` is the
+    "same puzzles for everyone" contract, not a setting. `DEFAULT_SCHEDULE`
+    must keep reproducing the determinism snapshots. To run it off the main
+    thread, use `services/generation/generationClient.ts` (`generateAsync`:
+    one worker per request, abortable, answers a `Result`).
   - **Generator playground** (dev only): `npm run dev`, then open
     `/playground.html`. Its entry is `src/playground.tsx`. `vite.config.ts`
     adds it as a build input only on Vercel *preview* deployments
     (`VERCEL_ENV=preview`, i.e. every PR) or with `PLAYGROUND=1`, so it can be
-    tried on a phone from a PR but never ships to production. It drives `generate()` — the generator with every
+    tried on a phone from a PR but never ships to production. It drives `generate()` (through `generateAsync`) — the generator with every
     former hard-coded rule exposed as `GenOptions` (max/min degree, edge reach,
     clearance, crossings, gadget mix, extra edges, uniqueness, search limits) —
-    in a Web Worker, and shows the result as a schematic (cover, second
+    and shows the result as a schematic (cover, second
     optimum, crossings) or on the real `Board` — tap nodes in either view to
     play-test it against par (the placed cats are shared by both) — with `domain/graphStats.ts`
     and the generator's `GenReport` (why candidates were rejected) alongside.
     Its **Variety** panel sweeps N consecutive seeds in a second worker and
     counts distinct graphs and drawings (with Chao1 estimates of the total,
     a repeat chance and the most common graphs, each loadable by seed).
-    Settings live only in the URL hash. `makeLevel()` is `generate()` under
-    `DEFAULT_GEN`, which must keep reproducing the determinism snapshots.
+    Settings live only in the URL hash; its control ranges and site presets
+    come from `OPTION_LIMITS` and `DEFAULT_SCHEDULE`.
   - `src/app/` — `App.tsx` (screen routing, `AuthProvider`), the staff badge
     and the once-per-session orientation (`useOrientation`).
   - `src/ui/` (Button, Panel/TabHeader, Tag, Logo, Screen, StaffBadge, Stat,
@@ -180,7 +200,7 @@ graphs grew (150 world units per lattice step in house 1, 40 in the worst house
   `CAT_S`/`THING_S` are plain constants. Tune the feel through the constant
   block at the top of the file, not by reintroducing per-level scaling.
 
-None of this touched `domain/engine.ts` — seeded generation, the uniqueness check and
+None of this touched the generator (now `domain/generation/`) — seeded generation, the uniqueness check and
 day-determinism are exactly as they were.
 
 ## The house is generated from the graph
@@ -222,7 +242,7 @@ cuts the level into rooms and fills each one with a drawn room from
 - Determinism is the one hard rule: seeds come from `houseSeed(lv)` — the
   level's own contents, never the day or the site index, because `layoutFor()`
   runs during render and for levels other than the current one — and the only
-  randomness is `domain/engine.ts`'s seeded RNG (no `Math.random()`, no random sort
+  randomness is `domain/rng.ts`'s seeded RNG (no `Math.random()`, no random sort
   comparators).
 
 ### The room art
@@ -288,10 +308,11 @@ side effects inside render).
 `screens` / `app`. `ui` and `sprites` depend only on `styles`, `assets` and
 `domain/types`.
 
-- `src/domain/` — pure TypeScript: engine, house, cover rules, scoring,
+- `src/domain/` — pure TypeScript: level generation, house, cover rules, scoring,
   calendar, sites, share text. No React, DOM, Supabase or `Math.random()`.
 - `src/services/` — Supabase client, repositories (one file per aggregate:
-  profiles, siteClears, leaderboards, friendships, squads), auth provider.
+  profiles, siteClears, leaderboards, friendships, squads), auth provider, the
+  generation worker client.
   Repositories return `Result<T>` and log through one shared logger. Components
   never call Supabase directly; they use repositories via hooks.
 - `src/game/` — reducer + selectors, pure camera maths, scene building, input
@@ -321,7 +342,7 @@ side effects inside render).
   pure module gets unit tests. The determinism snapshots in
   `src/domain/determinism.test.ts` must pass unchanged — if one changes,
   the day's puzzles changed, which is a bug unless explicitly intended.
-  The tests freeze `Date.now()` because `makeLevel()` has a wall-clock search
+  The tests freeze `Date.now()` because the generator has a wall-clock search
   budget: with a live clock, a slower device can settle on a different level
   than a faster one for the same day. That is a known, pre-existing gap in the
   "same puzzles for everyone" promise — don't paper over it in tests, and ask
@@ -349,7 +370,7 @@ npm run lint       # oxlint
 - `npm run check` = lint + `tsc --noEmit` + Vitest + build. It must be green
   before any change is considered done. Tests live beside the code
   (`*.test.ts[x]`) or in `src/__tests__/`.
-- The puzzle generator (`domain/engine.ts`) is deterministic per day via a seed
+- The puzzle generator (`domain/generation/`) is deterministic per day via a seed
   derived from `Date.UTC` epoch + day offset — the same puzzle set must be
   reproducible for all players on a given day. Be careful not to break that
   determinism (e.g. don't introduce `Math.random()` outside the seeded RNG).

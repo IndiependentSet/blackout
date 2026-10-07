@@ -2,7 +2,7 @@ import { ok, type Result } from '../result';
 import { supabase } from '../supabase/client';
 import { toResult } from '../supabase/guard';
 
-/* stars is the level's own difficulty rating (engine's difficulty(), 1-3).
+/* stars is the level's own difficulty rating (domain/generation's difficulty(), 1-3).
    The leaderboard score itself is computed in the DB from stars and how far
    catsUsed landed from par (see app/sql/…-weighted-score.sql). */
 export async function recordClear(

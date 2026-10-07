@@ -1,7 +1,9 @@
 /* What the playground can turn, how it maps onto the generator's options, and
    how it round-trips through the URL hash (the only place it is kept). Pure. */
-import { DEFAULT_GEN, GADGET_NAMES, RAMP, menuFor, type GadgetName } from '../../domain/engine';
-import type { GenOptions } from '../../domain/types';
+import {
+  DEFAULT_GEN, DEFAULT_SCHEDULE, GADGET_NAMES, menuFor, resolveOptions,
+  type GadgetName, type GenerateRequest, type GenOptions,
+} from '../../domain/generation';
 
 export type Weights = Record<GadgetName, number>;
 
@@ -40,12 +42,15 @@ export const DEFAULT_PARAMS: PlaygroundParams = {
   clock: false,
 };
 
-/** The menu a difficulty uses, as per-gadget weights. */
-export function weightsFor(diff: number): Weights {
+/** A gadget menu (duplicates as weights) as per-gadget weights. */
+function weightsOf(menu: readonly string[]): Weights {
   const w = Object.fromEntries(GADGET_NAMES.map(n => [n, 0])) as Weights;
-  for (const n of menuFor(diff)) w[n]++;
+  for (const n of menu) if (Object.hasOwn(w, n)) w[n as GadgetName]++;
   return w;
 }
+
+/** The menu a difficulty uses, as per-gadget weights. */
+export const weightsFor = (diff: number): Weights => weightsOf(menuFor(diff));
 
 export function toGenOptions(p: PlaygroundParams): Partial<GenOptions> {
   const { maxDegree, minDegree, reach, clearance, crossings, unique, matchStars, extraEdges,
@@ -53,6 +58,11 @@ export function toGenOptions(p: PlaygroundParams): Partial<GenOptions> {
   const menu = p.weights ? GADGET_NAMES.flatMap(n => Array<string>(Math.max(0, p.weights?.[n] ?? 0)).fill(n)) : null;
   return { maxDegree, minDegree, reach, clearance, crossings, unique, matchStars, extraEdges, menu,
     attempts, repairs, budgetMs, solverCap, clock };
+}
+
+/** The generator request these params describe. */
+export function toRequest(p: PlaygroundParams): GenerateRequest {
+  return { seed: p.seed, size: p.size, diff: p.diff, options: toGenOptions(p) };
 }
 
 export type ParamsAction =
@@ -65,10 +75,19 @@ export function paramsReducer(p: PlaygroundParams, a: ParamsAction): PlaygroundP
   switch (a.type) {
     case 'set': return { ...p, ...a.patch };
     case 'weight': return { ...p, weights: { ...(p.weights ?? weightsFor(p.diff)), [a.gadget]: Math.max(0, a.value) } };
-    /* the game's own settings for a site: what makeLevelForDay() asks for */
+    /* the game's own settings for a site: what the default schedule asks for
+       (a site's level constraints, e.g. site 1's, have no knob here) */
     case 'site': {
-      const step = RAMP[a.idx];
-      return step ? { ...DEFAULT_PARAMS, seed: p.seed, size: step.n, diff: step.d, budgetMs: a.idx >= 4 ? 700 : 400 } : p;
+      const site = DEFAULT_SCHEDULE.sites[a.idx];
+      if (!site) return p;
+      const o = resolveOptions(site.options);
+      return {
+        ...DEFAULT_PARAMS, seed: p.seed, size: site.size, diff: site.diff,
+        maxDegree: o.maxDegree, minDegree: o.minDegree, reach: o.reach, clearance: o.clearance,
+        crossings: o.crossings, unique: o.unique, matchStars: o.matchStars, extraEdges: o.extraEdges,
+        weights: o.menu ? weightsOf(o.menu) : null,
+        attempts: o.attempts, repairs: o.repairs, budgetMs: o.budgetMs, solverCap: o.solverCap,
+      };
     }
     case 'reset': return { ...DEFAULT_PARAMS, seed: p.seed };
   }

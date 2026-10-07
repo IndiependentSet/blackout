@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { makeLevelForDay, rngFromSeed } from './engine';
+import { DEFAULT_SCHEDULE, levelForSite } from './generation';
+import { rngFromSeed } from './rng';
 import { drawingKey, shapeKey } from './graphIdentity';
 import type { Cell, Edge } from './types';
 
@@ -22,7 +23,7 @@ const shuffle = (n: number, seed: number) => {
 describe('shapeKey', () => {
   it('ignores node order, on real levels', () => {
     for (const site of [1, 3, 5, 6]) {
-      const lv = makeLevelForDay(40, site);
+      const lv = levelForSite(DEFAULT_SCHEDULE, 40, site);
       const g = graph(lv.edges, lv.nodes);
       for (let s = 0; s < 3; s++) {
         const k = shapeKey(relabel(g, shuffle(lv.nodes.length, s)));
