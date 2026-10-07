@@ -1,0 +1,11 @@
+# Migrations that were run by hand in the Supabase SQL editor before
+# app/tools/migrate.sh started tracking them. Production records these as
+# already applied (without running them again: some aren't safe to re-run).
+# Never add a file here that hasn't been applied to production by hand.
+2026-09-07-profiles-email-privacy.sql
+2026-09-07-site-clears-keep-best.sql
+2026-09-07-site-clears-upsert-grant.sql
+2026-09-07-weighted-score.sql
+2026-09-08-crew-squads.sql
+2026-09-08-merge-nickname-username.sql
+2026-09-08-squad-members-upsert-grant.sql
