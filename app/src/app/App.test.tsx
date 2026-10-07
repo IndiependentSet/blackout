@@ -24,9 +24,9 @@ const hudReads = () => {
 };
 
 describe('the app, signed out', () => {
-  it('opens on the work order, with the orientation for a first-time visitor', async () => {
+  it('opens on the dashboard, with the orientation for a first-time visitor', async () => {
     render(<App />);
-    expect(screen.getByText(/WORK ORDER #/)).toBeInTheDocument();
+    expect(screen.getByText(/DAILY SHIFT #/)).toBeInTheDocument();
     expect(await screen.findByRole('dialog', { name: /How CATASTROPHE INC. works/ })).toBeInTheDocument();
   });
 
@@ -35,13 +35,14 @@ describe('the app, signed out', () => {
     await screen.findByRole('dialog');
     first.unmount();
     render(<App />);
-    await waitFor(() => expect(screen.getByText(/WORK ORDER #/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/DAILY SHIFT #/)).toBeInTheDocument());
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('clocks in, plays a hire from the keyboard, and recalls it', async () => {
     sessionStorage.setItem('cc-howto-seen', '1');
     render(<App />);
+    await userEvent.click(screen.getByRole('button', { name: 'OPEN WORK ORDER' }));
     await userEvent.click(screen.getByRole('button', { name: 'CLOCK IN' }));
 
     expect(await screen.findByRole('application', { name: 'cat cover grid' }, { timeout: 15000 })).toBeInTheDocument();
@@ -56,6 +57,7 @@ describe('the app, signed out', () => {
   it('shows the site plaque and lets you re-read the work order', async () => {
     sessionStorage.setItem('cc-howto-seen', '1');
     render(<App />);
+    await userEvent.click(screen.getByRole('button', { name: 'OPEN WORK ORDER' }));
     await userEvent.click(screen.getByRole('button', { name: 'CLOCK IN' }));
     expect(await screen.findByText('THE STUDIO FLAT')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'RE-READ WORK ORDER' }));
@@ -64,4 +66,21 @@ describe('the app, signed out', () => {
     await screen.findByRole('application', {}, { timeout: 15000 });
     expect(screen.getByText('THE STUDIO FLAT')).toBeInTheDocument();
   }, 40000);
+
+  it('goes from the dashboard to the work order and back', async () => {
+    sessionStorage.setItem('cc-howto-seen', '1');
+    render(<App />);
+    await userEvent.click(screen.getByRole('button', { name: 'OPEN WORK ORDER' }));
+    expect(screen.getByText(/WORK ORDER #/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'BACK' }));
+    expect(screen.getByText(/DAILY SHIFT #/)).toBeInTheDocument();
+  });
+
+  it('sends a signed-out player who picks the campaign to the staff office', async () => {
+    sessionStorage.setItem('cc-howto-seen', '1');
+    render(<App />);
+    await userEvent.click(screen.getByRole('button', { name: 'SIGN IN' }));
+    expect(screen.queryByText(/DAILY SHIFT #/)).toBeNull();
+  });
 });
+

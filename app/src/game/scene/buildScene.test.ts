@@ -81,3 +81,10 @@ describe('culling and the minimap', () => {
     expect(viewCoversContent({ x: 0, y: 0, w: 10, h: 10 }, layout.content)).toBe(false);
   });
 });
+
+describe('buildScene with a loadout but no art drawn yet', () => {
+  it('is identical to the bare scene: the accessory simply is not there', () => {
+    const bare = buildScene(input);
+    expect(buildScene({ ...input, loadout: { head: 'hard-hat', neck: 'scarf' } })).toStrictEqual(bare);
+  });
+});

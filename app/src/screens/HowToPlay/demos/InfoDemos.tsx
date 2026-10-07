@@ -27,7 +27,7 @@ export function ConsultDemo() {
   );
 }
 
-/** Seven bars filling in: the week's sites closing one by one. */
+/** Seven bars filling in: the day's sites closing one by one. */
 export function WeekDemo({ sites }: { sites: readonly string[] }) {
   const lit = Math.min(useTick(450), SITE_COUNT);
   return (
@@ -41,7 +41,7 @@ export function WeekDemo({ sites }: { sites: readonly string[] }) {
       </div>
       <div className={styles.legend}>S = SITE CLOSED ON BUDGET</div>
       <div className={styles.finale}>
-        {lit === SITE_COUNT && <Stamp style={{ fontSize: 20, transform: 'rotate(-4deg)' }}>WEEKLY INVOICE: PURR-FECT</Stamp>}
+        {lit === SITE_COUNT && <Stamp style={{ fontSize: 20, transform: 'rotate(-4deg)' }}>DAILY INVOICE: PURR-FECT</Stamp>}
       </div>
     </div>
   );

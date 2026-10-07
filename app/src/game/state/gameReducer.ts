@@ -1,6 +1,6 @@
 import { coveredEdges, isCleared } from '../../domain/cover';
 import { keepBest, scoreRun } from '../../domain/scoring';
-import { LAST_SITE, SITE_COUNT, isSiteIndex } from '../../domain/sites';
+import { SITE_COUNT } from '../../domain/sites';
 import type { Hint, HintTier, Level, SiteResult } from '../../domain/types';
 import { OVER_PAR_ALLOWANCE } from '../constants';
 import { consult } from './hints';
@@ -8,7 +8,7 @@ import { consult } from './hints';
 /** Something that happened which the outside world should react to (sound, saving, the score card). */
 export type GameEvent =
   | { seq: number; kind: 'hired'; node: number; count: number; gained: number }
-  | { seq: number; kind: 'cleared'; node: number; count: number; gained: number; run: SiteResult; prevScore: number }
+  | { seq: number; kind: 'cleared'; node: number; count: number; gained: number; run: SiteResult; prevScore: number; consulted: 0 | HintTier }
   | { seq: number; kind: 'recalled'; count: number }
   | { seq: number; kind: 'refused' }
   | { seq: number; kind: 'reset' }
@@ -22,6 +22,8 @@ export interface GameState {
   /** best run per site */
   results: (SiteResult | null)[];
   hint: Hint | null;
+  /** the highest hint tier asked for on the open site's current attempt (0 = none) */
+  consulted: 0 | HintTier;
   msg: string;
   /** keyboard focus */
   focus: number;
@@ -35,6 +37,7 @@ export type GameAction =
   | { type: 'tap'; node: number; lv: Level }
   | { type: 'reset' }
   | { type: 'go'; idx: number }
+  | { type: 'restart'; count: number }
   | { type: 'consult'; tier: HintTier; lv: Level }
   | { type: 'focus'; node: number }
   | { type: 'keyboard' }
@@ -42,9 +45,9 @@ export type GameAction =
 
 export const REFUSED_MSG = 'PAYROLL SAYS NO — RECALL SOMEONE';
 
-export const initialGameState = (): GameState => ({
-  idx: 0, placed: [], results: Array(SITE_COUNT).fill(null),
-  hint: null, msg: '', focus: 0, kbd: false, event: null,
+export const initialGameState = (count: number = SITE_COUNT): GameState => ({
+  idx: 0, placed: [], results: Array(count).fill(null),
+  hint: null, consulted: 0, msg: '', focus: 0, kbd: false, event: null,
 });
 
 const nextSeq = (s: GameState) => (s.event ? s.event.seq + 1 : 1);
@@ -81,7 +84,7 @@ function tap(s: GameState, lv: Level, node: number): GameState {
   results[s.idx] = keepBest(prev, run);
   return {
     ...base, results,
-    event: { seq, kind: 'cleared', node, count: placed.length, gained, run, prevScore: prev ? prev.score : 0 },
+    event: { seq, kind: 'cleared', node, count: placed.length, gained, run, prevScore: prev ? prev.score : 0, consulted: s.consulted },
   };
 }
 
@@ -90,13 +93,16 @@ export function gameReducer(s: GameState, a: GameAction): GameState {
     case 'tap':
       return tap(s, a.lv, a.node);
     case 'reset':
-      return { ...s, placed: [], hint: null, msg: '', focus: 0, event: { seq: nextSeq(s), kind: 'reset' } };
+      return { ...s, placed: [], hint: null, consulted: 0, msg: '', focus: 0, event: { seq: nextSeq(s), kind: 'reset' } };
     case 'go':
-      if (!isSiteIndex(a.idx)) return s;
-      return { ...s, idx: a.idx, placed: [], hint: null, msg: '', focus: 0, event: { seq: nextSeq(s), kind: 'entered', idx: a.idx } };
+      if (!Number.isInteger(a.idx) || a.idx < 0 || a.idx >= s.results.length) return s;
+      return { ...s, idx: a.idx, placed: [], hint: null, consulted: 0, msg: '', focus: 0, event: { seq: nextSeq(s), kind: 'entered', idx: a.idx } };
+    case 'restart':
+      /* keeps `seq` climbing so a consumer never mistakes the new run's first event for one it already handled */
+      return { ...initialGameState(a.count), event: { seq: nextSeq(s), kind: 'entered', idx: 0 } };
     case 'consult': {
       const { hint, msg } = consult(a.lv, s.placed, a.tier);
-      return { ...s, hint, msg };
+      return { ...s, hint, msg, consulted: Math.max(s.consulted, a.tier) as HintTier };
     }
     case 'focus':
       return { ...s, focus: a.node };
@@ -107,4 +113,4 @@ export function gameReducer(s: GameState, a: GameAction): GameState {
   }
 }
 
-export const isLastSite = (idx: number) => idx >= LAST_SITE;
+export const isLastSite = (idx: number, count: number = SITE_COUNT) => idx >= count - 1;

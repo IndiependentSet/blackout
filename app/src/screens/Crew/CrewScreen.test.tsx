@@ -15,6 +15,8 @@ vi.mock('../../services/repositories/friendships', () => ({
 }));
 vi.mock('../../services/repositories/profiles', () => ({ getProfile: repo.getProfile, searchPlayers: repo.searchPlayers }));
 vi.mock('../../services/repositories/leaderboards', () => ({ getPlayerScore: repo.getPlayerScore, getBoardFor: repo.getBoardFor }));
+const listBadgesOf = vi.fn();
+vi.mock('../../services/repositories/badges', () => ({ listBadgesOf: (...a: unknown[]) => listBadgesOf(...a) }));
 vi.mock('../../services/repositories/squads', () => ({
   getMySquads: repo.getMySquads, createSquad: repo.createSquad, joinSquadByCode: repo.joinSquadByCode,
   leaveSquad: repo.leaveSquad, getSquadMembers: repo.getSquadMembers,
@@ -30,6 +32,7 @@ beforeEach(() => {
   repo.getProfile.mockResolvedValue(ok({ id: 'me', username: 'meow', invite_code: 'CAT-AAAA' }));
   repo.getPlayerScore.mockResolvedValue(ok({ user_id: 'x', name: '', score: 4, week_score: 2 }));
   repo.getBoardFor.mockResolvedValue(ok([{ user_id: 'me', name: 'meow', score: 9 }, { user_id: 'a', name: 'ann', score: 5 }]));
+  listBadgesOf.mockResolvedValue(ok([]));
   repo.getMySquads.mockResolvedValue(ok([]));
   repo.getSquadMembers.mockResolvedValue(ok([]));
   repo.getFriendships.mockResolvedValue(ok(friendships()));
@@ -86,6 +89,15 @@ describe('Crew roster', () => {
     await userEvent.type(await screen.findByPlaceholderText(/handle or code/), 'zz');
     await userEvent.click(screen.getByRole('button', { name: 'SEARCH' }));
     expect(await screen.findByText('NOBODY ON FILE UNDER THAT NAME.')).toBeInTheDocument();
+  });
+
+  it("shows a workmate's badges on their personnel file", async () => {
+    listBadgesOf.mockResolvedValue(ok([{ id: 'chapter-clear', earnedAt: '2026-10-01T10:00:00Z' }]));
+    repo.getFriendships.mockResolvedValue(ok(friendships({ friends: [{ row: { id: '1', requester_id: 'me', addressee_id: 'a', status: 'accepted' }, person: ann }] })));
+    open();
+    await userEvent.click(await screen.findByRole('button', { name: 'ann' }));
+    expect(await screen.findByText('SITE FOREMAN')).toBeInTheDocument();
+    expect(listBadgesOf).toHaveBeenCalledWith('a');
   });
 
   it('drills into a workmate, compares head to head, and backs out', async () => {

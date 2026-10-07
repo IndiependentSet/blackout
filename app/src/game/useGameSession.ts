@@ -1,27 +1,19 @@
-import { useCallback, useReducer, useState, type Dispatch } from 'react';
+import { useCallback, useReducer, useState } from 'react';
 import { dayNumber, daySeed } from '../domain/calendar';
-import type { Level } from '../domain/types';
+import { DAILY_SET } from '../domain/sites';
+import type { PlayFeatures } from '../domain/types';
+import { recordClear } from '../services/repositories/siteClears';
 import { prefersMoreContrast } from './env';
 import { useLevels } from './hooks/useLevels';
-import { gameReducer, initialGameState, type GameAction, type GameState } from './state/gameReducer';
+import type { ClearSaver, PlaySession } from './session';
+import { gameReducer, initialGameState } from './state/gameReducer';
 
-export interface GameSession {
-  /** the work-order number everyone shares today */
-  day: number;
-  /** the week's levels; null while one is still being generated */
-  levels: (Level | null)[];
-  /** the open site's level */
-  level: Level | null;
-  state: GameState;
-  dispatch: Dispatch<GameAction>;
-  /** board preferences that survive leaving for another screen */
-  view: { expanded: boolean; dim: boolean; toggleExpanded: () => void; toggleDim: () => void };
-}
+const DAILY_FEATURES: PlayFeatures = { hints: true, invoice: true, share: true };
 
-/* Everything about today's game that has to outlive any one screen: the week's
+/* Everything about today's game that has to outlive any one screen: the day's
    levels, the player's board, and how they like the board shown. Held above
    the work order, the game and the account screens so none of them loses it. */
-export function useGameSession(): GameSession {
+export function useGameSession(): PlaySession {
   const [day] = useState(() => dayNumber());
   const levels = useLevels(daySeed(day));
   const [state, dispatch] = useReducer(gameReducer, undefined, initialGameState);
@@ -33,8 +25,12 @@ export function useGameSession(): GameSession {
   const toggleExpanded = useCallback(() => setExpanded(v => !v), []);
   const toggleDim = useCallback(() => setDim(v => !v), []);
 
+  const save = useCallback<ClearSaver>(
+    (userId, idx, run) => recordClear(userId, day, idx, run.used, run.par, run.stars), [day]);
+
   return {
     day, levels, level: levels[state.idx], state, dispatch,
+    set: DAILY_SET, features: DAILY_FEATURES, save,
     view: { expanded, dim, toggleExpanded, toggleDim },
   };
 }

@@ -12,7 +12,7 @@ export const SpriteLayer = memo(function SpriteLayer({ sprites }: { sprites: Spr
         <g key={s.key} transform={`translate(${s.x} ${s.y}) scale(${s.scale})`}>
           {s.kind === 'thing'
             ? <ThingSprite thing={s.thing} smashed={s.smashed} index={s.index} />
-            : <PadSprite breed={s.breed} hired={s.hired} pulsing={s.pulsing} focused={s.focused} bloomId={bloomId(s.node)} />}
+            : <PadSprite breed={s.breed} hired={s.hired} pulsing={s.pulsing} focused={s.focused} bloomId={bloomId(s.node)} accessory={s.accessory} />}
         </g>
       ))}
     </>

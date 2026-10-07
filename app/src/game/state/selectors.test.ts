@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Level } from '../../domain/types';
+import type { Level, PlaySet } from '../../domain/types';
 import { scoreRun } from '../../domain/scoring';
 import { banner, budgetTone, hud, isWarning, perfectCount, pips, statusMessage } from './selectors';
 
@@ -29,7 +29,14 @@ describe('banner', () => {
     expect(banner(lv, [0, 1, 2], 0)).toMatchObject({ tone: 'over', text: 'CLEARED — BUT 3/2 CATS' });
   });
   it('has no next site after the last', () => {
-    expect(banner(lv, [1, 2], 6)).toMatchObject({ canAdvance: false, nextLabel: 'WEEK DONE' });
+    expect(banner(lv, [1, 2], 6)).toMatchObject({ canAdvance: false, nextLabel: 'SHIFT DONE' });
+  });
+  it('counts an open set from the offset, with no total', () => {
+    const open = { count: 1, open: true, unitLabel: 'SITE' as const, finishLabel: 'NEXT SITE', name: () => 'X' };
+    expect(banner(lv, [1], 0, open, 4)).toMatchObject({ text: 'SITE 5 · BUDGET 2 CATS', tone: 'working' });
+  });
+  it('numbers a bounded set from the offset too', () => {
+    expect(banner(lv, [1], 0, undefined, 2).text).toBe('SITE 3/7 · BUDGET 2 CATS');
   });
 });
 
@@ -54,5 +61,29 @@ describe('pips', () => {
     expect(p[2].state).toBe('pending');
     expect(pips(results, levels, 0)[1].state).toBe('ready');
     expect(perfectCount(results)).toBe(1);
+  });
+});
+
+/* a 12-level campaign chapter: the labels and counts come from the set, not from the daily seven */
+const chapter: PlaySet = { count: 12, name: i => 'LEVEL ' + (i + 1), unitLabel: 'LEVEL', finishLabel: 'CHAPTER DONE' };
+
+describe('banner for another set', () => {
+  it('counts and names the unit from the set', () => {
+    expect(banner(lv, [1], 3, chapter)).toMatchObject({ text: 'LEVEL 4/12 · BUDGET 2 CATS', tone: 'working' });
+    expect(banner(lv, [1, 2], 3, chapter)).toMatchObject({ text: 'LEVEL CLEARED — ON BUDGET 2/2', canAdvance: true, nextLabel: 'NEXT LEVEL' });
+  });
+  it('ends on the last level of the set, wherever that is', () => {
+    expect(banner(lv, [1, 2], 11, chapter)).toMatchObject({ canAdvance: false, nextLabel: 'CHAPTER DONE' });
+    expect(banner(lv, [1, 2], 6, chapter)).toMatchObject({ canAdvance: true });
+  });
+});
+
+describe('pips for another set', () => {
+  it('draws one pip per level of the set', () => {
+    const results = Array<null>(12).fill(null);
+    const p = pips(results, Array<Level | null>(12).fill(null), 0, chapter);
+    expect(p).toHaveLength(12);
+    expect(p[0].state).toBe('current');
+    expect(p[11]).toMatchObject({ n: 12, state: 'pending' });
   });
 });

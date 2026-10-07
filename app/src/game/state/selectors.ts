@@ -1,6 +1,7 @@
 import { coveredEdges, isCleared } from '../../domain/cover';
-import { LAST_SITE, SITE_COUNT } from '../../domain/sites';
-import type { Level, SiteResult } from '../../domain/types';
+import { DAILY_SET } from '../../domain/sites';
+import type { Level, PlaySet, SiteResult } from '../../domain/types';
+import { isLastSite } from './gameReducer';
 
 /** Colour of the "cats hired" count: green on budget, pink over, plain under. */
 export type BudgetTone = 'under' | 'at' | 'over';
@@ -29,16 +30,18 @@ export interface Banner {
   canAdvance: boolean;
   nextLabel: string;
 }
-export function banner(lv: Level | null, placed: number[], idx: number): Banner {
-  const nextLabel = idx < LAST_SITE ? 'NEXT SITE' : 'WEEK DONE';
+export function banner(lv: Level | null, placed: number[], idx: number, set: PlaySet = DAILY_SET, offset = 0): Banner {
+  const last = isLastSite(idx, set.count);
+  const nextLabel = last ? set.finishLabel : 'NEXT ' + set.unitLabel;
   if (lv && isCleared(lv, placed)) {
     const perfect = placed.length <= lv.k;
     return {
-      text: perfect ? 'SITE CLEARED — ON BUDGET ' + lv.k + '/' + lv.k : 'CLEARED — BUT ' + placed.length + '/' + lv.k + ' CATS',
-      tone: perfect ? 'perfect' : 'over', canAdvance: idx < LAST_SITE, nextLabel,
+      text: perfect ? set.unitLabel + ' CLEARED — ON BUDGET ' + lv.k + '/' + lv.k : 'CLEARED — BUT ' + placed.length + '/' + lv.k + ' CATS',
+      tone: perfect ? 'perfect' : 'over', canAdvance: !last, nextLabel,
     };
   }
-  return { text: 'SITE ' + (idx + 1) + '/' + SITE_COUNT + ' · BUDGET ' + (lv ? lv.k : 0) + ' CATS', tone: 'working', canAdvance: false, nextLabel: 'NEXT' };
+  const place = (idx + 1 + offset) + (set.open ? '' : '/' + set.count);
+  return { text: set.unitLabel + ' ' + place + ' · BUDGET ' + (lv ? lv.k : 0) + ' CATS', tone: 'working', canAdvance: false, nextLabel: 'NEXT' };
 }
 
 /** Message under the board: whatever was last said, or a nudge once the budget is spent. */
@@ -51,8 +54,8 @@ export const isWarning = (msg: string) => msg.startsWith('PAYROLL') || msg.start
 export type PipState = 'current' | 'perfect' | 'over' | 'ready' | 'pending';
 export interface Pip { i: number; n: number; grade: string; state: PipState }
 /** The row of site buttons: which are done, which is open, which are still being generated. */
-export function pips(results: (SiteResult | null)[], levels: (Level | null)[], idx: number): Pip[] {
-  return Array.from({ length: SITE_COUNT }, (_, i) => {
+export function pips(results: (SiteResult | null)[], levels: (Level | null)[], idx: number, set: PlaySet = DAILY_SET): Pip[] {
+  return Array.from({ length: set.count }, (_, i) => {
     const r = results[i];
     const state: PipState = i === idx ? 'current' : r ? (r.status === 'perfect' ? 'perfect' : 'over') : levels[i] ? 'ready' : 'pending';
     return { i, n: i + 1, grade: r ? r.grade : '', state };

@@ -29,6 +29,10 @@ const { setUsername, searchPlayers } = await import('./profiles');
 const { getFriendships } = await import('./friendships');
 const { getBoardFor } = await import('./leaderboards');
 const { createSquad, joinSquadByCode } = await import('./squads');
+const { getCampaignClears, recordCampaignClear, toCampaignClear } = await import('./campaign');
+const { getStreak, NO_STREAK } = await import('./streaks');
+const { listBadgesOf, listMyBadges } = await import('./badges');
+const { scoreRun } = await import('../../domain/scoring');
 
 beforeEach(() => { responses = {}; calls.length = 0; });
 
@@ -99,5 +103,93 @@ describe('squads', () => {
   it('reports an unknown invite code', async () => {
     responses.squads = { data: null };
     expect(await joinSquadByCode('u', 'site-0000')).toEqual({ ok: false, error: 'NO SQUAD WITH THAT CODE.' });
+  });
+});
+
+describe('campaign clears', () => {
+  const row = { level_no: 7, cats_used: 4, par: 3, stars: 2, campaign_stars: 1 };
+
+  it('rebuilds a played run from the stored numbers', () => {
+    expect(toCampaignClear(row)).toEqual({ levelNo: 7, run: scoreRun({ stars: 2, k: 3 }, 4), campaignStars: 1 });
+  });
+  it('keeps odd stored values inside the legal range', () => {
+    expect(toCampaignClear({ ...row, stars: 9, campaign_stars: -2 })).toMatchObject({ run: { stars: 3 }, campaignStars: 0 });
+  });
+  it('loads a player\'s clears, dropping rows outside levels 1-100', async () => {
+    responses.campaign_clears = { data: [row, { ...row, level_no: 101 }, { ...row, level_no: 0 }] };
+    const r = await getCampaignClears('me');
+    expect(r.ok && r.data.map(c => c.levelNo)).toEqual([7]);
+    expect(calls.some(c => c.table === 'campaign_clears' && c.method === 'eq' && c.args[1] === 'me')).toBe(true);
+  });
+  it('has nothing to load for a signed-out player and never asks the db', async () => {
+    expect(await getCampaignClears(null)).toEqual({ ok: true, data: [] });
+    expect(calls).toHaveLength(0);
+  });
+  it('surfaces a failed load (migration not applied yet) as an error Result', async () => {
+    responses.campaign_clears = { error: { message: 'relation "campaign_clears" does not exist' } };
+    expect(await getCampaignClears('me')).toEqual({ ok: false, error: 'relation "campaign_clears" does not exist' });
+  });
+  it('upserts a clear on user and level with the run and its campaign stars', async () => {
+    responses.campaign_clears = { error: null };
+    const run = scoreRun({ stars: 2, k: 3 }, 3);
+    expect(await recordCampaignClear('me', 12, run, 3)).toEqual({ ok: true, data: null });
+    const up = calls.find(c => c.method === 'upsert')!;
+    expect(up.table).toBe('campaign_clears');
+    expect(up.args[0]).toEqual({ user_id: 'me', level_no: 12, cats_used: 3, par: 3, stars: 2, campaign_stars: 3 });
+    expect(up.args[1]).toEqual({ onConflict: 'user_id,level_no' });
+  });
+  it('reports a failed save', async () => {
+    responses.campaign_clears = { error: { message: 'permission denied' } };
+    expect(await recordCampaignClear('me', 1, scoreRun({ stars: 1, k: 2 }, 2), 3)).toEqual({ ok: false, error: 'permission denied' });
+  });
+});
+
+describe('streaks', () => {
+  it('maps the view row to a streak', async () => {
+    responses.player_streaks = { data: { current_streak: 4, best_streak: 9 } };
+    expect(await getStreak('me')).toEqual({ ok: true, data: { current: 4, best: 9 } });
+  });
+  it('reads no row as no streak', async () => {
+    responses.player_streaks = { data: null };
+    expect(await getStreak('me')).toEqual({ ok: true, data: NO_STREAK });
+  });
+  it('has no streak for a signed-out player and never asks the db', async () => {
+    expect(await getStreak(null)).toEqual({ ok: true, data: NO_STREAK });
+    expect(calls).toHaveLength(0);
+  });
+  it('surfaces a failed query (view missing) as an error Result', async () => {
+    responses.player_streaks = { error: { message: 'relation "player_streaks" does not exist' } };
+    expect(await getStreak('me')).toEqual({ ok: false, error: 'relation "player_streaks" does not exist' });
+  });
+});
+
+describe('badges', () => {
+  it('maps player_badges rows to earned badges', async () => {
+    responses.player_badges = { data: [
+      { badge_id: 'streak-7', earned_at: '2026-10-01T10:00:00Z' },
+      { badge_id: 'first-duel-win', earned_at: '2026-10-02T10:00:00Z' },
+    ] };
+    expect(await listBadgesOf('me')).toEqual({ ok: true, data: [
+      { id: 'streak-7', earnedAt: '2026-10-01T10:00:00Z' },
+      { id: 'first-duel-win', earnedAt: '2026-10-02T10:00:00Z' },
+    ] });
+    expect(calls).toContainEqual({ table: 'player_badges', method: 'eq', args: ['user_id', 'me'] });
+  });
+  it('reads no rows as no badges', async () => {
+    responses.player_badges = { data: null };
+    expect(await listBadgesOf('me')).toEqual({ ok: true, data: [] });
+  });
+  it('surfaces a failed query (table missing) as an error Result', async () => {
+    responses.player_badges = { error: { message: 'relation "player_badges" does not exist' } };
+    expect(await listBadgesOf('me')).toEqual({ ok: false, error: 'relation "player_badges" does not exist' });
+  });
+  it('has no badges for a signed-out player and never asks the db', async () => {
+    expect(await listMyBadges(null)).toEqual({ ok: true, data: [] });
+    expect(calls).toHaveLength(0);
+  });
+  it('never writes: only select is called on player_badges', async () => {
+    responses.player_badges = { data: [] };
+    await listBadgesOf('me');
+    expect(calls.filter(c => c.table === 'player_badges').map(c => c.method).sort()).toEqual(['eq', 'order', 'select']);
   });
 });

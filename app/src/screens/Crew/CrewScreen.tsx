@@ -21,7 +21,7 @@ type OpenSquad = Squad & Partial<MySquad>;
    small view stack: crew / squads at the top level; profile, head-to-head and
    a squad as drill-downs. The data each view needs comes from hooks keyed on
    what is open, so a slow reply for a view you've left is ignored. */
-export function CrewScreen({ userId, onClose }: { userId: string; onClose: () => void }) {
+export function CrewScreen({ userId, onClose, onChallenge }: { userId: string; onClose: () => void; onChallenge?: (personId: string) => void }) {
   const [view, setView] = useState<View>('crew');
   const [scope, setScope] = useState<BoardScope>('week');
   const [squad, setSquad] = useState<OpenSquad | null>(null);
@@ -72,7 +72,10 @@ export function CrewScreen({ userId, onClose }: { userId: string; onClose: () =>
           onHeadToHead={() => setView('h2h')} />
       )}
 
-      {view === 'h2h' && viewing && <HeadToHead me={me.data} person={viewing} mine={myScore.data} theirs={theirScore.data} />}
+      {view === 'h2h' && viewing && (
+        <HeadToHead me={me.data} person={viewing} mine={myScore.data} theirs={theirScore.data}
+          onChallenge={onChallenge ? () => onChallenge(viewing.id) : undefined} />
+      )}
 
       {view === 'squads' && <SquadsView squads={squads} onOpen={openSquad} />}
 

@@ -1,5 +1,5 @@
 import { useEffect, useImperativeHandle, useMemo, useRef, useState, type Ref } from 'react';
-import type { Hint, Level } from '../../domain/types';
+import type { Hint, Level, Loadout } from '../../domain/types';
 import { cx } from '../../ui';
 import { viewOf, zoomBounds } from '../camera/camera';
 import { useCamera } from '../camera/useCamera';
@@ -38,6 +38,8 @@ interface Props {
   kbd: boolean;
   dim: boolean;
   expanded: boolean;
+  /** what the cats wear (cosmetic only) */
+  loadout?: Loadout;
   onTapNode: (node: number) => void;
   onToggleExpand: () => void;
   onToggleDim: () => void;
@@ -50,7 +52,7 @@ const uiScale = (boardW: number) => Math.max(0.52, Math.min(1, boardW / 620));
    It owns the camera and the pointer, so a pan re-renders only this — the
    scene is rebuilt when the game changes, and each frame just culls it. */
 export function Board({
-  ref, level, siteIdx, placed, hint, focus, kbd, dim, expanded, onTapNode, onToggleExpand, onToggleDim,
+  ref, level, siteIdx, placed, hint, focus, kbd, dim, expanded, loadout, onTapNode, onToggleExpand, onToggleDim,
 }: Props) {
   const layout = useMemo(() => layoutFor(level), [level]);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -85,8 +87,8 @@ export function Board({
   }), [controls]);
 
   const scene = useMemo(
-    () => buildScene({ layout, siteIdx, placed, hint, focus, kbd }),
-    [layout, siteIdx, placed, hint, focus, kbd]);
+    () => buildScene({ layout, siteIdx, placed, hint, focus, kbd, loadout }),
+    [layout, siteIdx, placed, hint, focus, kbd, loadout]);
   const map = useMemo(() => buildMinimap(layout, placed), [layout, placed]);
 
   /* this frame: the camera as a viewBox, and only what is in it */

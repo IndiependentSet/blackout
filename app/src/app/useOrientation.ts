@@ -12,20 +12,20 @@ function markSeen() {
 
 /* The orientation slideshow. A visitor with no staff login — most likely new on
    the job — gets it once per browser session (sessionStorage, so it survives a
-   reload but not a closed tab); HOW IT WORKS on the work order reopens it any
-   time. Decided once, when sign-in state first becomes known. */
-export function useOrientation({ ready, signedIn, onWorkOrder }: { ready: boolean; signedIn: boolean; onWorkOrder: boolean }) {
+   reload but not a closed tab); HOW IT WORKS reopens it any
+   time. It is offered on the dashboard, the entry screen. Decided once, when sign-in state first becomes known. */
+export function useOrientation({ ready, signedIn, onEntry }: { ready: boolean; signedIn: boolean; onEntry: boolean }) {
   const [open, setOpen] = useState(false);
   const decided = useRef(false);
 
   useEffect(() => {
     if (!ready || decided.current) return;
     decided.current = true;
-    if (signedIn || !onWorkOrder || seenThisSession()) return;
+    if (signedIn || !onEntry || seenThisSession()) return;
     markSeen();
     // eslint-disable-next-line react-hooks/set-state-in-effect -- runs once, when async sign-in state arrives
     setOpen(true);
-  }, [ready, signedIn, onWorkOrder]);
+  }, [ready, signedIn, onEntry]);
 
   return {
     open,

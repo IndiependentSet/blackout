@@ -1,11 +1,15 @@
 import { displayName } from '../../domain/profile';
 import type { Profile } from '../../domain/types';
-import { Panel, cx } from '../../ui';
+import { Button, Panel, cx } from '../../ui';
 import { bar, NO_SCORES, verdict, type Scores } from './versus';
 import styles from './Crew.module.css';
 
 /** You against a workmate, this week and all-time. */
-export function HeadToHead({ me, person, mine, theirs }: { me: Profile | null | undefined; person: Profile; mine: Scores | undefined; theirs: Scores | undefined }) {
+export function HeadToHead({ me, person, mine, theirs, onChallenge }: {
+  me: Profile | null | undefined; person: Profile; mine: Scores | undefined; theirs: Scores | undefined;
+  /** open the 1vs1 lobby with this workmate picked */
+  onChallenge?: () => void;
+}) {
   const ms = mine ?? NO_SCORES, vs = theirs ?? NO_SCORES;
   const rows = [
     { label: 'THIS WEEK', left: ms.week_score, right: vs.week_score, pct: bar(ms.week_score, vs.week_score) },
@@ -39,6 +43,11 @@ export function HeadToHead({ me, person, mine, theirs }: { me: Profile | null | 
         </div>
       ))}
       <div className={styles.result}>{verdict(ms.score, vs.score)}</div>
+      {onChallenge && (
+        <div className={styles.buttons}>
+          <Button onClick={onChallenge} style={{ flex: '1 1 150px' }}>CHALLENGE LIVE</Button>
+        </div>
+      )}
     </Panel>
   );
 }

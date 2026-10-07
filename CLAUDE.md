@@ -60,11 +60,20 @@ visuals — `app/src/assets/` and the camera system in `app/src/game/camera/` ar
     building the puzzle sits in, below; seeded by the level's own
     coordinates, every number precomputed once per level), plus the small
     rules the UI used to carry inline: `cover.ts`, `scoring.ts` (the one
-    mirror of the SQL score), `calendar.ts`, `sites.ts`, `navigation.ts`,
+    mirror of the SQL score), `calendar.ts`, `sites.ts`, `campaign.ts` (the 7 chapters = 100 levels, campaign stars, unlock rule), `survival.ts` (the 180 s clock, run summary, best run; the caller passes `now`), `match.ts` (1vs1 clocks and outcome, the lobby's grouping, and `isMatchLevel`, the guard for a level read back from JSON; the caller passes `now`), `navigation.ts`,
     `invoice.ts`, `profile.ts`, and the shared `types.ts`.
   - `src/services/` — `supabase/client.ts`, `result.ts` (`Result<T>`),
     `logger.ts`, one repository per aggregate in `repositories/`, and
     `auth/` (`AuthProvider` + `useAuth`: the app's single session source).
+    `levels/` is the port the non-daily game modes get their levels from:
+    `LevelSource.getLevel(LevelRequest)` returns a `Level`. Today only
+    `mockLevelSource` exists (a few fixed maps in `fixtures/baseMaps.ts`, picked
+    deterministically, no RNG or clock) until the backend generator arrives;
+    `IS_MOCK_SOURCE` tells the UI to show a DEV MOCK tag. The daily does not go
+    through it — it still uses `makeLevelForDay`.
+    `realtime/matchChannel.ts` wraps the Supabase realtime client for a 1vs1
+    (presence, a progress broadcast, `postgres_changes`) and for the lobby's
+    inbox; both return a `close` that is safe to call twice.
   - `src/game/` — the playable board. `state/` (pure reducer that turns taps
     into numbered events, selectors, hints, score-card copy), `camera/` (pure
     maths + `useCamera`), `layout/layout.ts` (lattice → world, memoized per
@@ -74,11 +83,75 @@ visuals — `app/src/assets/` and the camera system in `app/src/game/camera/` ar
     crackles in `src/assets/sfx/`), `hooks/` (levels queue, score card),
     `fx.ts` (one-shot Web Animations), `components/` (Board — which owns the
     camera — and its layers, HUD, score card, side rails), `GameScreen.tsx`
-    and `useGameSession.ts` (what has to outlive a screen).
-  - `src/screens/` — `WorkOrder/`, `StaffOffice/` (sign-in, ID card,
-    leaderboard), `Crew/` (roster, squads, profiles), `HowToPlay/`.
-  - `src/app/` — `App.tsx` (screen routing, `AuthProvider`), the staff badge
-    and the once-per-session orientation (`useOrientation`).
+    and `useGameSession.ts` (what has to outlive a screen). `loadout/` holds the
+    player's wardrobe above every screen (`LoadoutProvider` + `useLoadout`): the
+    accessories they own and wear, read by `GameScreen` (which hands it to
+    `Board`) and by the staff office's Wardrobe; signed out, or with the tables
+    missing, every cat is bare. `GameScreen` plays
+    any `PlaySession` (`session.ts`): its levels, board state, a `PlaySet`
+    (how many levels, what to call them), `PlayFeatures` (hints/invoice/share)
+    and a `save` strategy. The daily is the first session; `hooks/useClearSaver.ts`
+    runs the save and ignores stale responses. The campaign is the second:
+    `useCampaignSession.ts` plays one chapter (its levels are the board's
+    "sites"; a level not yet unlocked is held back as `null`, which is all
+    `GameScreen` needs to refuse it) and saves each clear under its campaign
+    level number. The player's clears live in `hooks/useCampaignClears.ts`,
+    per account, held in `Shell`: the saved record is loaded from the server
+    (`repositories/campaign.ts`), a clear shows on the map at once and is
+    written through `save`, and `persistence` (`loading` / `server` / `memory`)
+    tells the map whether progress is being kept. If the table is missing or a
+    save fails it carries on in memory with a note; there is no localStorage
+    (don't add one without asking). `hooks/useStreak.ts` reads the daily streak
+    (`repositories/streaks.ts`, the `player_streaks` view) for the hub card and
+    the ID card. Survival is the third: `useSurvivalSession.ts` keeps the run
+    in a pure `runReducer` (a one-site board, `PlaySet.open`, restarted by
+    `restart` after every clear; `siteOffset` is how many are behind it), asks
+    the level source for the open site and the next one
+    (`hooks/useSurvivalLevels.ts`), and runs the 180 s clock from the moment
+    the first site is on the board. It has no `save`, no hints and no
+    localStorage. A signed-in player's run is also registered on the server
+    by `hooks/useSurvivalRecorder.ts` (`start_survival_run` at the first site,
+    `submit_survival_site` per clear, one at a time, in order; the server keeps
+    its own clock and covers-check, the client never sends a time). Whatever
+    happens there, the run is still played locally: a missing migration or a
+    dropped connection only turns `recording` to `unsaved` and shows a note.
+    `hooks/useSurvivalRanking.ts` reads the leaderboard (after the last site
+    is answered for) and the player's server best (once, at the start, so the
+    run in progress never counts against it); `Shell` shows the better of that
+    and the session's best on the hub card. `hooks/useBoardView.ts` is the
+    expand/dim preference shared by sessions.
+    1vs1 is the fourth: `useMatchSession.ts` is a one-site board (`MATCH_SET`,
+    no hints) whose `save` submits the cats of the clear it was made in;
+    `GameScreen` is kept `locked` until the server's clock says go. The match
+    itself (rows, clock, opponent) lives in `screens/Match/useMatch.ts`: the
+    server's rows are the truth (`repositories/matches.ts`, every write an RPC
+    — see app/sql/README.md), `services/realtime/matchChannel.ts` carries
+    presence, the opponent's progress (a bare number) and "something changed,
+    read it again". Countdown, live clock and "opponent gone" are derived from
+    `starts_at`/`ends_at` against a ticking `now` (`domain/match.ts`), never
+    stored. The channel is closed on unmount, and the level object is kept
+    across re-reads so the board does not rebuild its house.
+  - `src/screens/` — `Hub/` (the dashboard: one card per game mode, state
+    derived in `hubCards.ts`), `Campaign/` (the 7-chapter map, and
+    `CampaignPlay` which puts one chapter on the board; needs a staff login),
+    `Survival/` (the run with its clock HUD, and the summary; open to everyone),
+    `Match/` (the 1vs1 lobby, the waiting room, the match HUD and result sheet;
+    needs a staff login; `Crew`'s head-to-head view has a CHALLENGE LIVE button
+    that opens the lobby with that workmate picked),
+    `WorkOrder/`, `StaffOffice/` (sign-in, ID card,
+    leaderboard, and `BadgeShelf`, which loads a player's badges for the ID card
+    and for `Crew/ProfileView`; it renders nothing while loading or when the read
+    fails), `Crew/` (roster, squads, profiles), `HowToPlay/`. The badges are awarded
+    by the server only (`app/sql/2026-10-16-badges.sql`): `domain/badges.ts` is the
+    client's catalogue of ids, names and descriptions, `repositories/badges.ts` is
+    read-only, and `domain/badges.test.ts` holds the catalogue to the SQL seed — add
+    a badge in both or the test fails. The six ids are what cosmetics unlock from.
+    `StaffOffice/Wardrobe` lists the accessories and puts them on or takes them off
+    (`domain/cosmetics.ts` is the catalogue, mirrored by `app/sql/2026-10-18-cosmetics.sql`;
+    a locked one says which badge unlocks it, and one with no art yet shows ART COMING).
+  - `src/app/` — `App.tsx` (screen routing — it opens on the dashboard —
+    and `AuthProvider`), the staff badge and the once-per-session orientation
+    (`useOrientation`, shown on the dashboard).
   - `src/ui/` (Button, Panel/TabHeader, Tag, Logo, Screen, StaffBadge, Stat,
     Avatar, Field, ListRow/RankRow, ScopeTabs, Message, GradeBadge) and
     `src/sprites/` (PadSprite, CatFlipbook, ThingSprite, PathWeb/PathLit and
@@ -103,6 +176,14 @@ visuals — `app/src/assets/` and the camera system in `app/src/game/camera/` ar
     empty node renders as a drawn "deployment pad" (dashed ring + paw
     stencil, no sprite) rather than the `sleep` pose — `sleep` frames still
     exist in the sticker sheet but are currently unused by the game.
+  - `src/assets/cosmetics/` — the accessories cats wear, drawn over the hired cat
+    in both flip-book frames. File name `<item>-<breed>-<pose>.png` is the
+    contract (`<breed>` is `Breed.key` from `assets/cats`, `<pose>` is `wakeA` or
+    `wakeB`), on the cats' 192x192 canvas and baseline; `index.ts` globs the folder
+    and is the only thing the game imports. **No art is shipped yet**: a missing
+    file means a bare cat, never an error. Cosmetic only — `buildScene` adds an
+    optional `accessory` to a pad and never touches the breed formula or the draw
+    order. See the README there.
   - `src/assets/things/` — the smashables that sit on the cables, cut from a
     destructible-items sticker sheet: four states per item (`idle`, `wobble`,
     `hit`, `broken`) on a shared 128x128 canvas with a common base line
@@ -130,6 +211,11 @@ visuals — `app/src/assets/` and the camera system in `app/src/game/camera/` ar
     (`src/services/`; SQL in `app/sql/`). The puzzle itself still needs no
     backend, and a signed-out player gets the whole game. Don't add other
     persistence (localStorage etc.) without checking with the user first.
+    `app/sql/README.md` has the migration order and the rules for new tables
+    (RLS on the new table only; competitive writes through `security definer`
+    RPCs, never direct table writes). The campaign record, `campaign_clears`,
+    is the first table with RLS. `app/sql/2026-10-08-base-schema.sql` is
+    `profiles`/`site_clears` reconstructed from the repo, not a production dump.
 
 ## The board is a camera, not a fit
 
@@ -271,7 +357,7 @@ side effects inside render).
 - `src/domain/` — pure TypeScript: engine, house, cover rules, scoring,
   calendar, sites, share text. No React, DOM, Supabase or `Math.random()`.
 - `src/services/` — Supabase client, repositories (one file per aggregate:
-  profiles, siteClears, leaderboards, friendships, squads), auth provider.
+  profiles, siteClears, leaderboards, friendships, squads, campaign, streaks, badges, cosmetics), auth provider.
   Repositories return `Result<T>` and log through one shared logger. Components
   never call Supabase directly; they use repositories via hooks.
 - `src/game/` — reducer + selectors, pure camera maths, scene building, input
