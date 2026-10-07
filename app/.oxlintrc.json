@@ -12,6 +12,19 @@
       {
         "allowConstantExport": true
       }
+    ],
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          {
+            "group": [
+              "**/domain/generation/*", "./generation/*"
+            ],
+            "message": "Level generation has one public API: import from domain/generation, not its files."
+          }
+        ]
+      }
     ]
   },
   "overrides": [
@@ -45,6 +58,12 @@
                   "**/hooks/**"
                 ],
                 "message": "domain/ is the bottom layer: it imports nothing from the layers above it."
+              },
+              {
+                "group": [
+                  "**/domain/generation/*", "./generation/*"
+                ],
+                "message": "Level generation has one public API: import from domain/generation, not its files."
               }
             ]
           }
@@ -77,6 +96,12 @@
                   "**/sprites/**"
                 ],
                 "message": "services/ must not depend on the UI layers."
+              },
+              {
+                "group": [
+                  "**/domain/generation/*", "./generation/*"
+                ],
+                "message": "Level generation has one public API: import from domain/generation, not its files."
               }
             ]
           }
@@ -101,6 +126,12 @@
                   "**/app/**"
                 ],
                 "message": "ui/ and sprites/ are leaf layers: styles, assets and domain types only."
+              },
+              {
+                "group": [
+                  "**/domain/generation/*", "./generation/*"
+                ],
+                "message": "Level generation has one public API: import from domain/generation, not its files."
               }
             ]
           }
@@ -122,6 +153,48 @@
                   "**/app/**"
                 ],
                 "message": "game/ must not depend on screens or the app shell."
+              },
+              {
+                "group": [
+                  "**/domain/generation/*", "./generation/*"
+                ],
+                "message": "Level generation has one public API: import from domain/generation, not its files."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "src/domain/generation/**"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "react",
+                  "react-dom",
+                  "react/*",
+                  "@supabase/*"
+                ],
+                "message": "domain/ is pure: no React or Supabase."
+              },
+              {
+                "group": [
+                  "**/game/**",
+                  "**/services/**",
+                  "**/screens/**",
+                  "**/app/**",
+                  "**/ui/**",
+                  "**/sprites/**",
+                  "**/assets/**",
+                  "**/hooks/**"
+                ],
+                "message": "domain/ is the bottom layer: it imports nothing from the layers above it."
               }
             ]
           }
