@@ -17,6 +17,8 @@ vi.mock('../../services/repositories/leaderboards', () => ({
     { user_id: 'me', username: 'meow', score: 40 }, { user_id: 'u2', username: 'zed', score: 25 },
   ])),
 }));
+const isAdmin = vi.fn(() => Promise.resolve(ok<boolean>(false)));
+vi.mock('../../services/repositories/admin', () => ({ isAdmin: () => isAdmin() }));
 vi.mock('../Crew/CrewScreen', () => ({ CrewScreen: () => <div>crew roster</div> }));
 
 const { StaffOfficeScreen } = await import('./StaffOfficeScreen');
@@ -103,5 +105,14 @@ describe('Staff Office, signed in', () => {
     renderWith(signedIn());
     await userEvent.click(screen.getByRole('button', { name: /CREW ROSTER/ }));
     expect(screen.getByText('crew roster')).toBeInTheDocument();
+  });
+
+  it('offers the admin tools only to an admin', async () => {
+    renderWith(signedIn());
+    await screen.findByText('@meow (YOU)');
+    expect(screen.queryByRole('button', { name: /ADMIN TOOLS/ })).toBeNull();
+    isAdmin.mockResolvedValueOnce(ok(true));
+    renderWith(auth({ userId: 'boss', email: 'b@example.com', username: 'boss', handle: '@boss' }));
+    expect(await screen.findByRole('button', { name: /ADMIN TOOLS/ })).toBeInTheDocument();
   });
 });

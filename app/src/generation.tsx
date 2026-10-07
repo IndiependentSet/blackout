@@ -1,13 +1,13 @@
-/* Admin entry: the level generator playground, at /playground.html. */
+/* Admin entry: the generation config page, at /generation.html. */
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles/tokens.css';
 import './styles/global.css';
 import { AdminPage } from './app/admin/AdminPage';
-import { PlaygroundScreen } from './screens/Playground/PlaygroundScreen';
+import { GenerationConfigScreen } from './screens/GenerationConfig/GenerationConfigScreen';
 
 createRoot(document.getElementById('root') as HTMLElement).render(
   <StrictMode>
-    <AdminPage current="playground"><PlaygroundScreen /></AdminPage>
+    <AdminPage current="generation"><GenerationConfigScreen /></AdminPage>
   </StrictMode>,
 );

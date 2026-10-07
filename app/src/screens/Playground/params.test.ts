@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { menuFor } from '../../domain/generation';
-import { DEFAULT_PARAMS, decodeParams, describeParams, encodeParams, paramsReducer, toGenOptions, weightsFor } from './params';
+import { DEFAULT_SCHEDULE, menuFor } from '../../domain/generation';
+import {
+  DEFAULT_PARAMS, decodeParams, describeParams, encodeParams, fallbackToParams, paramsReducer, paramsToFallback, paramsToSite,
+  siteToParams, toGenOptions, weightsFor,
+} from './params';
 
 describe('playground params', () => {
   it('encodes defaults as an empty hash', () => {
@@ -44,5 +47,27 @@ describe('playground params', () => {
   it('loads a site preset from the game ramp and keeps the seed', () => {
     const p = paramsReducer({ ...DEFAULT_PARAMS, seed: 9, crossings: true }, { type: 'site', idx: 6 });
     expect(p).toMatchObject({ seed: 9, size: 30, diff: 3, budgetMs: 700, crossings: false });
+  });
+});
+
+describe('schedule sites as params', () => {
+  it('round-trips every site of the default schedule', () => {
+    for (const site of DEFAULT_SCHEDULE.sites) expect(paramsToSite(siteToParams(site, 5), site.constraints)).toEqual(site);
+  });
+  it('round-trips the fallback', () => {
+    expect(paramsToFallback(fallbackToParams(DEFAULT_SCHEDULE.fallback, 10))).toEqual(DEFAULT_SCHEDULE.fallback);
+  });
+  it('stores only what differs from the defaults', () => {
+    const p = { ...siteToParams(DEFAULT_SCHEDULE.sites[1], 0), crossings: true, weights: weightsFor(2) };
+    const site = paramsToSite(p);
+    expect(site.options.crossings).toBe(true);
+    expect(site.options.budgetMs).toBe(400);
+    expect(site.options.menu).toEqual(toGenOptions(p).menu);
+    expect(Object.keys(site.options).sort()).toEqual(['budgetMs', 'crossings', 'menu']);
+    expect(site.constraints).toBeUndefined();
+  });
+  it('keeps a site\'s clock setting (the playground preset turns it off)', () => {
+    expect(siteToParams(DEFAULT_SCHEDULE.sites[0], 0).clock).toBe(true);
+    expect(paramsReducer(DEFAULT_PARAMS, { type: 'site', idx: 0 }).clock).toBe(false);
   });
 });
