@@ -137,6 +137,14 @@ describe('generation configs', () => {
     const r = await configInForce('daily', 181);
     expect(r.ok && r.data?.id).toBe(4);
   });
+  it('reads a missing table as nothing saved, and any other failure as a failure', async () => {
+    responses.generation_configs = { error: { message: 'Could not find the table', code: 'PGRST205' } };
+    expect(await configInForce('daily', 9)).toEqual({ ok: true, data: null });
+    responses.generation_configs = { error: { message: 'relation does not exist', code: '42P01' } };
+    expect(await configInForce('daily', 9)).toEqual({ ok: true, data: null });
+    responses.generation_configs = { error: { message: 'timeout', code: '57014' } };
+    expect(await configInForce('daily', 9)).toEqual({ ok: false, error: 'timeout' });
+  });
   it('saves and deletes through the admin-checked functions', async () => {
     responses['rpc:save_generation_config'] = { data: 9 };
     expect(await saveConfig('daily', 200, DEFAULT_SCHEDULE, 'n')).toEqual({ ok: true, data: 9 });

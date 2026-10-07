@@ -3,7 +3,7 @@ import type { GenerationSchedule } from '../../domain/generation';
 import type { StoredConfig } from '../../domain/generationConfig';
 import { ok, type Result } from '../result';
 import { supabase } from '../supabase/client';
-import { toResult } from '../supabase/guard';
+import { isMissingTable, toResult } from '../supabase/guard';
 
 /* Admin-saved level generation (public.generation_configs). Anyone can read
    them — signed-out players generate their week from the one in force — but
@@ -26,10 +26,13 @@ export async function listConfigs(mode: GameMode): Promise<Result<StoredConfig[]
   return res.ok ? ok(res.data.map(toConfig)) : res;
 }
 
-/** The config in force for a mode on a day, or null when none has taken effect. */
+/** The config in force for a mode on a day, or null when none has taken effect.
+    A missing table also means none: a deploy can go live a minute before its
+    migration lands, and with nothing saved the default really is the schedule. */
 export async function configInForce(mode: GameMode, day: number): Promise<Result<StoredConfig | null>> {
   const { data, error } = await supabase.from('generation_configs').select(COLS)
     .eq('mode', mode).lte('effective_from_day', day).order('effective_from_day', { ascending: false }).limit(1);
+  if (isMissingTable(error)) return ok(null);
   const res = toResult('configInForce', (data || []) as Row[], error);
   return res.ok ? ok(res.data[0] ? toConfig(res.data[0]) : null) : res;
 }
