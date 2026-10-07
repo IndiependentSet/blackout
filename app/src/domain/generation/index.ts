@@ -2,8 +2,8 @@
    imports from here and nowhere deeper (lint-enforced). */
 
 // settings
-export type { GenOptions, GenReport } from '../types';
-export { DEFAULT_GEN, OPTION_LIMITS, resolveOptions, type Limit } from './options';
+export type { GenOptions, GenReport, Strategy } from '../types';
+export { DEFAULT_GEN, OPTION_LIMITS, STRATEGIES, resolveOptions, type Limit } from './options';
 export { GADGET_NAMES, menuFor, type GadgetName } from './gadgets';
 export type { LevelConstraints } from './constraints';
 
@@ -14,3 +14,4 @@ export { parseOptions, parseSchedule, type ParseResult } from './parse';
 // on demand
 export { generate, type GenerateRequest, type GenerateResult } from './generate';
 export { difficulty, solve, type SolveResult } from './solver';
+export { greedyCover, matchingBound } from './hardness';

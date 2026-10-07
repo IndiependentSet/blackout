@@ -1,43 +1,35 @@
 /* What the playground can turn, how it maps onto the generator's options, and
    how it round-trips through the URL hash (the only place it is kept). Pure. */
 import {
-  DEFAULT_GEN, DEFAULT_SCHEDULE, GADGET_NAMES, menuFor, resolveOptions,
-  type GadgetName, type GenerateRequest, type GenOptions,
+  DEFAULT_GEN, DEFAULT_SCHEDULE, GADGET_NAMES, STRATEGIES, menuFor, resolveOptions,
+  type GadgetName, type GenerateRequest, type GenOptions, type Strategy,
 } from '../../domain/generation';
 
 export type Weights = Record<GadgetName, number>;
 
-export interface PlaygroundParams {
+/** The settings that go straight through to the generator (everything but the gadget mix). */
+const PASSED = [
+  'strategy', 'maxDegree', 'minDegree', 'reach', 'clearance', 'crossings',
+  'density', 'spread', 'lengthBias', 'girth', 'maxOptima', 'greedyMustFail', 'minBoundGap', 'matchStars',
+  'extraEdges', 'attempts', 'repairs', 'budgetMs', 'solverCap', 'clock',
+] as const satisfies readonly (keyof GenOptions)[];
+type Passed = Pick<GenOptions, (typeof PASSED)[number]>;
+
+const passed = (o: Passed): Passed => Object.fromEntries(PASSED.map(k => [k, o[k]])) as unknown as Passed;  // keys from PASSED
+
+/** Every knob; see GenOptions for what the passed-through ones mean. */
+export interface PlaygroundParams extends Passed {
   seed: number;
   /** target node count */
   size: number;
-  /** 1-3: picks the default gadget menu, the extra-edge pass and the star target */
+  /** 1-3: the star target; for gadgets also the default menu and extra-edge pass */
   diff: number;
-  maxDegree: number;
-  minDegree: number;
-  reach: number;
-  clearance: number;
-  crossings: boolean;
-  unique: boolean;
-  matchStars: boolean;
-  /** null = the difficulty's own (0.8 at 3, else 0) */
-  extraEdges: number | null;
   /** null = the difficulty's own gadget menu */
   weights: Weights | null;
-  attempts: number;
-  repairs: number;
-  budgetMs: number;
-  solverCap: number;
-  clock: boolean;
 }
 
 export const DEFAULT_PARAMS: PlaygroundParams = {
-  seed: 1, size: 14, diff: 2,
-  maxDegree: DEFAULT_GEN.maxDegree, minDegree: DEFAULT_GEN.minDegree, reach: DEFAULT_GEN.reach,
-  clearance: DEFAULT_GEN.clearance, crossings: DEFAULT_GEN.crossings, unique: DEFAULT_GEN.unique,
-  matchStars: DEFAULT_GEN.matchStars, extraEdges: null, weights: null,
-  attempts: DEFAULT_GEN.attempts, repairs: DEFAULT_GEN.repairs, budgetMs: DEFAULT_GEN.budgetMs,
-  solverCap: DEFAULT_GEN.solverCap,
+  seed: 1, size: 14, diff: 2, ...passed(DEFAULT_GEN), weights: null,
   /* off by default here, so a seed always shows the same graph */
   clock: false,
 };
@@ -53,11 +45,8 @@ function weightsOf(menu: readonly string[]): Weights {
 export const weightsFor = (diff: number): Weights => weightsOf(menuFor(diff));
 
 export function toGenOptions(p: PlaygroundParams): Partial<GenOptions> {
-  const { maxDegree, minDegree, reach, clearance, crossings, unique, matchStars, extraEdges,
-    attempts, repairs, budgetMs, solverCap, clock } = p;
   const menu = p.weights ? GADGET_NAMES.flatMap(n => Array<string>(Math.max(0, p.weights?.[n] ?? 0)).fill(n)) : null;
-  return { maxDegree, minDegree, reach, clearance, crossings, unique, matchStars, extraEdges, menu,
-    attempts, repairs, budgetMs, solverCap, clock };
+  return { ...passed(p), menu };
 }
 
 /** The generator request these params describe. */
@@ -82,11 +71,8 @@ export function paramsReducer(p: PlaygroundParams, a: ParamsAction): PlaygroundP
       if (!site) return p;
       const o = resolveOptions(site.options);
       return {
-        ...DEFAULT_PARAMS, seed: p.seed, size: site.size, diff: site.diff,
-        maxDegree: o.maxDegree, minDegree: o.minDegree, reach: o.reach, clearance: o.clearance,
-        crossings: o.crossings, unique: o.unique, matchStars: o.matchStars, extraEdges: o.extraEdges,
-        weights: o.menu ? weightsOf(o.menu) : null,
-        attempts: o.attempts, repairs: o.repairs, budgetMs: o.budgetMs, solverCap: o.solverCap,
+        ...DEFAULT_PARAMS, seed: p.seed, size: site.size, diff: site.diff, ...passed(o),
+        weights: o.menu ? weightsOf(o.menu) : null, clock: DEFAULT_PARAMS.clock,
       };
     }
     case 'reset': return { ...DEFAULT_PARAMS, seed: p.seed };
@@ -121,9 +107,19 @@ export function decodeParams(hash: string): PlaygroundParams {
         if ((GADGET_NAMES as string[]).includes(n) && Number.isFinite(Number(v))) w[n as GadgetName] = Math.max(0, Number(v));
       }
       out.weights = w;
+    } else if (k === 'strategy') {
+      if ((STRATEGIES as readonly string[]).includes(raw)) out.strategy = raw as Strategy;
     } else if (typeof DEFAULT_PARAMS[k] === 'boolean') rec[k] = raw === 'true';
     else if (raw === 'auto' && k === 'extraEdges') out.extraEdges = null;
     else if (Number.isFinite(Number(raw)) && raw !== '') rec[k] = Number(raw);
   }
   return out;
+}
+
+/** A short name for a set of settings: the strategy, then whatever else differs from the defaults (the seed aside). */
+export function describeParams(p: PlaygroundParams): string {
+  const diff = new URLSearchParams(encodeParams({ ...p, seed: DEFAULT_PARAMS.seed }));
+  diff.delete('strategy');
+  const rest = [...diff].map(([k, v]) => (k === 'weights' ? 'custom mix' : `${k} ${v}`));
+  return [p.strategy, ...rest].join(' · ');
 }

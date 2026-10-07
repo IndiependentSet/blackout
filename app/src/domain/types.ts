@@ -22,8 +22,13 @@ export interface Level {
 
 export type LevelFilter = (lv: Level) => boolean;
 
+/** How a level's graph is built: snapped together from fixed gadgets, or
+    placed and wired straight from the settings. */
+export type Strategy = 'gadgets' | 'free';
+
 /** The rules the level generator works under (see DEFAULT_GEN for the game's). */
 export interface GenOptions {
+  strategy: Strategy;
   /** most paths a junction may have */
   maxDegree: number;
   /** fewest paths a junction may have; 0 or 1 means no constraint */
@@ -38,8 +43,20 @@ export interface GenOptions {
   menu: string[] | null;
   /** extra edges to close, as a fraction of the target size; null = 0.8 at difficulty 3, else 0 */
   extraEdges: number | null;
-  /** require exactly one optimal cover */
-  unique: boolean;
+  /** free: target mean degree (paths per junction) */
+  density: number;
+  /** free: lattice area per junction; the layout box is about √(size·spread) a side */
+  spread: number;
+  /** free: edge length preference, -1 (short) .. 0 (any) .. 1 (long), up to reach */
+  lengthBias: number;
+  /** shortest cycle a new path may close (3 = any, 4 = no triangles, ...) */
+  girth: number;
+  /** most optimal covers a level may have: 1 = unique, 0 = no limit */
+  maxOptima: number;
+  /** reject levels that "take the junction with the most open paths" solves at par */
+  greedyMustFail: boolean;
+  /** reject unless par is at least this far above the matching bound (what ESTIMATE shows) */
+  minBoundGap: number;
   /** require the solving technique (stars) to equal the difficulty asked for */
   matchStars: boolean;
   attempts: number;
@@ -65,7 +82,7 @@ export interface GenReport {
   visits: number;
   rejected: {
     degenerate: number; blowup: number; unresolved: number; filter: number;
-    minDegree: number; stars: number; size: number;
+    minDegree: number; stars: number; size: number; greedy: number; bound: number;
   };
 }
 

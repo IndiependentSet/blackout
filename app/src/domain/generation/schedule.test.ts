@@ -16,7 +16,7 @@ describe('schedule', () => {
     expect(accept).not.toBeNull();
     let seen = 0, kept = 0;
     for (let seed = 0; seed < 60; seed++) {
-      const { level } = generate({ seed, size: 3 + (seed % 6), diff: 1 + (seed % 2), options: { clock: false, attempts: 3, unique: false } });
+      const { level } = generate({ seed, size: 3 + (seed % 6), diff: 1 + (seed % 2), options: { clock: false, attempts: 3, maxOptima: 0 } });
       if (!level) continue;
       seen++;
       if (oldSiteOne(level)) kept++;
@@ -36,7 +36,7 @@ describe('schedule', () => {
     const parsed = parseSchedule(JSON.parse(JSON.stringify(DEFAULT_SCHEDULE)));
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
-    expect(levelsForDay(parsed.value, 97)).toEqual(levelsForDay(DEFAULT_SCHEDULE, 97));
+    expect(levelsForDay(parsed.value, 12)).toEqual(levelsForDay(DEFAULT_SCHEDULE, 12));
   });
 
   it('falls back when a site can grow nothing', () => {

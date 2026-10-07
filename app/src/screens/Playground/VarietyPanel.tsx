@@ -4,6 +4,7 @@ import { Info } from './Info';
 import { encodeParams, type PlaygroundParams } from './params';
 import { useVariety } from './useVariety';
 import { VarietyChart } from './VarietyChart';
+import { VarietyCompare } from './VarietyCompare';
 import styles from './Variety.module.css';
 
 const SAMPLES = [100, 500, 2000, 10000];
@@ -11,8 +12,10 @@ const pct = (v: number) => Math.round(v * 100) + '%';
 
 /** How many genuinely different levels do these settings produce? Runs a
     sweep of consecutive seeds and counts distinct graphs and drawings. */
-export function VarietyPanel({ params, onLoadSeed }: { params: PlaygroundParams; onLoadSeed: (seed: number) => void }) {
-  const { run, start, stop } = useVariety();
+export function VarietyPanel({ params, onLoadSeed, onLoadParams }: {
+  params: PlaygroundParams; onLoadSeed: (seed: number) => void; onLoadParams: (p: PlaygroundParams) => void;
+}) {
+  const { run, history, start, stop } = useVariety();
   const [samples, setSamples] = useState(500);
   const s = run.summary;
   const running = run.status === 'running';
@@ -43,7 +46,8 @@ export function VarietyPanel({ params, onLoadSeed }: { params: PlaygroundParams;
           <Tile value={s.shapes} label="distinct graphs" sub={`≈ ${s.estShapes.toLocaleString()} in total`} help="varietyGraphs" />
           <Tile value={s.drawings} label="distinct drawings" sub={`≈ ${s.estDrawings.toLocaleString()} in total`} help="varietyDrawings" />
           <Tile value={pct(s.repeatShapes)} label="repeat chance" sub={`${pct(s.repeatDrawings)} for drawings`} help="varietyRepeat" />
-          <Tile value={s.found.toLocaleString()} label="levels found" sub={`${(s.tried - s.found).toLocaleString()} seeds gave none`} help="varietyFound" />
+          <Tile value={s.found.toLocaleString()} label="levels found" sub={`${s.met.toLocaleString()} met every rule · ${(s.tried - s.found).toLocaleString()} none`} help="varietyFound" />
+          <Tile value={Math.round(s.msPerLevel).toLocaleString()} label="ms / level" sub="generator time per seed" help="varietyTime" />
         </div>
         {s.approx > 0 && <p className={styles.note}>{s.approx} graph(s) were too symmetric to identify exactly; their count may be slightly low.</p>}
         <VarietyChart curve={s.curve} />
@@ -61,6 +65,7 @@ export function VarietyPanel({ params, onLoadSeed }: { params: PlaygroundParams;
           ))}
         </ol>
       </div>}
+      <VarietyCompare rows={history} onLoad={onLoadParams} />
     </section>
   );
 }

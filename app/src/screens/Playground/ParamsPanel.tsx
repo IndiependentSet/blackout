@@ -1,9 +1,10 @@
 import type { Dispatch } from 'react';
-import { DEFAULT_SCHEDULE, GADGET_NAMES, OPTION_LIMITS as L } from '../../domain/generation';
+import { DEFAULT_SCHEDULE, OPTION_LIMITS as L, STRATEGIES, type Strategy } from '../../domain/generation';
 import { Button } from '../../ui';
 import { Check, Num, Range, Row, Select } from './controls';
 import { Info } from './Info';
-import { weightsFor, type ParamsAction, type PlaygroundParams } from './params';
+import type { ParamsAction, PlaygroundParams } from './params';
+import { FreeSection, GadgetSection, HardnessSection } from './sections';
 import styles from './Playground.module.css';
 
 const REACH = [{ v: 1, label: '1 · orthogonal' }, { v: 1.5, label: '1.5 · + diagonals' },
@@ -14,7 +15,6 @@ export function ParamsPanel({ p, dispatch, onReroll }: {
   p: PlaygroundParams; dispatch: Dispatch<ParamsAction>; onReroll: () => void;
 }) {
   const set = (patch: Partial<PlaygroundParams>) => dispatch({ type: 'set', patch });
-  const weights = p.weights ?? weightsFor(p.diff);
 
   return (
     <div className={styles.panel}>
@@ -35,15 +35,17 @@ export function ParamsPanel({ p, dispatch, onReroll }: {
           <Num v={p.seed} min={0} on={seed => set({ seed })} />
           <Button size="mini" onClick={onReroll} title="random seed (r)">🎲</Button>
         </Row>
+        <Row label="Strategy" help="strategy">
+          <Select v={p.strategy} on={v => set({ strategy: v as Strategy })}>
+            {STRATEGIES.map(s => <option key={s} value={s}>{s}</option>)}
+          </Select>
+        </Row>
         <Row label="Nodes" help="size" value={p.size}><Range v={p.size} {...L.size} on={size => set({ size })} /></Row>
         <Row label="Difficulty" help="diff" value={'★'.repeat(p.diff)}>
           <Range v={p.diff} {...L.diff} on={diff => set({ diff })} />
         </Row>
         <Row label="Stars must match" help="matchStars">
           <Check v={p.matchStars} on={matchStars => set({ matchStars })} />
-        </Row>
-        <Row label="Unique optimum" help="unique">
-          <Check v={p.unique} on={unique => set({ unique })} />
         </Row>
       </section>
 
@@ -70,26 +72,13 @@ export function ParamsPanel({ p, dispatch, onReroll }: {
         <Row label="Allow crossings" help="crossings">
           <Check v={p.crossings} on={crossings => set({ crossings })} />
         </Row>
+        <Row label="Shortest cycle" help="girth" value={p.girth === 3 ? 'any' : p.girth}>
+          <Range v={p.girth} {...L.girth} on={girth => set({ girth })} />
+        </Row>
       </section>
 
-      <section>
-        <h3>Shape</h3>
-        <Row label="Extra edges" help="extraEdges" value={p.extraEdges === null ? 'auto' : '×' + p.extraEdges.toFixed(1)}>
-          <Check v={p.extraEdges === null} on={auto => set({ extraEdges: auto ? null : (p.diff === 3 ? 0.8 : 0) })} />
-          {p.extraEdges !== null && <Range v={p.extraEdges} {...L.extraEdges} on={extraEdges => set({ extraEdges })} />}
-        </Row>
-        <Row label="Custom gadget mix" help="weights">
-          <Check v={p.weights !== null} on={on => set({ weights: on ? weightsFor(p.diff) : null })} />
-        </Row>
-        <div className={styles.gadgets}>
-          {GADGET_NAMES.map(n => (
-            <div key={n} className={p.weights ? undefined : styles.off}>
-              <span>{n}<Info k={`gadget.${n}`} /></span>
-              <Num v={weights[n]} {...L.gadgetWeight} label={`${n} weight`} on={value => dispatch({ type: 'weight', gadget: n, value })} />
-            </div>
-          ))}
-        </div>
-      </section>
+      {p.strategy === 'free' ? <FreeSection p={p} set={set} /> : <GadgetSection p={p} set={set} dispatch={dispatch} />}
+      <HardnessSection p={p} set={set} />
 
       <section>
         <h3>Search</h3>

@@ -72,6 +72,33 @@ describe('parseSchedule', () => {
   });
 });
 
+describe('parseSchedule and the free strategy', () => {
+  it('accepts a site switched to free', () => {
+    const s = clone();
+    s.sites[3].options = { ...s.sites[3].options, strategy: 'free', density: 2.8, spread: 2, lengthBias: 0.5, girth: 4, maxOptima: 2, greedyMustFail: true, minBoundGap: 1 };
+    const r = parseSchedule(s);
+    expect(r.ok && r.value.sites[3].options).toEqual(s.sites[3].options);
+  });
+
+  it('rejects an unknown strategy and free settings out of range', () => {
+    const s = clone();
+    s.sites[0].options.strategy = 'fractal';
+    s.sites[1].options.density = 9;
+    s.sites[2].options.girth = 2;
+    expect(errorsOf(s)).toEqual([
+      'schedule.sites[0].options.strategy: unknown strategy "fractal" (expected gadgets or free)',
+      'schedule.sites[1].options.density: 9 is outside 1–5',
+      'schedule.sites[2].options.girth: 2 is outside 3–6',
+    ]);
+  });
+
+  it('no longer knows the old uniqueness switch', () => {
+    const s = clone();
+    s.sites[0].options.unique = false;
+    expect(errorsOf(s)).toEqual(['schedule.sites[0].options.unique: unknown setting']);
+  });
+});
+
 describe('parseOptions', () => {
   it('accepts a partial option set', () => {
     expect(parseOptions({ crossings: true, extraEdges: null, menu: null })).toEqual(
@@ -79,6 +106,6 @@ describe('parseOptions', () => {
   });
 
   it('reports a wrong type', () => {
-    expect(parseOptions({ unique: 'yes' })).toEqual({ ok: false, errors: ['options.unique: expected true or false'] });
+    expect(parseOptions({ greedyMustFail: 'yes' })).toEqual({ ok: false, errors: ['options.greedyMustFail: expected true or false'] });
   });
 });

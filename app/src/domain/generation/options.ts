@@ -1,14 +1,19 @@
 /** The generator's settings: what the game plays by default, how far each one
     may be turned, and how a partial set is filled in. Pure. */
-import type { GenOptions } from '../types';
+import type { GenOptions, Strategy } from '../types';
 
 /** The rules the game's levels are generated under. Every field here is a
     constant the generator used to hard-code; the playground overrides them. */
 export const DEFAULT_GEN: GenOptions = {
+  strategy: 'gadgets',
   maxDegree: 3, minDegree: 0, reach: 1.5, clearance: 0.4, crossings: false,
-  menu: null, extraEdges: null, unique: true, matchStars: true,
+  menu: null, extraEdges: null,
+  density: 2.6, spread: 2, lengthBias: 0, girth: 3,
+  maxOptima: 1, greedyMustFail: false, minBoundGap: 0, matchStars: true,
   attempts: 400, repairs: 18, budgetMs: 500, solverCap: 600000, clock: true,
 };
+
+export const STRATEGIES: readonly Strategy[] = ['gadgets', 'free'];
 
 export interface Limit { min: number; max: number; step?: number }
 
@@ -23,10 +28,17 @@ export const OPTION_LIMITS = {
   reach: { min: 1, max: 3.2 },
   clearance: { min: 0, max: 0.7, step: 0.05 },
   extraEdges: { min: 0, max: 3, step: 0.1 },
+  density: { min: 1, max: 5, step: 0.1 },
+  spread: { min: 1, max: 5, step: 0.25 },
+  lengthBias: { min: -1, max: 1, step: 0.1 },
+  girth: { min: 3, max: 6 },
+  maxOptima: { min: 0, max: 50 },
+  minBoundGap: { min: 0, max: 10 },
   /** copies of one gadget in a menu */
   gadgetWeight: { min: 0, max: 9 },
   attempts: { min: 1, max: 10000 },
-  repairs: { min: 0, max: 200 },
+  /** at least one: each round is a solve, so 0 would never accept anything */
+  repairs: { min: 1, max: 200 },
   budgetMs: { min: 10, max: 60000, step: 100 },
   solverCap: { min: 1000, max: 50_000_000, step: 50000 },
 } as const satisfies Record<string, Limit>;

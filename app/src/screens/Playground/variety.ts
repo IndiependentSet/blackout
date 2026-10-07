@@ -24,6 +24,10 @@ export interface CurvePoint { tried: number; shapes: number; drawings: number }
 export interface VarietySummary {
   tried: number;
   found: number;
+  /** found levels that met every rule (the rest are closest misses) */
+  met: number;
+  /** mean generator time per seed */
+  msPerLevel: number;
   shapes: number;
   drawings: number;
   /** Chao1 estimates of the totals, seen and unseen */
@@ -41,6 +45,8 @@ export interface VarietySummary {
 interface Acc {
   tried: number;
   found: number;
+  fallbacks: number;
+  ms: number;
   approx: number;
   shapes: Map<string, ShapeSeen & { drawingKeys: Set<string> }>;
   drawings: Map<string, number>;
@@ -50,13 +56,18 @@ interface Acc {
 
 /** `every`: record a curve point after this many seeds (keeps the curve ~100 points). */
 export function newAcc(every = 1): Acc {
-  return { tried: 0, found: 0, approx: 0, shapes: new Map(), drawings: new Map(), curve: [], every: Math.max(1, every) };
+  return { tried: 0, found: 0, fallbacks: 0, ms: 0, approx: 0, shapes: new Map(), drawings: new Map(), curve: [], every: Math.max(1, every) };
 }
 
-export function addLevel(acc: Acc, seed: number, lv: Level | null): void {
+/** How one seed's run went, beyond the level itself. */
+export interface RunMeta { fallback: boolean; ms: number }
+
+export function addLevel(acc: Acc, seed: number, lv: Level | null, meta: RunMeta = { fallback: false, ms: 0 }): void {
   acc.tried++;
+  acc.ms += meta.ms;
   if (lv) {
     acc.found++;
+    if (meta.fallback) acc.fallbacks++;
     const { key, exact } = shapeKey(lv);
     if (!exact) acc.approx++;
     const draw = drawingKey(lv);
@@ -92,7 +103,8 @@ export function summarize(acc: Acc, top = 12): VarietySummary {
   const shapeCounts = [...acc.shapes.values()].map(s => s.count);
   const curve = acc.curve.at(-1)?.tried === acc.tried ? acc.curve : [...acc.curve, point(acc)];
   return {
-    tried: acc.tried, found: acc.found, shapes: acc.shapes.size, drawings: acc.drawings.size,
+    tried: acc.tried, found: acc.found, met: acc.found - acc.fallbacks,
+    msPerLevel: acc.tried ? acc.ms / acc.tried : 0, shapes: acc.shapes.size, drawings: acc.drawings.size,
     estShapes: chao1(shapeCounts), estDrawings: chao1(acc.drawings.values()),
     repeatShapes: repeatChance(shapeCounts, acc.found), repeatDrawings: repeatChance(acc.drawings.values(), acc.found),
     approx: acc.approx, curve,
@@ -109,7 +121,8 @@ export function* sweep(p: PlaygroundParams, samples: number): Generator<Acc, Acc
   const options = { ...req.options, clock: false };
   for (let i = 0; i < samples; i++) {
     const seed = p.seed + i;
-    addLevel(acc, seed, generate({ ...req, seed, options }).level);
+    const { level, report } = generate({ ...req, seed, options });
+    addLevel(acc, seed, level, report);
     yield acc;
   }
   return acc;

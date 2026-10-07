@@ -9,7 +9,7 @@ function Line({ k, v, help }: { k: string; v: string | number; help?: HelpKey })
 
 /** What came out, and how hard the generator had to work for it. */
 export function StatsPanel({ outcome, wallMs }: { outcome: Outcome; wallMs: number }) {
-  const { level, stats, report } = outcome;
+  const { level, stats, report, greedy, bound } = outcome;
   const maxBar = stats ? Math.max(1, ...stats.degrees) : 1;
   return (
     <div className={styles.panel}>
@@ -20,6 +20,8 @@ export function StatsPanel({ outcome, wallMs }: { outcome: Outcome; wallMs: numb
           <Line k="Par (min cover)" v={level.k} help="stat.par" />
           <Line k="Optimal covers" v={report.optima} help="stat.optima" />
           <Line k="Stars" v={'★'.repeat(level.stars)} help="stat.stars" />
+          {greedy !== null && <Line k="Greedy cover" v={greedy === level.k ? `${greedy} (solves it)` : `${greedy} (+${greedy - level.k})`} help="stat.greedy" />}
+          {bound !== null && <Line k="Matching bound" v={bound === level.k ? `${bound} (tight)` : `${bound} (gap ${level.k - bound})`} help="stat.bound" />}
           <Line k="Degree min · mean · max" v={`${stats.minDegree} · ${stats.meanDegree.toFixed(2)} · ${stats.maxDegree}`} help="stat.degree" />
           <Line k="Crossings" v={stats.crossings} help="stat.crossings" />
           <Line k="Planar by Euler?" v={stats.eulerNonPlanar ? 'no (m > 3n−6)' : 'not ruled out'} help="stat.euler" />

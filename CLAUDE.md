@@ -85,10 +85,17 @@ visuals — `app/src/assets/` and the camera system in `app/src/game/camera/` ar
   - **`src/domain/generation/`** — level generation as its own module, with
     **one public API, `index.ts`**: nothing outside the folder imports its
     files (lint-enforced by `no-restricted-imports`). Inside: `options.ts`
-    (`DEFAULT_GEN`, `OPTION_LIMITS`, `resolveOptions`), `gadgets.ts` (the
-    building blocks — leaf chains, degree-2 paths, cycles, hubs, crowns — and
-    each difficulty's menu), `builder.ts`/`growth.ts` (the mutable graph and
-    how it grows), `solver.ts` (exact branch-and-bound `solve` — the
+    (`DEFAULT_GEN`, `OPTION_LIMITS`, `resolveOptions`), `builder.ts` (the
+    mutable graph and the rules every path must pass: degree, reach,
+    clearance, crossings, shortest cycle), and two **strategies** chosen by
+    `GenOptions.strategy`: `gadgets` (the game's: `gadgets.ts` — leaf chains,
+    degree-2 paths, cycles, hubs, crowns, each difficulty's menu — grown by
+    `growth.ts`, ties broken with a spur) and `free` (`free.ts`: no templates,
+    junctions placed in a box sized by `spread` and wired towards a target
+    `density` with a `lengthBias`, ties broken by adding a path, never a
+    leaf). `hardness.ts` (`greedyCover`, `matchingBound`) backs the optional
+    `greedyMustFail`/`minBoundGap` filters, and `maxOptima` (1 = unique) sets
+    how many optimal covers a level may have. `solver.ts` (exact branch-and-bound `solve` — the
     uniqueness check — and the star rating `difficulty`), `generate.ts`
     (`generate(request)`: seed, size, difficulty, options, constraints in;
     level, second optimum and a `GenReport` out), `schedule.ts` (the game's
@@ -96,7 +103,9 @@ visuals — `app/src/assets/` and the camera system in `app/src/game/camera/` ar
     fallback; `levelForSite`/`levelsForDay` run it) and `parse.ts`
     (`parseSchedule`/`parseOptions`: untrusted JSON → a schedule or a list of
     errors). Every request and schedule is plain JSON, so it can be stored,
-    edited or posted to a worker. The seed mixing in `levelForSite` is the
+    edited or posted to a worker. Every new option defaults to what the game
+    already did (gadgets, any cycle, unique, no hardness filters), so
+    `DEFAULT_GEN` makes the same RNG draws as before. The seed mixing in `levelForSite` is the
     "same puzzles for everyone" contract, not a setting. `DEFAULT_SCHEDULE`
     must keep reproducing the determinism snapshots. To run it off the main
     thread, use `services/generation/generationClient.ts` (`generateAsync`:
@@ -107,14 +116,19 @@ visuals — `app/src/assets/` and the camera system in `app/src/game/camera/` ar
     (`VERCEL_ENV=preview`, i.e. every PR) or with `PLAYGROUND=1`, so it can be
     tried on a phone from a PR but never ships to production. It drives `generate()` (through `generateAsync`) — the generator with every
     former hard-coded rule exposed as `GenOptions` (max/min degree, edge reach,
-    clearance, crossings, gadget mix, extra edges, uniqueness, search limits) —
+    clearance, crossings, shortest cycle, strategy — gadget mix and extra
+    edges, or free density/spread/edge length — max optimal covers, the
+    greedy and matching-bound hardness filters, search limits) —
     and shows the result as a schematic (cover, second
     optimum, crossings) or on the real `Board` — tap nodes in either view to
     play-test it against par (the placed cats are shared by both) — with `domain/graphStats.ts`
     and the generator's `GenReport` (why candidates were rejected) alongside.
     Its **Variety** panel sweeps N consecutive seeds in a second worker and
     counts distinct graphs and drawings (with Chao1 estimates of the total,
-    a repeat chance and the most common graphs, each loadable by seed).
+    a repeat chance, the share that met every rule, time per level and the
+    most common graphs, each loadable by seed); finished sweeps collect in a
+    **Compare runs** table (in memory only) so strategies and settings can be
+    read side by side.
     Settings live only in the URL hash; its control ranges and site presets
     come from `OPTION_LIMITS` and `DEFAULT_SCHEDULE`.
   - `src/app/` — `App.tsx` (screen routing, `AuthProvider`), the staff badge
@@ -377,6 +391,9 @@ npm run lint       # oxlint
 - Levels must keep a **unique** optimal cover — this is what makes the
   puzzle feel deducible rather than guessed. If you touch the generator,
   preserve the uniqueness check rather than relaxing it for convenience.
+  (`maxOptima` can relax it, but only the playground does; the game stays at
+  1, and the INSIDER hint assumes one solution. Changing that is the user's
+  call.)
 
 ## When designs change again
 

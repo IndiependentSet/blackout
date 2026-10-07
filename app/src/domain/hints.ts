@@ -9,7 +9,7 @@ export function hintLeaf(lv: Level, placed: Set<number>): { leaf: number; forced
   }
   return null;
 }
-export function hintMatching(lv: Level): number[] {
+export function hintMatching(lv: Pick<Level, 'edges'>): number[] {
   const used = new Set<number>(); const m: number[] = [];
   for (let i = 0; i < lv.edges.length; i++) {
     const [u, v] = lv.edges[i];
