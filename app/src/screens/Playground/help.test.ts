@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { GADGET_NAMES } from '../../domain/engine';
+import { GADGET_NAMES } from '../../domain/generation';
 import { HELP } from './help';
 import { DEFAULT_PARAMS } from './params';
 

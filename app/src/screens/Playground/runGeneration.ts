@@ -1,9 +1,8 @@
-/* One playground run, start to finish: generate under the given params and
-   measure what came out. Pure, so the worker is just a postMessage shim. */
-import { generate, rngFromSeed } from '../../domain/engine';
+/* One playground run: what the generator gave back, measured. Pure. */
+import { generate, type GenerateResult } from '../../domain/generation';
 import { crossingPairs, graphStats, type GraphStats } from '../../domain/graphStats';
 import type { GenReport, Level } from '../../domain/types';
-import { toGenOptions, type PlaygroundParams } from './params';
+import { toRequest, type PlaygroundParams } from './params';
 
 export interface Outcome {
   level: Level | null;
@@ -15,11 +14,16 @@ export interface Outcome {
   crossings: [number, number][];
 }
 
-export function runGeneration(p: PlaygroundParams): Outcome {
-  const { level, report, alt } = generate(rngFromSeed(p.seed), p.size, p.diff, toGenOptions(p));
+/** Stats and crossings for a result (cheap next to generating it). */
+export function toOutcome({ level, report, alt }: GenerateResult): Outcome {
   return {
     level, alt, report,
     stats: level && graphStats(level),
     crossings: level ? crossingPairs(level) : [],
   };
+}
+
+/** Generate and measure in one go, on the calling thread. */
+export function runGeneration(p: PlaygroundParams): Outcome {
+  return toOutcome(generate(toRequest(p)));
 }

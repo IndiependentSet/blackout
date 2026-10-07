@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { menuFor } from '../../domain/engine';
+import { menuFor } from '../../domain/generation';
 import { DEFAULT_PARAMS, decodeParams, encodeParams, paramsReducer, toGenOptions, weightsFor } from './params';
 
 describe('playground params', () => {

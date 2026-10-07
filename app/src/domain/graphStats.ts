@@ -1,5 +1,5 @@
 /** Structural facts about a level's graph, for the generator playground. Pure. */
-import { segCross } from './engine';
+import { segCross } from './geometry';
 import type { Level } from './types';
 
 export interface GraphStats {

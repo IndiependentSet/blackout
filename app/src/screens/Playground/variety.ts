@@ -1,10 +1,10 @@
 /* The variety sweep: generate one seed after another under the same settings
    and count how many genuinely different levels come out. Pure; the worker
    only drives it. */
-import { generate, rngFromSeed } from '../../domain/engine';
+import { generate } from '../../domain/generation';
 import { drawingKey, shapeKey } from '../../domain/graphIdentity';
 import type { Level, Stars } from '../../domain/types';
-import { toGenOptions, type PlaygroundParams } from './params';
+import { toRequest, type PlaygroundParams } from './params';
 
 /** One distinct abstract graph, and the first seed that produced it. */
 export interface ShapeSeen {
@@ -105,10 +105,11 @@ export function summarize(acc: Acc, top = 12): VarietySummary {
     The clock is always off here, so every seed listed can be reloaded exactly. */
 export function* sweep(p: PlaygroundParams, samples: number): Generator<Acc, Acc> {
   const acc = newAcc(Math.ceil(samples / 100));
-  const opts = { ...toGenOptions(p), clock: false };
+  const req = toRequest(p);
+  const options = { ...req.options, clock: false };
   for (let i = 0; i < samples; i++) {
     const seed = p.seed + i;
-    addLevel(acc, seed, generate(rngFromSeed(seed), p.size, p.diff, opts).level);
+    addLevel(acc, seed, generate({ ...req, seed, options }).level);
     yield acc;
   }
   return acc;

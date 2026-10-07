@@ -1,5 +1,5 @@
 import type { Dispatch } from 'react';
-import { GADGET_NAMES, RAMP } from '../../domain/engine';
+import { DEFAULT_SCHEDULE, GADGET_NAMES, OPTION_LIMITS as L } from '../../domain/generation';
 import { Button } from '../../ui';
 import { Check, Num, Range, Row, Select } from './controls';
 import { Info } from './Info';
@@ -21,8 +21,8 @@ export function ParamsPanel({ p, dispatch, onReroll }: {
       <section>
         <h3>Presets <Info k="presets" /></h3>
         <div className={styles.chips}>
-          {RAMP.map((s, i) => (
-            <Button key={i} size="mini" variant="secondary" title={`${s.n} nodes, difficulty ${s.d}`}
+          {DEFAULT_SCHEDULE.sites.map((s, i) => (
+            <Button key={i} size="mini" variant="secondary" title={`${s.size} nodes, difficulty ${s.diff}`}
               onClick={() => dispatch({ type: 'site', idx: i })}>Site {i + 1}</Button>
           ))}
           <Button size="mini" variant="muted" onClick={() => dispatch({ type: 'reset' })}>Reset</Button>
@@ -35,9 +35,9 @@ export function ParamsPanel({ p, dispatch, onReroll }: {
           <Num v={p.seed} min={0} on={seed => set({ seed })} />
           <Button size="mini" onClick={onReroll} title="random seed (r)">🎲</Button>
         </Row>
-        <Row label="Nodes" help="size" value={p.size}><Range v={p.size} min={4} max={80} on={size => set({ size })} /></Row>
+        <Row label="Nodes" help="size" value={p.size}><Range v={p.size} {...L.size} on={size => set({ size })} /></Row>
         <Row label="Difficulty" help="diff" value={'★'.repeat(p.diff)}>
-          <Range v={p.diff} min={1} max={3} on={diff => set({ diff })} />
+          <Range v={p.diff} {...L.diff} on={diff => set({ diff })} />
         </Row>
         <Row label="Stars must match" help="matchStars">
           <Check v={p.matchStars} on={matchStars => set({ matchStars })} />
@@ -50,10 +50,10 @@ export function ParamsPanel({ p, dispatch, onReroll }: {
       <section>
         <h3>Degree</h3>
         <Row label="Min degree" help="minDegree" value={p.minDegree < 2 ? 'any' : p.minDegree}>
-          <Range v={p.minDegree} min={0} max={6} on={minDegree => set({ minDegree, maxDegree: Math.max(p.maxDegree, minDegree) })} />
+          <Range v={p.minDegree} {...L.minDegree} on={minDegree => set({ minDegree, maxDegree: Math.max(p.maxDegree, minDegree) })} />
         </Row>
         <Row label="Max degree" help="maxDegree" value={p.maxDegree}>
-          <Range v={p.maxDegree} min={1} max={8} on={maxDegree => set({ maxDegree, minDegree: Math.min(p.minDegree, maxDegree) })} />
+          <Range v={p.maxDegree} {...L.maxDegree} on={maxDegree => set({ maxDegree, minDegree: Math.min(p.minDegree, maxDegree) })} />
         </Row>
       </section>
 
@@ -65,7 +65,7 @@ export function ParamsPanel({ p, dispatch, onReroll }: {
           </Select>
         </Row>
         <Row label="Clearance" help="clearance" value={p.clearance.toFixed(2)}>
-          <Range v={p.clearance} min={0} max={0.7} step={0.05} on={clearance => set({ clearance })} />
+          <Range v={p.clearance} {...L.clearance} on={clearance => set({ clearance })} />
         </Row>
         <Row label="Allow crossings" help="crossings">
           <Check v={p.crossings} on={crossings => set({ crossings })} />
@@ -76,7 +76,7 @@ export function ParamsPanel({ p, dispatch, onReroll }: {
         <h3>Shape</h3>
         <Row label="Extra edges" help="extraEdges" value={p.extraEdges === null ? 'auto' : '×' + p.extraEdges.toFixed(1)}>
           <Check v={p.extraEdges === null} on={auto => set({ extraEdges: auto ? null : (p.diff === 3 ? 0.8 : 0) })} />
-          {p.extraEdges !== null && <Range v={p.extraEdges} min={0} max={3} step={0.1} on={extraEdges => set({ extraEdges })} />}
+          {p.extraEdges !== null && <Range v={p.extraEdges} {...L.extraEdges} on={extraEdges => set({ extraEdges })} />}
         </Row>
         <Row label="Custom gadget mix" help="weights">
           <Check v={p.weights !== null} on={on => set({ weights: on ? weightsFor(p.diff) : null })} />
@@ -85,7 +85,7 @@ export function ParamsPanel({ p, dispatch, onReroll }: {
           {GADGET_NAMES.map(n => (
             <div key={n} className={p.weights ? undefined : styles.off}>
               <span>{n}<Info k={`gadget.${n}`} /></span>
-              <Num v={weights[n]} min={0} max={9} label={`${n} weight`} on={value => dispatch({ type: 'weight', gadget: n, value })} />
+              <Num v={weights[n]} {...L.gadgetWeight} label={`${n} weight`} on={value => dispatch({ type: 'weight', gadget: n, value })} />
             </div>
           ))}
         </div>
@@ -93,14 +93,14 @@ export function ParamsPanel({ p, dispatch, onReroll }: {
 
       <section>
         <h3>Search</h3>
-        <Row label="Attempts" help="attempts"><Num v={p.attempts} min={1} on={attempts => set({ attempts })} /></Row>
-        <Row label="Repairs / attempt" help="repairs"><Num v={p.repairs} min={0} on={repairs => set({ repairs })} /></Row>
+        <Row label="Attempts" help="attempts"><Num v={p.attempts} {...L.attempts} on={attempts => set({ attempts })} /></Row>
+        <Row label="Repairs / attempt" help="repairs"><Num v={p.repairs} {...L.repairs} on={repairs => set({ repairs })} /></Row>
         <Row label="Solver cap" help="solverCap">
-          <Num v={p.solverCap} min={1000} step={50000} on={solverCap => set({ solverCap })} />
+          <Num v={p.solverCap} {...L.solverCap} on={solverCap => set({ solverCap })} />
         </Row>
         <Row label="Time budget" help="clock">
           <Check v={p.clock} on={clock => set({ clock })} />
-          {p.clock ? <Num v={p.budgetMs} min={10} step={100} on={budgetMs => set({ budgetMs })} />
+          {p.clock ? <Num v={p.budgetMs} {...L.budgetMs} on={budgetMs => set({ budgetMs })} />
             : <span className={styles.muted}>off</span>}
         </Row>
       </section>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { makeLevelForDay } from '../../domain/engine';
+import { DEFAULT_SCHEDULE, levelForSite } from '../../domain/generation';
 import { LAST_SITE, SITE_COUNT } from '../../domain/sites';
 import type { Level } from '../../domain/types';
 
@@ -17,7 +17,7 @@ export function useLevels(seed: number): (Level | null)[] {
     let timer: ReturnType<typeof setTimeout>;
     const build = (i: number) => {
       if (!live || i > LAST_SITE) return;
-      const lv = makeLevelForDay(seed, i);     // heavy: kept out of the state updater
+      const lv = levelForSite(DEFAULT_SCHEDULE, seed, i);     // heavy: kept out of the state updater
       setLevels(prev => prev.map((x, j) => (j === i ? lv : x)));
       timer = setTimeout(() => build(i + 1), STAGGER_MS);
     };
