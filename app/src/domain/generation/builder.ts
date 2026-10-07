@@ -19,14 +19,31 @@ export function addNode(g: Graph, c: number, r: number) {
   g.nodes.push({ c, r }); g.adj.push([]); g.key.set(ck(c, r), i);
   return i;
 }
+/** Is b within `depth` steps of a? (The cycle a new edge a–b would close is that distance + 1.) */
+function within(g: Graph, a: number, b: number, depth: number) {
+  let frontier = [a];
+  const seen = new Set(frontier);
+  for (let d = 0; d < depth && frontier.length; d++) {
+    const next: number[] = [];
+    for (const v of frontier) for (const u of g.adj[v]) {
+      if (u === b) return true;
+      if (!seen.has(u)) { seen.add(u); next.push(u); }
+    }
+    frontier = next;
+  }
+  return false;
+}
+
 function edgeOk(g: Graph, a: number, b: number) {
-  const { maxDegree, reach, clearance, crossings } = g.cfg;
+  const { maxDegree, reach, clearance, crossings, girth } = g.cfg;
   if (a === b || g.adj[a].includes(b)) return false;
   if (g.adj[a].length >= maxDegree || g.adj[b].length >= maxDegree) return false;
   const A = g.nodes[a], B = g.nodes[b];
   if (Math.hypot(B.c - A.c, B.r - A.r) > reach) return false;
   for (let i = 0; i < g.nodes.length; i++)
     if (i !== a && i !== b && distPtSeg(g.nodes[i], A, B) < clearance) return false;
+  /* at the default girth (3) every cycle is allowed and this costs nothing */
+  if (girth > 3 && within(g, a, b, girth - 2)) return false;
   if (crossings) return true;
   for (const [u, v] of g.edges) {
     if (u === a || u === b || v === a || v === b) continue;
@@ -34,6 +51,15 @@ function edgeOk(g: Graph, a: number, b: number) {
   }
   return true;
 }
+/** May a new junction go on cell (c, r)? Free, and not within clearance of a
+    path it won't be on. (Gadgets only use unit steps, so they never need this.) */
+export function nodeOk(g: Graph, c: number, r: number) {
+  if (g.key.has(ck(c, r))) return false;
+  const p = { c, r };
+  for (const [u, v] of g.edges) if (distPtSeg(p, g.nodes[u], g.nodes[v]) < g.cfg.clearance) return false;
+  return true;
+}
+
 export function addEdge(g: Graph, a: number, b: number) {
   if (!edgeOk(g, a, b)) return false;
   g.edges.push([a, b]); g.adj[a].push(b); g.adj[b].push(a);

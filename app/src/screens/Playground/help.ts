@@ -17,8 +17,9 @@ export interface HelpEntry {
 type ParamKey = Exclude<keyof PlaygroundParams, 'weights' | 'budgetMs'>;
 type GadgetKey = `gadget.${GadgetName}`;
 type ViewKey = 'presets' | 'play' | 'solution' | 'secondOptimum' | 'labels';
-type VarietyKey = 'variety' | 'varietyGraphs' | 'varietyDrawings' | 'varietyRepeat' | 'varietyFound' | 'varietyTop';
-type StatKey = 'stat.par' | 'stat.optima' | 'stat.stars' | 'stat.degree' | 'stat.crossings' | 'stat.euler'
+type VarietyKey = 'variety' | 'varietyGraphs' | 'varietyDrawings' | 'varietyRepeat' | 'varietyFound' | 'varietyTime'
+  | 'varietyTop' | 'varietyCompare';
+type StatKey = 'stat.par' | 'stat.optima' | 'stat.stars' | 'stat.greedy' | 'stat.bound' | 'stat.degree' | 'stat.crossings' | 'stat.euler'
   | 'stat.bipartite' | 'stat.triangles' | 'stat.components' | 'stat.attempts' | 'stat.repairs' | 'stat.visits'
   | 'stat.time' | 'stat.rejected';
 export type HelpKey = ParamKey | 'weights' | GadgetKey | ViewKey | VarietyKey | StatKey;
@@ -34,13 +35,13 @@ export const HELP: Record<HelpKey, HelpEntry> = {
   size: {
     title: 'Nodes',
     what: 'The target number of nodes (pads).',
-    effect: 'The generator grows a smaller graph first (target − 1 nodes, or target − 3 at ★★★) because tie-break repairs add spur nodes back. A result is accepted if it lands between the target (target − 1 above 8) and target + 2; larger graphs also make the exact solver work much harder.',
+    effect: 'Gadgets: the generator grows a smaller graph first (target − 1 nodes, or target − 3 at ★★★) because tie-break repairs add spur nodes back. Free: exactly the target, since its repairs only add paths. A result is accepted if it lands between the target (target − 1 above 8) and target + 2; larger graphs also make the exact solver work much harder.',
     game: 'Sites 1–7 ramp through 4, 7, 10, 14, 18, 24 and 30 nodes.',
   },
   diff: {
     title: 'Difficulty',
     what: 'The difficulty you are asking for, 1 to 3 stars.',
-    effect: 'It picks three things at once: the default gadget menu, whether the extra-edge pass runs (0.8 × nodes at ★★★, none below), and the star rating a level must reach when "Stars must match" is on.',
+    effect: 'With gadgets it picks three things at once: the default gadget menu, whether the extra-edge pass runs (0.8 × nodes at ★★★, none below), and the star rating a level must reach when "Stars must match" is on. With free it is only that star target: the shape comes from the free settings.',
     game: 'Sites 1–2 are ★, 3–4 ★★, 5–7 ★★★.',
   },
   matchStars: {
@@ -49,11 +50,50 @@ export const HELP: Record<HelpKey, HelpEntry> = {
     effect: 'On: a graph with a unique optimum but the wrong star rating is rejected (counted under "stars") and only kept as a fallback. Off: any technique is accepted, which finds a level much faster.',
     game: 'Always on.',
   },
-  unique: {
-    title: 'Unique optimum',
-    what: 'Require the graph to have exactly one minimum vertex cover: one best set of pads to hire.',
-    effect: 'When the solver finds two optimal covers, the generator repairs the graph: it hangs a spur on a node where the two covers disagree (the leaf rule then forces that node), or closes an edge. Off: the first graph is accepted as-is, and the schematic shows where a second optimum differs.',
-    game: 'Always on. It is what makes a level deducible rather than a guess.',
+  strategy: {
+    title: 'Strategy',
+    what: 'How the graph is built. gadgets: snapped together from a few fixed building blocks (spur, hub, paths, crown, rings), each planting a known deduction. free: no templates; junctions are placed one by one and wired from the settings (density, spread, edge length, shortest cycle).',
+    effect: 'Gadgets hit a star rating reliably but repeat themselves (see Variety). Free graphs vary far more, but their difficulty is only measured afterwards, so expect more rejections; the hardness filters decide what is kept. Ties are broken differently too: gadgets hang a spur (a dead end), free adds a path (never a dead end).',
+    game: 'gadgets, for every site.',
+  },
+  density: {
+    title: 'Density',
+    what: 'Free only: the target mean degree, i.e. paths per junction on average. The graph gets about nodes × density ÷ 2 paths, never fewer than it takes to connect them.',
+    effect: 'Low (1–2): tree-like, many dead ends, easy leaf-rule starts. Around 2.5–3: loops everywhere, few free starts. High: dense and much more solver work. It can stall below target when max degree, reach or crossings leave no legal path.',
+  },
+  spread: {
+    title: 'Spread',
+    what: 'Free only: lattice area per junction. Junctions are placed inside a square about √(nodes × spread) cells a side.',
+    effect: 'At 1 they pack every cell, so paths are short and the drawing is a tight grid. Higher spreads them out, leaving room for long paths and irregular shapes; too high and junctions may sit out of reach of each other, which only matters for the extra paths (the first path to each junction is always within reach).',
+  },
+  lengthBias: {
+    title: 'Edge length',
+    what: 'Free only: which path lengths are preferred, from short (−1) through any (0) to long (+1), always up to the reach.',
+    effect: 'Each candidate path is weighted by its length to the power 3 × bias. Raise reach as well (2.3 or 3.2) for long paths to exist at all. Long paths cross more, so with crossings off they get refused more often.',
+  },
+  girth: {
+    title: 'Shortest cycle',
+    what: 'The shortest loop a new path may close: 3 allows triangles, 4 forbids them, 5 also forbids 4-cycles, and so on. Applies to both strategies.',
+    effect: 'Triangles feed the triangle rule (part of ★★), so banning them pushes levels towards folding or real branching. With gadgets, raising it makes some gadgets impossible to place (ring4 needs 4, crown has 4-cycles).',
+    game: '3 (any).',
+  },
+  maxOptima: {
+    title: 'Max optimal covers',
+    what: 'The most minimum covers a level may have. 1 = unique (one best set of pads), 0 = no limit, N = at most N.',
+    effect: 'Above the limit the generator repairs the graph where two covers disagree: gadgets hang a spur (the leaf rule then forces that node), free adds a path. With a few optima the level stays fair (any of them scores par) but the last moves can become "either works". The schematic\'s 2nd optimum shows where two differ.',
+    game: '1. Uniqueness is what makes a level deducible rather than a guess, and the INSIDER hint assumes it.',
+  },
+  greedyMustFail: {
+    title: 'Greedy must fail',
+    what: 'Reject a level if always taking the junction with the most open paths already reaches par.',
+    effect: 'That greedy habit is what a player falls into first; a level it solves needs no looking ahead. On, every kept level punishes it by at least one cat (counted under "greedy" when rejected). Cheap to check.',
+    game: 'Off.',
+  },
+  minBoundGap: {
+    title: 'Min bound gap',
+    what: 'Reject a level unless par is at least this many cats above the matching bound: the number of paths that share no junction, which is what the ESTIMATE consultant tells the player.',
+    effect: 'A gap of 0 means the estimate is the answer: one cat per independent path and done. Each extra cat of gap is a place where the player has to see further than that. Rejections count under "bound".',
+    game: 'Off.',
   },
   minDegree: {
     title: 'Min degree',
@@ -181,7 +221,7 @@ export const HELP: Record<HelpKey, HelpEntry> = {
   },
   secondOptimum: {
     title: '2nd optimum',
-    what: 'When the graph has more than one minimum cover (only possible with "Unique optimum" off), mark where a second one differs.',
+    what: 'When the graph has more than one minimum cover (only possible with "Max optimal covers" above 1), mark where a second one differs.',
     effect: 'Dashed pink ring: in the second cover but not the first. Dotted: in the first but not the second. That swap is exactly the ambiguity a tie-break repair would remove.',
   },
   labels: {
@@ -211,7 +251,18 @@ export const HELP: Record<HelpKey, HelpEntry> = {
   },
   varietyFound: {
     title: 'Levels found',
-    what: 'Seeds that produced a level. A seed gives none when every attempt was rejected; the playground then shows nothing for it. Fallbacks (closest misses) count as found.',
+    what: 'Seeds that produced a level. A seed gives none when every attempt was rejected; the playground then shows nothing for it. Fallbacks (closest misses) count as found; "met every rule" excludes them.',
+    effect: 'The share that met every rule is the strategy\'s success rate under these settings.',
+  },
+  varietyTime: {
+    title: 'Time per level',
+    what: 'Average time the generator spent per seed in this sweep (time budget off, so a whole run of attempts each).',
+    effect: 'The game builds seven of these on the player\'s device every day, so this is the cost of the settings.',
+  },
+  varietyCompare: {
+    title: 'Compare runs',
+    what: 'Every finished sweep is added here (the last 8, kept only while this page is open), labelled by strategy and the settings that differ from the defaults.',
+    effect: 'Run gadgets, switch to free (or change anything), run again, and read the rows side by side: variety, success rate and cost. Load restores that run\'s settings.',
   },
   varietyTop: {
     title: 'Most common graphs',
@@ -223,6 +274,16 @@ export const HELP: Record<HelpKey, HelpEntry> = {
   'stat.par': {
     title: 'Par',
     what: 'The size of the minimum vertex cover: the fewest cats that touch every path. This is the score target.',
+  },
+  'stat.greedy': {
+    title: 'Greedy cover',
+    what: 'How many cats you need if you always take the junction with the most uncovered paths. "solves it" means that reaches par.',
+    effect: 'A level greedy solves can be cleared without looking ahead. +N means the greedy habit costs N cats here. "Greedy must fail" keeps only the latter.',
+  },
+  'stat.bound': {
+    title: 'Matching bound',
+    what: 'Paths that share no junction, picked in order: each needs its own cat, so par is at least this. It is the number the ESTIMATE consultant gives.',
+    effect: '"tight" means the estimate is the answer. The gap is how much more the player has to find than the consultant tells them.',
   },
   'stat.optima': {
     title: 'Optimal covers',
@@ -278,6 +339,6 @@ export const HELP: Record<HelpKey, HelpEntry> = {
   'stat.rejected': {
     title: 'Rejected',
     what: 'Why candidates were thrown away, counted across the whole run.',
-    effect: 'degenerate: too few edges or an isolated node. blowup: solver hit its cap. unresolved: a tie that no repair could break. filter: an accept rule said no. minDegree / stars / size: unique, but a node stayed under the min degree, the solving technique differed, or the size was off. The last three are kept as fallbacks.',
+    effect: 'degenerate: too few edges or an isolated node. blowup: solver hit its cap. unresolved: a tie that no repair could break. filter: an accept rule said no. minDegree / stars / size / greedy / bound: few enough optima, but a node stayed under the min degree, the solving technique differed, the size was off, greedy solved it, or par sat too close to the matching bound. These five are kept as fallbacks.',
   },
 };

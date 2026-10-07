@@ -80,7 +80,8 @@ export function PlaygroundScreen() {
             {level && <PlayBar status={playStatus(level, shown)} showSol={showSol} onClear={play.clear} />}
           </div>
           {/* the clock goes off too: a sweep's seeds are reproducible, so loading one shows that exact level */}
-          <VarietyPanel params={params} onLoadSeed={seed => dispatch({ type: 'set', patch: { seed, clock: false } })} />
+          <VarietyPanel params={params} onLoadSeed={seed => dispatch({ type: 'set', patch: { seed, clock: false } })}
+            onLoadParams={patch => dispatch({ type: 'set', patch })} />
         </main>
         {outcome && <StatsPanel outcome={outcome} wallMs={wallMs} />}
       </div>

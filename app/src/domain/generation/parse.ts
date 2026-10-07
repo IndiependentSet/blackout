@@ -1,10 +1,10 @@
 /* Untrusted JSON (a stored or admin-edited schedule) in, a schedule the
    generator can run out — or every reason it can't. Pure. */
 import { SITE_COUNT } from '../sites';
-import type { GenOptions, Stars } from '../types';
+import type { GenOptions, Stars, Strategy } from '../types';
 import type { LevelConstraints } from './constraints';
 import { isGadget } from './gadgets';
-import { OPTION_LIMITS, resolveOptions, type Limit } from './options';
+import { OPTION_LIMITS, STRATEGIES, resolveOptions, type Limit } from './options';
 import type { GenerationSchedule, SiteRule } from './schedule';
 
 export type ParseResult<T> = { ok: true; value: T } | { ok: false; errors: string[] };
@@ -34,10 +34,10 @@ class Reader {
   }
 }
 
-const INT_OPTIONS = ['maxDegree', 'minDegree', 'attempts', 'repairs', 'budgetMs', 'solverCap'] as const;
-const REAL_OPTIONS = ['reach', 'clearance'] as const;
-const BOOL_OPTIONS = ['crossings', 'unique', 'matchStars', 'clock'] as const;
-const OPTION_KEYS = [...INT_OPTIONS, ...REAL_OPTIONS, ...BOOL_OPTIONS, 'menu', 'extraEdges'] as const;
+const INT_OPTIONS = ['maxDegree', 'minDegree', 'girth', 'maxOptima', 'minBoundGap', 'attempts', 'repairs', 'budgetMs', 'solverCap'] as const;
+const REAL_OPTIONS = ['reach', 'clearance', 'density', 'spread', 'lengthBias'] as const;
+const BOOL_OPTIONS = ['crossings', 'matchStars', 'greedyMustFail', 'clock'] as const;
+const OPTION_KEYS = [...INT_OPTIONS, ...REAL_OPTIONS, ...BOOL_OPTIONS, 'strategy', 'menu', 'extraEdges'] as const;
 
 function readOptions(r: Reader, path: string, raw: unknown): Partial<GenOptions> {
   if (!isObj(raw)) { r.errors.push(`${path}: expected an object`); return {}; }
@@ -48,6 +48,10 @@ function readOptions(r: Reader, path: string, raw: unknown): Partial<GenOptions>
   for (const k of BOOL_OPTIONS) if (k in raw) out[k] = r.bool(`${path}.${k}`, raw[k]);
   if ('extraEdges' in raw) {
     out.extraEdges = raw.extraEdges === null ? null : r.num(`${path}.extraEdges`, raw.extraEdges, OPTION_LIMITS.extraEdges, false);
+  }
+  if ('strategy' in raw) {
+    if (STRATEGIES.includes(raw.strategy as Strategy)) out.strategy = raw.strategy as Strategy;
+    else r.errors.push(`${path}.strategy: unknown strategy ${JSON.stringify(raw.strategy)} (expected ${STRATEGIES.join(' or ')})`);
   }
   if ('menu' in raw) out.menu = readMenu(r, `${path}.menu`, raw.menu);
   const full = resolveOptions(out);

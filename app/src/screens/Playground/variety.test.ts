@@ -36,10 +36,18 @@ describe('variety accumulator', () => {
     expect(s.curve.at(-1)).toEqual({ tried: 4, shapes: 1, drawings: 2 });
   });
 
+  it('counts closest misses and time apart from the levels that met every rule', () => {
+    const acc = newAcc();
+    addLevel(acc, 1, straight, { fallback: false, ms: 10 });
+    addLevel(acc, 2, bent, { fallback: true, ms: 30 });
+    addLevel(acc, 3, null, { fallback: false, ms: 20 });
+    expect(summarize(acc)).toMatchObject({ tried: 3, found: 2, met: 1, msPerLevel: 20 });
+  });
+
   it('sweeps consecutive seeds reproducibly', () => {
     const run = () => { const it = sweep({ ...DEFAULT_PARAMS, size: 4, diff: 1, seed: 100 }, 40); let r = it.next(); while (!r.done) r = it.next(); return summarize(r.value); };
     const a = run(), b = run();
-    expect(a).toEqual(b);
+    expect({ ...a, msPerLevel: 0 }).toEqual({ ...b, msPerLevel: 0 });     // time is wall time
     expect(a.tried).toBe(40);
     expect(a.shapes).toBeGreaterThan(0);
     expect(a.top.every(t => t.seed >= 100 && t.seed < 140)).toBe(true);
