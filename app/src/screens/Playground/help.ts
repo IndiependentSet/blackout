@@ -16,7 +16,7 @@ export interface HelpEntry {
 
 type ParamKey = Exclude<keyof PlaygroundParams, 'weights' | 'budgetMs'>;
 type GadgetKey = `gadget.${GadgetName}`;
-type ViewKey = 'presets' | 'play' | 'solution' | 'secondOptimum' | 'labels';
+type ViewKey = 'presets' | 'play' | 'solution' | 'otherOptima' | 'labels';
 type VarietyKey = 'variety' | 'varietyGraphs' | 'varietyDrawings' | 'varietyRepeat' | 'varietyFound' | 'varietyTime'
   | 'varietyTop' | 'varietyCompare';
 type StatKey = 'stat.par' | 'stat.optima' | 'stat.stars' | 'stat.greedy' | 'stat.bound' | 'stat.degree' | 'stat.crossings' | 'stat.euler'
@@ -80,7 +80,7 @@ export const HELP: Record<HelpKey, HelpEntry> = {
   maxOptima: {
     title: 'Max optimal covers',
     what: 'The most minimum covers a level may have. 1 = unique (one best set of pads), 0 = no limit, N = at most N.',
-    effect: 'Above the limit the generator repairs the graph where two covers disagree: gadgets hang a spur (the leaf rule then forces that node), free adds a path. With a few optima the level stays fair (any of them scores par) but the last moves can become "either works". The schematic\'s 2nd optimum shows where two differ.',
+    effect: 'Above the limit the generator repairs the graph where two covers disagree: gadgets hang a spur (the leaf rule then forces that node), free adds a path. With a few optima the level stays fair (any of them scores par) but the last moves can become "either works". The schematic\'s other optima mark where each differs.',
     game: '1. Uniqueness is what makes a level deducible rather than a guess, and the INSIDER hint assumes it.',
   },
   greedyMustFail: {
@@ -219,10 +219,10 @@ export const HELP: Record<HelpKey, HelpEntry> = {
     what: 'Highlight the minimum vertex cover: the fewest nodes such that every edge touches at least one. Shortcut: s.',
     effect: 'In the schematic, cover nodes are gold, their edges green and everything else muted; on the board, cats are placed on them. While it is on, tapping nodes does nothing; your own cats come back when you turn it off.',
   },
-  secondOptimum: {
-    title: '2nd optimum',
-    what: 'When the graph has more than one minimum cover (only possible with "Max optimal covers" above 1), mark where a second one differs.',
-    effect: 'Dashed pink ring: in the second cover but not the first. Dotted: in the first but not the second. That swap is exactly the ambiguity a tie-break repair would remove.',
+  otherOptima: {
+    title: 'Other optima',
+    what: 'When the level has more than one minimum cover (only possible with "Max optimal covers" above 1), mark where another one differs from the solution. ◀ ▶ step through them.',
+    effect: 'Dashed pink ring: in that cover but not the solution. Dotted: in the solution but not that cover. Each is equally good: any of them scores par. The solver counts every optimum but keeps only the first 20 it finds, so past that the caption says how many exist in all.',
   },
   labels: {
     title: 'Labels',

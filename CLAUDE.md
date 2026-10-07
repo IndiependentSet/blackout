@@ -98,7 +98,7 @@ visuals — `app/src/assets/` and the camera system in `app/src/game/camera/` ar
     how many optimal covers a level may have. `solver.ts` (exact branch-and-bound `solve` — the
     uniqueness check — and the star rating `difficulty`), `generate.ts`
     (`generate(request)`: seed, size, difficulty, options, constraints in;
-    level, second optimum and a `GenReport` out), `schedule.ts` (the game's
+    level, its other optimal covers (the first `KEPT_OPTIMA`) and a `GenReport` out), `schedule.ts` (the game's
     week as data: `DEFAULT_SCHEDULE`, one `SiteRule` per site, retries and a
     fallback; `levelForSite`/`levelsForDay` run it) and `parse.ts`
     (`parseSchedule`/`parseOptions`: untrusted JSON → a schedule or a list of
@@ -119,8 +119,8 @@ visuals — `app/src/assets/` and the camera system in `app/src/game/camera/` ar
     clearance, crossings, shortest cycle, strategy — gadget mix and extra
     edges, or free density/spread/edge length — max optimal covers, the
     greedy and matching-bound hardness filters, search limits) —
-    and shows the result as a schematic (cover, second
-    optimum, crossings) or on the real `Board` — tap nodes in either view to
+    and shows the result as a schematic (cover, the other optimal covers
+    one at a time, crossings) or on the real `Board` — tap nodes in either view to
     play-test it against par (the placed cats are shared by both) — with `domain/graphStats.ts`
     and the generator's `GenReport` (why candidates were rejected) alongside.
     Its **Variety** panel sweeps N consecutive seeds in a second worker and

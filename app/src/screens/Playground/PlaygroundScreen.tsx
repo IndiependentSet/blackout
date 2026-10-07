@@ -3,6 +3,7 @@ import { Button, cx } from '../../ui';
 import { useWindowKey } from '../../hooks/useWindowKey';
 import { ParamsPanel } from './ParamsPanel';
 import { Info } from './Info';
+import { OptimaStepper } from './OptimaStepper';
 import { decodeParams, encodeParams, paramsReducer } from './params';
 import { playStatus } from './play';
 import { PlayBar } from './PlayBar';
@@ -24,6 +25,8 @@ export function PlaygroundScreen() {
   const [view, setView] = useState<View>('schematic');
   const [showSol, setShowSol] = useState(false);
   const [showAlt, setShowAlt] = useState(true);
+  /* which other optimum is marked; tied to the outcome it was picked on, so a new level starts at the first */
+  const [altPick, setAltPick] = useState({ key: '', idx: 0 });
   const [labels, setLabels] = useState<LabelMode>('degree');
   const { running, outcome, error, wallMs, outcomeKey } = useGenerator(params);
   const reroll = () => dispatch({ type: 'set', patch: { seed: randomSeed() } });
@@ -41,6 +44,8 @@ export function PlaygroundScreen() {
   const play = usePlacement(outcomeKey);
   const shown = level && showSol ? level.sol : play.placed;
   const onTapNode = showSol ? undefined : play.toggle;
+  const alts = outcome?.alts ?? [];
+  const altIdx = altPick.key === outcomeKey ? Math.min(altPick.idx, Math.max(0, alts.length - 1)) : 0;
 
   return (
     <div className={styles.page}>
@@ -58,8 +63,8 @@ export function PlaygroundScreen() {
             <Button size="mini" variant="mint" onClick={reroll} title="random seed (r)">🎲 seed {params.seed}</Button>
             <span className={styles.toggle}><label><input type="checkbox" checked={showSol} onChange={e => setShowSol(e.target.checked)} /> solution</label><Info k="solution" /></span>
             {view === 'schematic' && <>
-              <span className={styles.toggle}><label>
-                <input type="checkbox" checked={showAlt} onChange={e => setShowAlt(e.target.checked)} /> 2nd optimum</label><Info k="secondOptimum" /></span>
+              <OptimaStepper on={showAlt} onToggle={setShowAlt} idx={altIdx} kept={alts.length}
+                others={Math.max(0, (outcome?.report.optima ?? 1) - 1)} onStep={idx => setAltPick({ key: outcomeKey, idx })} />
               <span className={styles.toggle}><select value={labels} onChange={e => setLabels(e.target.value as LabelMode)} aria-label="node labels">
                 <option value="degree">label: degree</option>
                 <option value="index">label: index</option>
@@ -72,8 +77,8 @@ export function PlaygroundScreen() {
           <div className={cx(styles.stage, running && styles.stale)}>
             {error && <p className={styles.warn}>{error}</p>}
             {level && view === 'schematic' && outcome && (
-              <SchematicView level={level} alt={outcome.alt} crossings={outcome.crossings}
-                placed={shown} dimRest={showSol} showAlt={showAlt} labels={labels} onTapNode={onTapNode} />
+              <SchematicView level={level} alt={showAlt ? alts[altIdx] ?? null : null} crossings={outcome.crossings}
+                placed={shown} dimRest={showSol} labels={labels} onTapNode={onTapNode} />
             )}
             {level && view === 'board' && <PlayPreview key={outcomeKey} level={level} placed={shown} onTapNode={onTapNode} />}
             {!level && !running && !error && <p className={styles.warn}>No level satisfied these rules. See the rejection counts.</p>}

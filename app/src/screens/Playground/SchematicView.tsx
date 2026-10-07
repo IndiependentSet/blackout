@@ -10,9 +10,10 @@ const PAD = 0.8;        // lattice steps of margin
 /** The bare graph: nodes, edges, crossings and the optimal cover(s), no art.
     `placed` (gold nodes, green covered edges) is either the player's cats or,
     with `dimRest`, the solution shown with everything else muted. */
-export function SchematicView({ level, alt, crossings, placed, dimRest, showAlt, labels, onTapNode }: {
+export function SchematicView({ level, alt, crossings, placed, dimRest, labels, onTapNode }: {
+  /** another optimal cover to mark against level.sol, or null for none */
   level: Level; alt: number[] | null; crossings: [number, number][];
-  placed: number[]; dimRest: boolean; showAlt: boolean; labels: LabelMode;
+  placed: number[]; dimRest: boolean; labels: LabelMode;
   onTapNode?: (node: number) => void;
 }) {
   const view = useMemo(() => {
@@ -37,14 +38,14 @@ export function SchematicView({ level, alt, crossings, placed, dimRest, showAlt,
       })}
       {level.nodes.map((_, i) => {
         const { x, y } = P(i);
-        const hired = cats.has(i), inAlt = showAlt && altSet.has(i) && !sol.has(i);
+        const hired = cats.has(i), inAlt = altSet.has(i) && !sol.has(i);
         return (
           <g key={i} onClick={onTapNode && (() => onTapNode(i))}>
             {/* a bigger, invisible target: nodes are small on a phone */}
             {onTapNode && <circle cx={x} cy={y} r={U * 0.48} className={styles.hit} />}
             <circle cx={x} cy={y} r={U * 0.3} className={cx(styles.node, hired && styles.inSol, dimRest && !hired && styles.outSol)} />
             {inAlt && <circle cx={x} cy={y} r={U * 0.4} className={styles.inAlt} />}
-            {showAlt && alt && sol.has(i) && !altSet.has(i) && <circle cx={x} cy={y} r={U * 0.4} className={styles.notAlt} />}
+            {alt && sol.has(i) && !altSet.has(i) && <circle cx={x} cy={y} r={U * 0.4} className={styles.notAlt} />}
             {labels !== 'none' && (
               <text x={x} y={y} className={styles.nodeLabel}>{labels === 'index' ? i : level.adj[i].length}</text>
             )}

@@ -25,8 +25,8 @@ export interface GenerateRequest {
 export interface GenerateResult {
   /** null only when nothing could be built at all (e.g. an empty gadget menu) */
   level: Level | null;
-  /** a second optimal cover, when the level has more than one */
-  alt: number[] | null;
+  /** the level's other optimal covers (report.optima − 1 of them), up to KEPT_OPTIMA */
+  alts: number[][];
   report: GenReport;
 }
 
@@ -50,13 +50,13 @@ export function generateWith(rng: Rng, target: number, diff: number, opts: Parti
     rejected: { degenerate: 0, blowup: 0, unresolved: 0, filter: 0, minDegree: 0, stars: 0, size: 0, greedy: 0, bound: 0 },
   };
   let fallback: Level | null = null;
-  let fbAlt: number[] | null = null, fbOptima = 0, fbVisits = 0;
-  const done = (level: Level | null, alt: number[] | null, optima: number, visits: number) => {
+  let fbAlts: number[][] = [], fbOptima = 0, fbVisits = 0;
+  const done = (level: Level | null, alts: number[][], optima: number, visits: number): GenerateResult => {
     Object.assign(report, { ms: Date.now() - started, optima, visits });
-    return { level, report, alt };
+    return { level, report, alts };
   };
   const free = cfg.strategy === 'free';
-  if (!free && !menu.length) return done(null, null, 0, 0);
+  if (!free && !menu.length) return done(null, [], 0, 0);
 
   for (let att = 0; att < cfg.attempts; att++) {
     if (now() - t0 > cfg.budgetMs && fallback) break;
@@ -83,7 +83,7 @@ export function generateWith(rng: Rng, target: number, diff: number, opts: Parti
         const sizeOk = n >= (target <= 8 ? target : target - 1) && n <= target + 2;
         const greedyOk = !cfg.greedyMustFail || greedyCover(lv) > lv.k;
         const boundOk = cfg.minBoundGap <= 0 || lv.k - matchingBound(lv) >= cfg.minBoundGap;
-        if (degOk && starsOk && sizeOk && greedyOk && boundOk) return done(lv, r.alt, r.count, r.visits);
+        if (degOk && starsOk && sizeOk && greedyOk && boundOk) return done(lv, r.alts, r.count, r.visits);
         if (!degOk) report.rejected.minDegree++;
         else if (!starsOk) report.rejected.stars++;
         else if (!sizeOk) report.rejected.size++;
@@ -92,7 +92,7 @@ export function generateWith(rng: Rng, target: number, diff: number, opts: Parti
         const score = (degOk ? 0 : 1000) + (starsOk ? 0 : Math.abs(d - diff) * 100) + Math.abs(n - target)
           + (greedyOk ? 0 : 50) + (boundOk ? 0 : 50);
         if (!fallback || score < (fallback._score ?? Infinity)) {
-          lv._score = score; fallback = lv; fbAlt = r.alt; fbOptima = r.count; fbVisits = r.visits;
+          lv._score = score; fallback = lv; fbAlts = r.alts; fbOptima = r.count; fbVisits = r.visits;
         }
         break;
       }
@@ -103,5 +103,5 @@ export function generateWith(rng: Rng, target: number, diff: number, opts: Parti
     }
   }
   report.fallback = !!fallback;
-  return done(fallback, fbAlt, fbOptima, fbVisits);
+  return done(fallback, fbAlts, fbOptima, fbVisits);
 }
