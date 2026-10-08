@@ -1,4 +1,4 @@
-import type { Dispatch } from 'react';
+import type { Dispatch, ReactNode } from 'react';
 import { DEFAULT_SCHEDULE, OPTION_LIMITS as L, STRATEGIES, type Strategy } from '../../domain/generation';
 import { Button } from '../../ui';
 import { Check, Num, Range, Row, Select } from './controls';
@@ -10,15 +10,23 @@ import styles from './Playground.module.css';
 const REACH = [{ v: 1, label: '1 · orthogonal' }, { v: 1.5, label: '1.5 · + diagonals' },
   { v: 2.3, label: '2.3 · + knight moves' }, { v: 3.2, label: '3.2 · long' }];
 
+/** What the panel edits: the playground's free settings, or one rule of a
+    generation schedule, where the day picks the seed (and the fallback runs at
+    each site's own size). */
+export type PanelUse = 'playground' | 'site' | 'fallback';
+
 /** Every knob the generator exposes, grouped the way they interact. */
-export function ParamsPanel({ p, dispatch, onReroll }: {
-  p: PlaygroundParams; dispatch: Dispatch<ParamsAction>; onReroll: () => void;
+export function ParamsPanel({ p, dispatch, onReroll, use = 'playground', children }: {
+  p: PlaygroundParams; dispatch: Dispatch<ParamsAction>; onReroll?: () => void; use?: PanelUse;
+  /** extra sections, shown under Graph */
+  children?: ReactNode;
 }) {
   const set = (patch: Partial<PlaygroundParams>) => dispatch({ type: 'set', patch });
+  const free = use === 'playground';
 
   return (
     <div className={styles.panel}>
-      <section>
+      {free && <section>
         <h3>Presets <Info k="presets" /></h3>
         <div className={styles.chips}>
           {DEFAULT_SCHEDULE.sites.map((s, i) => (
@@ -27,20 +35,20 @@ export function ParamsPanel({ p, dispatch, onReroll }: {
           ))}
           <Button size="mini" variant="muted" onClick={() => dispatch({ type: 'reset' })}>Reset</Button>
         </div>
-      </section>
+      </section>}
 
       <section>
         <h3>Graph</h3>
-        <Row label="Seed" help="seed">
+        {free && <Row label="Seed" help="seed">
           <Num v={p.seed} min={0} on={seed => set({ seed })} />
-          <Button size="mini" onClick={onReroll} title="random seed (r)">🎲</Button>
-        </Row>
+          {onReroll && <Button size="mini" onClick={onReroll} title="random seed (r)">🎲</Button>}
+        </Row>}
         <Row label="Strategy" help="strategy">
           <Select v={p.strategy} on={v => set({ strategy: v as Strategy })}>
             {STRATEGIES.map(s => <option key={s} value={s}>{s}</option>)}
           </Select>
         </Row>
-        <Row label="Nodes" help="size" value={p.size}><Range v={p.size} {...L.size} on={size => set({ size })} /></Row>
+        {use !== 'fallback' && <Row label="Nodes" help="size" value={p.size}><Range v={p.size} {...L.size} on={size => set({ size })} /></Row>}
         <Row label="Difficulty" help="diff" value={'★'.repeat(p.diff)}>
           <Range v={p.diff} {...L.diff} on={diff => set({ diff })} />
         </Row>
@@ -48,6 +56,7 @@ export function ParamsPanel({ p, dispatch, onReroll }: {
           <Check v={p.matchStars} on={matchStars => set({ matchStars })} />
         </Row>
       </section>
+      {children}
 
       <section>
         <h3>Degree</h3>

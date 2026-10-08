@@ -22,7 +22,9 @@ type VarietyKey = 'variety' | 'varietyGraphs' | 'varietyDrawings' | 'varietyRepe
 type StatKey = 'stat.par' | 'stat.optima' | 'stat.stars' | 'stat.greedy' | 'stat.bound' | 'stat.degree' | 'stat.crossings' | 'stat.euler'
   | 'stat.bipartite' | 'stat.triangles' | 'stat.components' | 'stat.attempts' | 'stat.repairs' | 'stat.visits'
   | 'stat.time' | 'stat.rejected';
-export type HelpKey = ParamKey | 'weights' | GadgetKey | ViewKey | VarietyKey | StatKey;
+/** the generation config page's own settings and readouts */
+type ScheduleKey = 'retries' | 'fallback' | 'minNodes' | 'maxK' | 'hasDegree' | 'effectiveDay' | 'previewDay' | 'week' | 'history';
+export type HelpKey = ParamKey | 'weights' | GadgetKey | ViewKey | VarietyKey | StatKey | ScheduleKey;
 
 export const HELP: Record<HelpKey, HelpEntry> = {
   /* ---------- settings ---------- */
@@ -340,5 +342,54 @@ export const HELP: Record<HelpKey, HelpEntry> = {
     title: 'Rejected',
     what: 'Why candidates were thrown away, counted across the whole run.',
     effect: 'degenerate: too few edges or an isolated node. blowup: solver hit its cap. unresolved: a tie that no repair could break. filter: an accept rule said no. minDegree / stars / size / greedy / bound: few enough optima, but a node stayed under the min degree, the solving technique differed, the size was off, greedy solved it, or par sat too close to the matching bound. These five are kept as fallbacks.',
+  },
+
+  /* ---------- the generation config page ---------- */
+  retries: {
+    title: 'Retries',
+    what: 'How many salted seeds each site tries, with its own rules, before giving up on them.',
+    effect: 'Each retry is a full generator run, so more retries mean more chances to meet strict rules and constraints, and more time on a player\'s device when they fail.',
+    game: '6.',
+  },
+  fallback: {
+    title: 'Fallback',
+    what: 'What a site settles for when every retry came back empty: these rules, at the site\'s own node count, with no constraints.',
+    effect: 'Keep it easy to satisfy. If the fallback fails too, the site has no level and the game cannot start.',
+    game: '★, 900 ms budget.',
+  },
+  minNodes: {
+    title: 'At least N nodes',
+    what: 'Reject a level with fewer junctions than this.',
+    effect: 'The generator can come in under the target size; this makes the site retry instead.',
+    game: 'Site 1: 4.',
+  },
+  maxK: {
+    title: 'Par at most',
+    what: 'Reject a level whose par (minimum number of cats) is above this.',
+    game: 'Site 1: 2, so the first site stays a gentle start.',
+  },
+  hasDegree: {
+    title: 'Has a junction of degree',
+    what: 'Reject a level unless at least one junction has exactly this many paths.',
+    game: 'Site 1: 3, so there is a visible "busiest junction" to start from.',
+  },
+  effectiveDay: {
+    title: 'Effective from day',
+    what: 'The first puzzle day this config makes. Every later day uses it too, until a config with a later day takes over.',
+    effect: 'Tomorrow at the earliest: today\'s puzzles are already being played and scored, so they never change. Saving again for the same day replaces that config.',
+  },
+  previewDay: {
+    title: 'Preview day',
+    what: 'Generate the week this schedule would make on this day, exactly as a player\'s device would.',
+    effect: 'The day picks the seed, so the preview is the real level for that day (as long as the time budget is off, or this machine is about as fast as a player\'s).',
+  },
+  week: {
+    title: 'The week',
+    what: 'Each site\'s level on the preview day: junctions, par, stars, the retry that produced it, and the time it took here.',
+    effect: 'Players generate these on the main thread one after another, so a slow site is a frozen screen on a phone. "fallback" means no retry met the site\'s rules.',
+  },
+  history: {
+    title: 'Saved configs',
+    what: 'Every config saved for this mode. "in force" is today\'s; "scheduled" ones take over on their day and can still be cancelled; past ones are kept as a record.',
   },
 };

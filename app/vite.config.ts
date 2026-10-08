@@ -2,18 +2,14 @@
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 
-/* The generator playground (playground.html) is always served by `npm run dev`.
-   It is built only for Vercel preview deployments (so a PR can be tried on a
-   phone) or when PLAYGROUND=1 — never into a production deployment. */
-/* the app's tsconfig has no Node types (they'd leak into src/); this file only needs env */
-declare const process: { env: Record<string, string | undefined> };
-const withPlayground = process.env.VERCEL_ENV === 'preview' || process.env.PLAYGROUND === '1';
-
+/* Three pages: the game, and the two admin pages (the generator playground
+   and the generation config). The admin pages are their own chunks, so the
+   game never downloads them, and are gated by sign-in plus public.admins. */
 export default defineConfig({
   plugins: [react()],
   build: {
     rolldownOptions: {
-      input: { main: 'index.html', ...(withPlayground ? { playground: 'playground.html' } : {}) },
+      input: { main: 'index.html', playground: 'playground.html', generation: 'generation.html' },
     },
   },
   test: {

@@ -61,21 +61,29 @@ visuals — `app/src/assets/` and the camera system in `app/src/game/camera/` ar
     coordinates, every number precomputed once per level), plus the small
     rules the UI used to carry inline: `cover.ts`, `scoring.ts` (the one
     mirror of the SQL score), `calendar.ts`, `sites.ts`, `navigation.ts`,
-    `invoice.ts`, `profile.ts`, `graphStats.ts` and `graphIdentity.ts` (when
+    `invoice.ts`, `profile.ts`, `gameModes.ts` (the modes generation can be
+    configured for: only `daily` today), `generationConfig.ts` (which saved
+    config is in force on a day, and the schedule it resolves to — falling
+    back to `DEFAULT_SCHEDULE` when none is saved or it doesn't parse),
+    `graphStats.ts` and `graphIdentity.ts` (when
     two levels are the same: `drawingKey` up to moving/rotating/mirroring,
     `shapeKey` up to node order — an exact canonical labelling), and the
     shared `types.ts`.
   - `src/services/` — `supabase/client.ts`, `result.ts` (`Result<T>`),
     `logger.ts`, one repository per aggregate in `repositories/`, and
-    `auth/` (`AuthProvider` + `useAuth`: the app's single session source),
-    and `generation/` (the worker client for level generation on demand).
+    `auth/` (`AuthProvider` + `useAuth`: the app's single session source;
+    `useIsAdmin`), and `generation/` (worker clients: `generateAsync` for
+    one level on demand, `previewDayAsync` for a schedule's whole day, both
+    over the shared `workerCall`).
   - `src/game/` — the playable board. `state/` (pure reducer that turns taps
     into numbered events, selectors, hints, score-card copy), `camera/` (pure
     maths + `useCamera`), `layout/layout.ts` (lattice → world, memoized per
     level), `scene/` (`buildScene`/minimap/`cable`: the pure replacement for
     the old `renderVals`), `input/` (pointer hook, keymap), `audio/`
     (`AudioService`: Web Audio chirps/crashes/fanfare plus the recorded
-    crackles in `src/assets/sfx/`), `hooks/` (levels queue, score card),
+    crackles in `src/assets/sfx/`), `hooks/` (`useDailySchedule` — today's
+    saved generation config —, the levels queue that generates the week from
+    it, score card),
     `fx.ts` (one-shot Web Animations), `components/` (Board — which owns the
     camera — and its layers, HUD, score card, side rails), `GameScreen.tsx`
     and `useGameSession.ts` (what has to outlive a screen).
@@ -110,11 +118,10 @@ visuals — `app/src/assets/` and the camera system in `app/src/game/camera/` ar
     must keep reproducing the determinism snapshots. To run it off the main
     thread, use `services/generation/generationClient.ts` (`generateAsync`:
     one worker per request, abortable, answers a `Result`).
-  - **Generator playground** (dev only): `npm run dev`, then open
-    `/playground.html`. Its entry is `src/playground.tsx`. `vite.config.ts`
-    adds it as a build input only on Vercel *preview* deployments
-    (`VERCEL_ENV=preview`, i.e. every PR) or with `PLAYGROUND=1`, so it can be
-    tried on a phone from a PR but never ships to production. It drives `generate()` (through `generateAsync`) — the generator with every
+  - **Generator playground** (admin only): `/playground.html`, entry
+    `src/playground.tsx`, built into every deployment as its own chunk (the
+    game never downloads it) and wrapped in `app/admin/AdminPage` (sign-in +
+    `AdminGate` + `AdminNav`). It drives `generate()` (through `generateAsync`) — the generator with every
     former hard-coded rule exposed as `GenOptions` (max/min degree, edge reach,
     clearance, crossings, shortest cycle, strategy — gadget mix and extra
     edges, or free density/spread/edge length — max optimal covers, the
@@ -131,8 +138,32 @@ visuals — `app/src/assets/` and the camera system in `app/src/game/camera/` ar
     read side by side.
     Settings live only in the URL hash; its control ranges and site presets
     come from `OPTION_LIMITS` and `DEFAULT_SCHEDULE`.
+  - **Generation config** (admin only): `/generation.html`, entry
+    `src/generation.tsx`, `screens/GenerationConfig/`. Edits a whole
+    `GenerationSchedule` for a game mode — retries, one tab per site (the
+    playground's `ParamsPanel` through `siteToParams`/`paramsToSite`, plus the
+    site's constraints) and the fallback — previews the week it makes on any
+    day in a worker (per-site time, which retry or the fallback settled it,
+    play-testable schematic), and saves it **from a future day on** (tomorrow
+    at the earliest). The newest saved config is loaded on open; older ones
+    can be loaded back, scheduled ones cancelled.
+  - **Admins and saved generation** (`app/sql/2026-10-07-admin-generation-config.sql`,
+    guarded by `app/sql/ci/checks/admin-generation-config.sql`):
+    `public.admins` (rows added by hand in the SQL editor — data, not a
+    migration — and unreadable from the client), `is_admin()`, and `generation_configs` (`mode`,
+    `effective_from_day`, `schedule` jsonb). Everyone may read the configs;
+    only `save_generation_config`/`delete_generation_config` (security
+    definer, admin-checked, refusing today or earlier) can write them. The
+    admin gate in the app only decides what's shown — Postgres is the check.
+    The game reads the config in force for today (`useDailySchedule`, 5 s
+    timeout) before generating anything; a missing table reads as "nothing
+    saved", since a deploy can go live just before its migration lands. If that read fails or the stored
+    schedule doesn't parse, the game plays `DEFAULT_SCHEDULE` and **doesn't
+    record clears** (`skipSave`: they may not be everyone's puzzles); with no
+    config saved, `DEFAULT_SCHEDULE` *is* the schedule and clears count.
   - `src/app/` — `App.tsx` (screen routing, `AuthProvider`), the staff badge
-    and the once-per-session orientation (`useOrientation`).
+    and the once-per-session orientation (`useOrientation`); `admin/` is the
+    frame both admin pages render in.
   - `src/ui/` (Button, Panel/TabHeader, Tag, Logo, Screen, StaffBadge, Stat,
     Avatar, Field, ListRow/RankRow, ScopeTabs, Message, GradeBadge) and
     `src/sprites/` (PadSprite, CatFlipbook, ThingSprite, PathWeb/PathLit and
@@ -182,8 +213,10 @@ visuals — `app/src/assets/` and the camera system in `app/src/game/camera/` ar
     `cc-snooze`/`cc-zzz` leftovers are gone.)
   - Supabase backs optional sign-in, the leaderboard, crews and squads
     (`src/services/`; SQL in `app/sql/`, applied to production automatically
-    on merge to `main` by `app/tools/migrate.sh` — see `app/sql/README.md`). The puzzle itself still needs no
-    backend, and a signed-out player gets the whole game. Don't add other
+    on merge to `main` by `app/tools/migrate.sh` — see `app/sql/README.md`),
+    and stores the admin-saved generation configs. The puzzle itself still
+    needs no backend — without it, the default schedule plays — and a
+    signed-out player gets the whole game. Don't add other
     persistence (localStorage etc.) without checking with the user first.
 
 ## The board is a camera, not a fit
@@ -326,8 +359,8 @@ side effects inside render).
 - `src/domain/` — pure TypeScript: level generation, house, cover rules, scoring,
   calendar, sites, share text. No React, DOM, Supabase or `Math.random()`.
 - `src/services/` — Supabase client, repositories (one file per aggregate:
-  profiles, siteClears, leaderboards, friendships, squads), auth provider, the
-  generation worker client.
+  profiles, siteClears, leaderboards, friendships, squads, admin,
+  generationConfigs), auth provider, the generation worker clients.
   Repositories return `Result<T>` and log through one shared logger. Components
   never call Supabase directly; they use repositories via hooks.
 - `src/game/` — reducer + selectors, pure camera maths, scene building, input
@@ -397,7 +430,8 @@ npm run lint       # oxlint
 - Levels must keep a **unique** optimal cover — this is what makes the
   puzzle feel deducible rather than guessed. If you touch the generator,
   preserve the uniqueness check rather than relaxing it for convenience.
-  (`maxOptima` can relax it, but only the playground does; the game stays at
+  (`maxOptima` can relax it, but only the playground does — the generation
+  config page and `resolveSchedule` refuse it via `gameRuleErrors`; the game stays at
   1, and the INSIDER hint assumes one solution. Changing that is the user's
   call.)
 

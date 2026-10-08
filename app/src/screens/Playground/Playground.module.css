@@ -1,4 +1,4 @@
-/* Dev-only generator playground. Colours come from tokens.css. */
+/* The admin generator playground (and the generation config page, which shares its panels). Colours come from tokens.css. */
 .page { min-height: 100vh; background: var(--page); color: var(--on-dark); font-family: var(--font-body); }
 
 .header { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; padding: 14px 16px 6px; }

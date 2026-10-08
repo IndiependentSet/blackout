@@ -1,0 +1,14 @@
+/* The admin pages' shared chrome: the gate's messages and the nav bar. */
+.gate { display: grid; gap: 14px; justify-items: center; padding-top: 18vh; text-align: center; }
+.gateTitle { font-family: var(--font-display); color: var(--gold); font-size: 28px; letter-spacing: .04em; }
+.gateCopy { color: var(--lavender); font-size: 15px; max-width: 420px; line-height: 1.4; }
+
+.nav {
+  display: flex; align-items: center; gap: 4px 14px; flex-wrap: wrap; padding: 10px 16px 0;
+  font-family: var(--font-body); font-size: 13px; font-weight: 800;
+}
+.badge { font-family: var(--font-display); color: var(--gold); letter-spacing: .06em; font-size: 15px; margin-right: 4px; }
+.link { color: var(--lavender); text-decoration: none; padding: 4px 0; border-bottom: 2px solid transparent; }
+.link:hover { color: var(--on-dark); }
+.current { color: var(--on-dark); border-bottom-color: var(--gold); }
+.who { margin-left: auto; color: var(--muted); font-weight: 700; }

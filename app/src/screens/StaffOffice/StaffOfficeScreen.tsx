@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { signOut } from '../../services/repositories/auth';
 import { useAuth } from '../../services/auth/authContext';
-import { Screen, ScreenHeader } from '../../ui';
+import { useIsAdmin } from '../../services/auth/useIsAdmin';
+import { Button, Screen, ScreenHeader } from '../../ui';
 import { CrewScreen } from '../Crew/CrewScreen';
 import { IdCard } from './IdCard';
 import { Leaderboard } from './Leaderboard';
@@ -18,6 +19,7 @@ export function StaffOfficeScreen({ onClose, weeklyPerfect }: { onClose: () => v
   const link = useMagicLink();
   const [email, setEmail] = useState('');
   const [crewOpen, setCrewOpen] = useState(false);
+  const { admin } = useIsAdmin(auth.userId);
 
   if (crewOpen && auth.userId) return <CrewScreen userId={auth.userId} onClose={() => setCrewOpen(false)} />;
 
@@ -40,6 +42,7 @@ export function StaffOfficeScreen({ onClose, weeklyPerfect }: { onClose: () => v
           <IdCard userId={auth.userId} email={auth.email ?? ''} username={auth.username} weeklyPerfect={weeklyPerfect}
             onSaved={auth.setHandle} onSignOut={signOut} onOpenCrew={() => setCrewOpen(true)} />
           <Leaderboard userId={auth.userId} />
+          {admin && <Button variant="glass" size="nav" onClick={() => window.location.assign('/generation.html')}>ADMIN TOOLS ›</Button>}
         </div>
       )}
     </Screen>

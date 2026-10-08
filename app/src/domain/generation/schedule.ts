@@ -44,19 +44,31 @@ export const DEFAULT_SCHEDULE: GenerationSchedule = {
   fallback: { diff: 1, options: { budgetMs: 900 } },
 };
 
-/** The level a site gets on a given day. */
-export function levelForSite(schedule: GenerationSchedule, daySeed: number, idx: number): Level {
+/** How a site's level came about: which retry it settled on, or the fallback. */
+export interface SiteOutcome {
+  level: Level;
+  /** the retry (0-based) that produced the level; null when the fallback did */
+  salt: number | null;
+}
+
+/** The level a site gets on a given day, and which rule produced it. */
+export function levelForSiteReport(schedule: GenerationSchedule, daySeed: number, idx: number): SiteOutcome {
   const site = schedule.sites[idx];
   if (!site) throw new RangeError(`no site ${idx} in the schedule`);
   const accept = constraintFilter(site.constraints);
   for (let salt = 0; salt < schedule.retries; salt++) {
     const rng = rngFromSeed(daySeed * 7919 + idx * 104729 + salt * 31);
     const { level } = generateWith(rng, site.size, site.diff, site.options, accept);
-    if (level) return level;
+    if (level) return { level, salt };
   }
   const { level } = generateWith(rngFromSeed(daySeed + idx), site.size, schedule.fallback.diff, schedule.fallback.options);
   if (!level) throw new Error(`site ${idx} produced no level, even with the fallback rules`);
-  return level;
+  return { level, salt: null };
+}
+
+/** The level a site gets on a given day. */
+export function levelForSite(schedule: GenerationSchedule, daySeed: number, idx: number): Level {
+  return levelForSiteReport(schedule, daySeed, idx).level;
 }
 
 /** Every site's level for a day, in site order. */
