@@ -212,10 +212,11 @@ visuals — `app/src/assets/` and the camera system in `app/src/game/camera/` ar
     sequence that holds on the wreckage) when a cat gets to them. (The old
     `cc-snooze`/`cc-zzz` leftovers are gone.)
   - Supabase backs optional sign-in, the leaderboard, crews and squads
-    (`src/services/`; SQL in `app/sql/`), and stores the admin-saved
-    generation configs. The puzzle itself still needs no backend — without
-    it, the default schedule plays — and a signed-out player gets the whole
-    game. Don't add other
+    (`src/services/`; SQL in `app/sql/`, applied to production automatically
+    on merge to `main` by `app/tools/migrate.sh` — see `app/sql/README.md`),
+    and stores the admin-saved generation configs. The puzzle itself still
+    needs no backend — without it, the default schedule plays — and a
+    signed-out player gets the whole game. Don't add other
     persistence (localStorage etc.) without checking with the user first.
 
 ## The board is a camera, not a fit
@@ -396,6 +397,11 @@ side effects inside render).
   the user before changing generation (any fix changes the days' puzzles).
 - The layer rules are enforced by `no-restricted-imports` overrides in
   `app/.oxlintrc.json` — fix the dependency, don't disable the rule.
+- Schema changes: a new `app/sql/YYYY-MM-DD-name.sql`, never an edit to one
+  that has merged (the runner checksums applied files and refuses). CI replays
+  every migration onto a Supabase stand-in (`app/sql/ci/supabase-stub.sql`)
+  and runs `app/sql/ci/checks/`; merging applies it to production. No
+  `begin`/`commit` inside a migration — each already runs in a transaction.
 - New board behaviour: put the rule in `game/state/gameReducer.ts` (pure,
   returns an event), react to the event in `GameScreen` (sound, saving, UI
   effects), and draw it from `buildScene`. Don't mutate instance fields or
