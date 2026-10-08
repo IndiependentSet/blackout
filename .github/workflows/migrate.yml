@@ -1,0 +1,41 @@
+name: migrate
+# Applies new app/sql/ migrations to the production database once they are on
+# main. See app/sql/README.md (and its one-time setup: the SUPABASE_DB_URL
+# secret on the `production` environment).
+on:
+  push:
+    branches: [main]
+    paths:
+      - app/sql/**
+      - app/tools/migrate.sh
+      - .github/workflows/migrate.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: migrate-production
+  cancel-in-progress: false
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGSSLMODE: require
+      PGCONNECT_TIMEOUT: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check the database secret is set
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::Set the SUPABASE_DB_URL secret on the 'production' environment (Supabase → Connect → Session pooler). See app/sql/README.md."
+            exit 1
+          fi
+      - name: Install psql
+        run: command -v psql || (sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client)
+      - name: Pending migrations
+        run: |
+          pending="$(app/tools/migrate.sh --baseline app/sql/BASELINE --check-only)"
+          echo "${pending:-nothing to apply}"
+      - name: Apply them
+        run: app/tools/migrate.sh --baseline app/sql/BASELINE
