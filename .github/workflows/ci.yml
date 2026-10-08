@@ -21,3 +21,38 @@ jobs:
         env:
           VITE_SUPABASE_URL: https://example.supabase.co
           VITE_SUPABASE_ANON_KEY: ci-placeholder
+  # Every migration in app/sql/ replays, in order, onto a throwaway Postgres
+  # shaped like Supabase (app/sql/ci/supabase-stub.sql); then the checks in
+  # app/sql/ci/checks/ run against the result. Production is never touched here.
+  migrations:
+    name: migrations (throwaway DB)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install psql
+        run: command -v psql || (sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client)
+      - name: Load the Supabase stand-in
+        run: psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -f sql/ci/supabase-stub.sql
+      - name: Replay every migration
+        run: tools/migrate.sh
+      - name: A second run has nothing to do
+        run: |
+          pending="$(tools/migrate.sh --check-only)"
+          if [ -n "$pending" ]; then echo "::error::still pending after a full run: $pending"; exit 1; fi
+      - name: The production baseline names real files
+        run: tools/migrate.sh --baseline sql/BASELINE --check-only
+      - name: Checks
+        run: for f in sql/ci/checks/*.sql; do echo "$f"; psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -f "$f"; done
