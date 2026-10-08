@@ -20,7 +20,10 @@ function chain(table: string) {
 }
 
 vi.mock('../supabase/client', () => ({
-  supabase: { from: (t: string) => chain(t) },
+  supabase: {
+    from: (t: string) => chain(t),
+    rpc: (fn: string, args?: unknown) => { calls.push({ table: 'rpc', method: fn, args: [args] }); return chain('rpc:' + fn); },
+  },
   APP_BASE_URL: 'http://localhost',
 }));
 vi.mock('../logger', () => ({ logger: { error: vi.fn() } }));
@@ -29,6 +32,9 @@ const { setUsername, searchPlayers } = await import('./profiles');
 const { getFriendships } = await import('./friendships');
 const { getBoardFor } = await import('./leaderboards');
 const { createSquad, joinSquadByCode } = await import('./squads');
+const { isAdmin } = await import('./admin');
+const { configInForce, deleteConfig, listConfigs, saveConfig } = await import('./generationConfigs');
+const { DEFAULT_SCHEDULE } = await import('../../domain/generation');
 
 beforeEach(() => { responses = {}; calls.length = 0; });
 
@@ -99,5 +105,53 @@ describe('squads', () => {
   it('reports an unknown invite code', async () => {
     responses.squads = { data: null };
     expect(await joinSquadByCode('u', 'site-0000')).toEqual({ ok: false, error: 'NO SQUAD WITH THAT CODE.' });
+  });
+});
+
+describe('admin', () => {
+  it('never asks the db about a signed-out visitor', async () => {
+    expect(await isAdmin(null)).toEqual({ ok: true, data: false });
+    expect(calls).toHaveLength(0);
+  });
+  it('answers what is_admin says', async () => {
+    responses['rpc:is_admin'] = { data: true };
+    expect(await isAdmin('u')).toEqual({ ok: true, data: true });
+    responses['rpc:is_admin'] = { data: null, error: { message: 'down' } };
+    expect(await isAdmin('u')).toEqual({ ok: false, error: 'down' });
+  });
+});
+
+describe('generation configs', () => {
+  const row = { id: 4, mode: 'daily', effective_from_day: 180, schedule: { version: 1 }, note: null, created_at: 't' };
+  it('maps rows to configs', async () => {
+    responses.generation_configs = { data: [row] };
+    expect(await listConfigs('daily')).toEqual({ ok: true, data: [
+      { id: 4, mode: 'daily', effectiveFromDay: 180, schedule: { version: 1 }, note: '', createdAt: 't' },
+    ] });
+  });
+  it('reads only the config in force on a day', async () => {
+    responses.generation_configs = { data: [] };
+    expect(await configInForce('daily', 179)).toEqual({ ok: true, data: null });
+    expect(calls).toContainEqual({ table: 'generation_configs', method: 'lte', args: ['effective_from_day', 179] });
+    responses.generation_configs = { data: [row] };
+    const r = await configInForce('daily', 181);
+    expect(r.ok && r.data?.id).toBe(4);
+  });
+  it('reads a missing table as nothing saved, and any other failure as a failure', async () => {
+    responses.generation_configs = { error: { message: 'Could not find the table', code: 'PGRST205' } };
+    expect(await configInForce('daily', 9)).toEqual({ ok: true, data: null });
+    responses.generation_configs = { error: { message: 'relation does not exist', code: '42P01' } };
+    expect(await configInForce('daily', 9)).toEqual({ ok: true, data: null });
+    responses.generation_configs = { error: { message: 'timeout', code: '57014' } };
+    expect(await configInForce('daily', 9)).toEqual({ ok: false, error: 'timeout' });
+  });
+  it('saves and deletes through the admin-checked functions', async () => {
+    responses['rpc:save_generation_config'] = { data: 9 };
+    expect(await saveConfig('daily', 200, DEFAULT_SCHEDULE, 'n')).toEqual({ ok: true, data: 9 });
+    expect(calls).toContainEqual({ table: 'rpc', method: 'save_generation_config', args: [
+      { p_mode: 'daily', p_effective_from_day: 200, p_schedule: DEFAULT_SCHEDULE, p_note: 'n' },
+    ] });
+    responses['rpc:delete_generation_config'] = { error: { message: 'only admins can change level generation' } };
+    expect(await deleteConfig(9)).toEqual({ ok: false, error: 'only admins can change level generation' });
   });
 });

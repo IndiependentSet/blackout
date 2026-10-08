@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { scoreRun } from '../../domain/scoring';
-import { bestNote, cardTitle, saveNote, signed } from './scoreCopy';
+import { bestNote, cardTitle, saveNote, signed, skipSave } from './scoreCopy';
 
 const perfect = scoreRun({ stars: 3, k: 4 }, 4);
 const over = scoreRun({ stars: 3, k: 4 }, 5);
@@ -24,6 +24,13 @@ describe('score card copy', () => {
     expect(saveNote({ kind: 'saved' })).toBe('SAVED TO YOUR LEDGER');
     expect(saveNote({ kind: 'anon' })).toBe('SIGN IN TO SAVE YOUR SCORE');
     expect(saveNote({ kind: 'error', message: 'boom' })).toBe('SCORE NOT SAVED — boom');
+    expect(saveNote({ kind: 'offSchedule' })).toBe('OFF-SCHEDULE: NOT ON THE BOARD');
+  });
+  it('only records a signed-in clear of an on-schedule level', () => {
+    expect(skipSave('u', true)).toBeNull();
+    expect(skipSave(null, true)).toEqual({ kind: 'anon' });
+    expect(skipSave('u', false)).toEqual({ kind: 'offSchedule' });
+    expect(skipSave(null, false)).toEqual({ kind: 'offSchedule' });
   });
   it('signs row values', () => {
     expect(signed(30)).toBe('+30');

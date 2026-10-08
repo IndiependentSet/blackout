@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Level } from '../types';
-import { DEFAULT_SCHEDULE, generate, levelForSite, levelsForDay, parseSchedule, type GenerationSchedule } from '.';
+import { DEFAULT_SCHEDULE, generate, levelForSite, levelForSiteReport, levelsForDay, parseSchedule, type GenerationSchedule } from '.';
 import { constraintFilter } from './constraints';
 
 /* frozen clock, as in determinism.test.ts */
@@ -51,5 +51,19 @@ describe('schedule', () => {
 
   it('refuses a site it does not have', () => {
     expect(() => levelForSite(DEFAULT_SCHEDULE, 1, DEFAULT_SCHEDULE.sites.length)).toThrow(RangeError);
+  });
+
+  it('reports which retry settled a site without changing the level', () => {
+    const r = levelForSiteReport(DEFAULT_SCHEDULE, 40, 2);
+    expect(r.level).toEqual(levelForSite(DEFAULT_SCHEDULE, 40, 2));
+    expect(r.salt).not.toBeNull();
+  });
+
+  it('reports the fallback when no retry can meet the rules', () => {
+    const impossible: GenerationSchedule = {
+      ...DEFAULT_SCHEDULE, retries: 1,
+      sites: DEFAULT_SCHEDULE.sites.map(s => ({ ...s, options: { ...s.options, clock: false, attempts: 2 }, constraints: { maxK: 0 } })),
+    };
+    expect(levelForSiteReport(impossible, 40, 1).salt).toBeNull();
   });
 });
