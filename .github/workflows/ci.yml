@@ -25,6 +25,7 @@ jobs:
   # shaped like Supabase (app/sql/ci/supabase-stub.sql); then the checks in
   # app/sql/ci/checks/ run against the result. Production is never touched here.
   migrations:
+    name: migrations (throwaway DB)
     runs-on: ubuntu-latest
     services:
       postgres:
