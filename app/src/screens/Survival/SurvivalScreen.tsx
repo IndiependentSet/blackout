@@ -2,9 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { betterRun, mergeBest, type RunSummary } from '../../domain/survival';
 import { GameScreen } from '../../game/GameScreen';
 import { useServerBest, useSurvivalBoard } from '../../game/hooks/useSurvivalRanking';
+import { usePoolPublished } from '../../game/hooks/usePoolPublished';
 import { useSurvivalSession } from '../../game/useSurvivalSession';
-import type { StaffBadgeInfo } from '../../ui';
+import { UNPUBLISHED_COPY } from '../../services/repositories/levelPools';
+import { Button, Message, type StaffBadgeInfo } from '../../ui';
 import { SurvivalHud } from './SurvivalHud';
+import styles from './Survival.module.css';
 import { SurvivalSummary } from './SurvivalSummary';
 
 interface Props {
@@ -54,5 +57,14 @@ function SurvivalRun({ userId, badge, best, onFinish, onOpenAccount, onOpenHub, 
 /* Survival: as many sites as the clock allows. Each run is its own mount (and its own run seed), so PLAY AGAIN is a new key. */
 export function SurvivalScreen(props: Props) {
   const [run, setRun] = useState(0);
+  const pool = usePoolPublished('survival');
+  if (pool === 'empty') {
+    return (
+      <div className={styles.unpublished}>
+        <Message tone="muted">{UNPUBLISHED_COPY}</Message>
+        <Button variant="glass" onClick={props.onOpenHub}>BACK TO DASHBOARD</Button>
+      </div>
+    );
+  }
   return <SurvivalRun key={run} {...props} onAgain={() => setRun(n => n + 1)} />;
 }

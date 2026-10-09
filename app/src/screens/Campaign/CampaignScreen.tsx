@@ -1,7 +1,9 @@
 import type { CampaignClears } from '../../domain/campaign';
 import type { Persistence } from '../../game/hooks/useCampaignClears';
+import { usePoolPublished } from '../../game/hooks/usePoolPublished';
 import { IS_MOCK_SOURCE } from '../../services/levels';
-import { Button, Logo, Panel, StaffBadge, Tag, type StaffBadgeInfo } from '../../ui';
+import { UNPUBLISHED_COPY } from '../../services/repositories/levelPools';
+import { Button, Logo, Message, Panel, StaffBadge, Tag, type StaffBadgeInfo } from '../../ui';
 import { ChapterList } from './ChapterList';
 import styles from './Campaign.module.css';
 
@@ -23,6 +25,7 @@ interface Props {
 
 /* The campaign map. The campaign needs a staff login, so a signed-out player gets the way to one instead of the map. */
 export function CampaignScreen({ signedIn, clears, persistence, badge, onOpenLevel, onOpenAccount, onBack }: Props) {
+  const pool = usePoolPublished('campaign');
   return (
     <div className={styles.page}>
       <div className={styles.inner}>
@@ -45,7 +48,8 @@ export function CampaignScreen({ signedIn, clears, persistence, badge, onOpenLev
               {IS_MOCK_SOURCE && <Tag tone="orchid" size="sm">DEV MOCK</Tag>}
               <span className={styles.note}>{PERSISTENCE_NOTE[persistence]}</span>
             </div>
-            <ChapterList clears={clears} onOpenLevel={onOpenLevel} />
+            {pool === 'empty' && <Message tone="muted">{UNPUBLISHED_COPY}</Message>}
+            <ChapterList clears={clears} onOpenLevel={pool === 'empty' ? () => {} : onOpenLevel} />
           </>
         ) : (
           <div className={styles.gate}>

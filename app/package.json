@@ -12,7 +12,16 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check": "npm run lint && npm run typecheck && npm run test && npm run build"
+    "check": "npm run lint && npm run typecheck && npm run test && npm run build",
+    "db:up": "tools/db-local.sh up",
+    "db:down": "tools/db-local.sh down",
+    "db:reset": "tools/db-local.sh reset",
+    "db:admin": "tools/db-local.sh admin",
+    "db:psql": "tools/db-local.sh psql",
+    "local": "tools/db-local.sh dev",
+    "local:seed": "tools/db-local.sh seed",
+    "local:pools": "tools/db-local.sh pools",
+    "local:login": "tools/db-local.sh login"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.115.0",

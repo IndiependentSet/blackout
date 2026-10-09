@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { makeLevelForDay } from '../../domain/engine';
+import { DEFAULT_SCHEDULE, levelForSite } from '../../domain/generation';
 import type { AccessoryArt, Loadout } from '../../domain/types';
 import { layoutFor } from '../layout/layout';
 
@@ -11,7 +11,7 @@ vi.mock('../../assets/cosmetics', () => ({
 
 const { buildScene } = await import('./buildScene');
 
-const lv = makeLevelForDay(12, 2);
+const lv = levelForSite(DEFAULT_SCHEDULE, 12, 2);
 const layout = layoutFor(lv);
 const input = { layout, siteIdx: 2, placed: [0, 3] as number[], hint: null, focus: 0, kbd: false };
 const worn: Loadout = { head: 'hard-hat', neck: null };

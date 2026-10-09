@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { coveredEdges, isCleared } from '../../domain/cover';
-import { solve } from '../../domain/engine';
+import { solve } from '../../domain/generation';
 import { CAMPAIGN_LEVELS } from '../../domain/types';
 import type { LevelRequest } from '../../domain/types';
 import { BASE_MAPS } from './fixtures/baseMaps';

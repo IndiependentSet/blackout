@@ -29,3 +29,5 @@
 
 /* leaderboard */
 .boardHead { display: flex; gap: 6px; align-items: flex-end; }
+
+.adminList { display: flex; flex-wrap: wrap; gap: 8px; }

@@ -14,3 +14,8 @@ export function toResult<T>(scope: string, data: T, error: DbError | null): Resu
 
 /** Postgres unique_violation. */
 export const UNIQUE_VIOLATION = '23505';
+
+/** The table doesn't exist (yet): Postgres undefined_table, or PostgREST's
+    "not in the schema cache", which is how a missing table reaches the client. */
+export const isMissingTable = (error: DbError | null): boolean =>
+  !!error && (error.code === '42P01' || error.code === 'PGRST205');

@@ -10,7 +10,13 @@ vi.mock('../services/supabase/client', () => ({
       onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
       signOut: () => Promise.resolve(),
     },
-    from: () => { throw new Error('signed-out play must not touch the database'); },
+    /* the one read a signed-out player makes: today's generation config (none saved here) */
+    from: (table: string) => {
+      if (table !== 'generation_configs') throw new Error('signed-out play must only read the generation config');
+      const query = { select: () => query, eq: () => query, lte: () => query, order: () => query,
+        limit: () => Promise.resolve({ data: [], error: null }) };
+      return query;
+    },
   },
 }));
 

@@ -20,7 +20,7 @@
 --   void     cancelled, declined, expired, or nobody cleared it
 --
 -- Access: select by policy for the two participants only. Every change goes
--- through the functions in 2026-10-12-match-rpc.sql (security definer); there
+-- through the functions in 2026-10-13-match-rpc.sql (security definer); there
 -- are no INSERT/UPDATE/DELETE grants on purpose, so a client cannot write its
 -- own win. Realtime (postgres_changes) respects these select policies.
 

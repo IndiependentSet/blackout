@@ -153,13 +153,13 @@ describe('useSurvivalSession on the server', () => {
     clearBoard(result);
     await flush();
     expect(repo.submit).toHaveBeenCalledTimes(1);
-    expect(repo.submit).toHaveBeenLastCalledWith('run-1', 0, first, [...first.sol]);
+    expect(repo.submit).toHaveBeenLastCalledWith('run-1', 0, [...first.sol]);
 
     const second = result.current.level as Level;
     clearBoard(result);
     await flush();
     expect(repo.submit).toHaveBeenCalledTimes(2);
-    expect(repo.submit).toHaveBeenLastCalledWith('run-1', 1, second, [...second.sol]);
+    expect(repo.submit).toHaveBeenLastCalledWith('run-1', 1, [...second.sol]);
     expect(repo.start).toHaveBeenCalledTimes(1);
   });
 

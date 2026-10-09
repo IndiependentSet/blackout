@@ -46,112 +46,145 @@ visuals — `app/src/assets/` and the camera system in `app/src/game/camera/` ar
 - `project/` — Claude Design prototype files (`.dc.html`, `engine.js`,
   `support.js`). These are exported prototypes, not the app; don't edit them
   to fix bugs — port fixes into `app/` instead. `project/engine.js` and
-  `app/src/domain/engine.ts` are (currently) the same solver (the app's is
-  typed); 
+  `app/src/domain/generation/` (`solver.ts`, `generate.ts` and friends) are
+  (currently) the same generator and solver, the app's typed and split up;
   if you change one for a real fix, check whether the other needs it too, or
   whether `project/` can just be left as a historical snapshot.
 - `app/` — the actual React app (Vite + React 19, **TypeScript strict**, CSS
   Modules). This is what ships and what you should be editing for any real
   feature/bug work. See *Engineering standards* below for the layer rules.
   - `src/domain/` — pure TypeScript, no React/DOM/Supabase (lint-enforced):
-    `engine.ts` (seeded RNG, gadget-based level generator — leaf chains,
-    degree-2 paths, cycles, hubs, crowns — exact branch-and-bound solver, and
-    the hint helpers `hintLeaf`/`hintMatching`/`hintReveal`), `house.ts` (the
+    `generation/` (below), `rng.ts` (the seeded RNG everything random draws
+    from), `geometry.ts`, `hints.ts` (`hintLeaf`/`hintMatching`/`hintReveal`),
+    `house.ts` (the
     building the puzzle sits in, below; seeded by the level's own
     coordinates, every number precomputed once per level), plus the small
     rules the UI used to carry inline: `cover.ts`, `scoring.ts` (the one
-    mirror of the SQL score), `calendar.ts`, `sites.ts`, `campaign.ts` (the 7 chapters = 100 levels, campaign stars, unlock rule), `survival.ts` (the 180 s clock, run summary, best run; the caller passes `now`), `match.ts` (1vs1 clocks and outcome, the lobby's grouping, and `isMatchLevel`, the guard for a level read back from JSON; the caller passes `now`), `navigation.ts`,
-    `invoice.ts`, `profile.ts`, and the shared `types.ts`.
+    mirror of the SQL score), `calendar.ts`, `sites.ts`, `navigation.ts`,
+    `invoice.ts`, `profile.ts`, `gameModes.ts` (the modes generation can be
+    configured for: only `daily` today), `generationConfig.ts` (which saved
+    config is in force on a day, and the schedule it resolves to — falling
+    back to `DEFAULT_SCHEDULE` when none is saved or it doesn't parse),
+    `graphStats.ts` and `graphIdentity.ts` (when
+    two levels are the same: `drawingKey` up to moving/rotating/mirroring,
+    `shapeKey` up to node order — an exact canonical labelling), and the
+    shared `types.ts`.
   - `src/services/` — `supabase/client.ts`, `result.ts` (`Result<T>`),
     `logger.ts`, one repository per aggregate in `repositories/`, and
-    `auth/` (`AuthProvider` + `useAuth`: the app's single session source).
-    `levels/` is the port the non-daily game modes get their levels from:
-    `LevelSource.getLevel(LevelRequest)` returns a `Level`. Today only
-    `mockLevelSource` exists (a few fixed maps in `fixtures/baseMaps.ts`, picked
-    deterministically, no RNG or clock) until the backend generator arrives;
-    `IS_MOCK_SOURCE` tells the UI to show a DEV MOCK tag. The daily does not go
-    through it — it still uses `makeLevelForDay`.
-    `realtime/matchChannel.ts` wraps the Supabase realtime client for a 1vs1
-    (presence, a progress broadcast, `postgres_changes`) and for the lobby's
-    inbox; both return a `close` that is safe to call twice.
+    `auth/` (`AuthProvider` + `useAuth`: the app's single session source;
+    `useIsAdmin`), and `generation/` (worker clients: `generateAsync` for
+    one level on demand, `previewDayAsync` for a schedule's whole day, both
+    over the shared `workerCall`).
   - `src/game/` — the playable board. `state/` (pure reducer that turns taps
     into numbered events, selectors, hints, score-card copy), `camera/` (pure
     maths + `useCamera`), `layout/layout.ts` (lattice → world, memoized per
     level), `scene/` (`buildScene`/minimap/`cable`: the pure replacement for
     the old `renderVals`), `input/` (pointer hook, keymap), `audio/`
     (`AudioService`: Web Audio chirps/crashes/fanfare plus the recorded
-    crackles in `src/assets/sfx/`), `hooks/` (levels queue, score card),
+    crackles in `src/assets/sfx/`), `hooks/` (`useDailySchedule` — today's
+    saved generation config —, the levels queue that generates the week from
+    it, score card),
     `fx.ts` (one-shot Web Animations), `components/` (Board — which owns the
     camera — and its layers, HUD, score card, side rails), `GameScreen.tsx`
-    and `useGameSession.ts` (what has to outlive a screen). `loadout/` holds the
-    player's wardrobe above every screen (`LoadoutProvider` + `useLoadout`): the
-    accessories they own and wear, read by `GameScreen` (which hands it to
-    `Board`) and by the staff office's Wardrobe; signed out, or with the tables
-    missing, every cat is bare. `GameScreen` plays
-    any `PlaySession` (`session.ts`): its levels, board state, a `PlaySet`
-    (how many levels, what to call them), `PlayFeatures` (hints/invoice/share)
-    and a `save` strategy. The daily is the first session; `hooks/useClearSaver.ts`
-    runs the save and ignores stale responses. The campaign is the second:
-    `useCampaignSession.ts` plays one chapter (its levels are the board's
-    "sites"; a level not yet unlocked is held back as `null`, which is all
-    `GameScreen` needs to refuse it) and saves each clear under its campaign
-    level number. The player's clears live in `hooks/useCampaignClears.ts`,
-    per account, held in `Shell`: the saved record is loaded from the server
-    (`repositories/campaign.ts`), a clear shows on the map at once and is
-    written through `save`, and `persistence` (`loading` / `server` / `memory`)
-    tells the map whether progress is being kept. If the table is missing or a
-    save fails it carries on in memory with a note; there is no localStorage
-    (don't add one without asking). `hooks/useStreak.ts` reads the daily streak
-    (`repositories/streaks.ts`, the `player_streaks` view) for the hub card and
-    the ID card. Survival is the third: `useSurvivalSession.ts` keeps the run
-    in a pure `runReducer` (a one-site board, `PlaySet.open`, restarted by
-    `restart` after every clear; `siteOffset` is how many are behind it), asks
-    the level source for the open site and the next one
-    (`hooks/useSurvivalLevels.ts`), and runs the 180 s clock from the moment
-    the first site is on the board. It has no `save`, no hints and no
-    localStorage. A signed-in player's run is also registered on the server
-    by `hooks/useSurvivalRecorder.ts` (`start_survival_run` at the first site,
-    `submit_survival_site` per clear, one at a time, in order; the server keeps
-    its own clock and covers-check, the client never sends a time). Whatever
-    happens there, the run is still played locally: a missing migration or a
-    dropped connection only turns `recording` to `unsaved` and shows a note.
-    `hooks/useSurvivalRanking.ts` reads the leaderboard (after the last site
-    is answered for) and the player's server best (once, at the start, so the
-    run in progress never counts against it); `Shell` shows the better of that
-    and the session's best on the hub card. `hooks/useBoardView.ts` is the
-    expand/dim preference shared by sessions.
-    1vs1 is the fourth: `useMatchSession.ts` is a one-site board (`MATCH_SET`,
-    no hints) whose `save` submits the cats of the clear it was made in;
-    `GameScreen` is kept `locked` until the server's clock says go. The match
-    itself (rows, clock, opponent) lives in `screens/Match/useMatch.ts`: the
-    server's rows are the truth (`repositories/matches.ts`, every write an RPC
-    — see app/sql/README.md), `services/realtime/matchChannel.ts` carries
-    presence, the opponent's progress (a bare number) and "something changed,
-    read it again". Countdown, live clock and "opponent gone" are derived from
-    `starts_at`/`ends_at` against a ticking `now` (`domain/match.ts`), never
-    stored. The channel is closed on unmount, and the level object is kept
-    across re-reads so the board does not rebuild its house.
-  - `src/screens/` — `Hub/` (the dashboard: one card per game mode, state
-    derived in `hubCards.ts`), `Campaign/` (the 7-chapter map, and
-    `CampaignPlay` which puts one chapter on the board; needs a staff login),
-    `Survival/` (the run with its clock HUD, and the summary; open to everyone),
-    `Match/` (the 1vs1 lobby, the waiting room, the match HUD and result sheet;
-    needs a staff login; `Crew`'s head-to-head view has a CHALLENGE LIVE button
-    that opens the lobby with that workmate picked),
-    `WorkOrder/`, `StaffOffice/` (sign-in, ID card,
-    leaderboard, and `BadgeShelf`, which loads a player's badges for the ID card
-    and for `Crew/ProfileView`; it renders nothing while loading or when the read
-    fails), `Crew/` (roster, squads, profiles), `HowToPlay/`. The badges are awarded
-    by the server only (`app/sql/2026-10-16-badges.sql`): `domain/badges.ts` is the
-    client's catalogue of ids, names and descriptions, `repositories/badges.ts` is
-    read-only, and `domain/badges.test.ts` holds the catalogue to the SQL seed — add
-    a badge in both or the test fails. The six ids are what cosmetics unlock from.
-    `StaffOffice/Wardrobe` lists the accessories and puts them on or takes them off
-    (`domain/cosmetics.ts` is the catalogue, mirrored by `app/sql/2026-10-18-cosmetics.sql`;
-    a locked one says which badge unlocks it, and one with no art yet shows ART COMING).
-  - `src/app/` — `App.tsx` (screen routing — it opens on the dashboard —
-    and `AuthProvider`), the staff badge and the once-per-session orientation
-    (`useOrientation`, shown on the dashboard).
+    and `useGameSession.ts` (what has to outlive a screen).
+  - `src/screens/` — `WorkOrder/`, `StaffOffice/` (sign-in, ID card,
+    leaderboard), `Crew/` (roster, squads, profiles), `HowToPlay/`, and the
+    dev-only `Playground/` (below).
+  - **`src/domain/generation/`** — level generation as its own module, with
+    **one public API, `index.ts`**: nothing outside the folder imports its
+    files (lint-enforced by `no-restricted-imports`). Inside: `options.ts`
+    (`DEFAULT_GEN`, `OPTION_LIMITS`, `resolveOptions`), `builder.ts` (the
+    mutable graph and the rules every path must pass: degree, reach,
+    clearance, crossings, shortest cycle), and two **strategies** chosen by
+    `GenOptions.strategy`: `gadgets` (the game's: `gadgets.ts` — leaf chains,
+    degree-2 paths, cycles, hubs, crowns, each difficulty's menu — grown by
+    `growth.ts`, ties broken with a spur) and `free` (`free.ts`: no templates,
+    junctions placed in a box sized by `spread` and wired towards a target
+    `density` with a `lengthBias`, ties broken by adding a path, never a
+    leaf). `hardness.ts` (`greedyCover`, `matchingBound`) backs the optional
+    `greedyMustFail`/`minBoundGap` filters, and `maxOptima` (1 = unique) sets
+    how many optimal covers a level may have. `solver.ts` (exact branch-and-bound `solve` — the
+    uniqueness check — and the star rating `difficulty`), `generate.ts`
+    (`generate(request)`: seed, size, difficulty, options, constraints in;
+    level, its other optimal covers (the first `KEPT_OPTIMA`) and a `GenReport` out), `schedule.ts` (the game's
+    week as data: `DEFAULT_SCHEDULE`, one `SiteRule` per site, retries and a
+    fallback; `levelForSite`/`levelsForDay` run it) and `parse.ts`
+    (`parseSchedule`/`parseOptions`: untrusted JSON → a schedule or a list of
+    errors). Every request and schedule is plain JSON, so it can be stored,
+    edited or posted to a worker. Every new option defaults to what the game
+    already did (gadgets, any cycle, unique, no hardness filters), so
+    `DEFAULT_GEN` makes the same RNG draws as before. The seed mixing in `levelForSite` is the
+    "same puzzles for everyone" contract, not a setting. `DEFAULT_SCHEDULE`
+    must keep reproducing the determinism snapshots. To run it off the main
+    thread, use `services/generation/generationClient.ts` (`generateAsync`:
+    one worker per request, abortable, answers a `Result`).
+  - **Generator playground** (admin only): `/playground.html`, entry
+    `src/playground.tsx`, built into every deployment as its own chunk (the
+    game never downloads it) and wrapped in `app/admin/AdminPage` (sign-in +
+    `AdminGate` + `AdminNav`). It drives `generate()` (through `generateAsync`) — the generator with every
+    former hard-coded rule exposed as `GenOptions` (max/min degree, edge reach,
+    clearance, crossings, shortest cycle, strategy — gadget mix and extra
+    edges, or free density/spread/edge length — max optimal covers, the
+    greedy and matching-bound hardness filters, search limits) —
+    and shows the result as a schematic (cover, the other optimal covers
+    one at a time, crossings) or on the real `Board` — tap nodes in either view to
+    play-test it against par (the placed cats are shared by both) — with `domain/graphStats.ts`
+    and the generator's `GenReport` (why candidates were rejected) alongside.
+    Its **Variety** panel sweeps N consecutive seeds in a second worker and
+    counts distinct graphs and drawings (with Chao1 estimates of the total,
+    a repeat chance, the share that met every rule, time per level and the
+    most common graphs, each loadable by seed); finished sweeps collect in a
+    **Compare runs** table (in memory only) so strategies and settings can be
+    read side by side.
+    Settings live only in the URL hash; its control ranges and site presets
+    come from `OPTION_LIMITS` and `DEFAULT_SCHEDULE`.
+  - **Generation config** (admin only): `/generation.html`, entry
+    `src/generation.tsx`, `screens/GenerationConfig/`. Edits a whole
+    `GenerationSchedule` for a game mode — retries, one tab per site (the
+    playground's `ParamsPanel` through `siteToParams`/`paramsToSite`, plus the
+    site's constraints) and the fallback — previews the week it makes on any
+    day in a worker (per-site time, which retry or the fallback settled it,
+    play-testable schematic), and saves it **from a future day on** (tomorrow
+    at the earliest). The newest saved config is loaded on open; older ones
+    can be loaded back, scheduled ones cancelled.
+  - **Level pools** (admin only): campaign, survival and 1vs1 don't generate
+    while someone plays. An admin edits a `LevelCurve` (`domain/generation/curve.ts`:
+    seed, retries, a list of tiers — count, size, stars, options, constraints —
+    and a fallback; `DEFAULT_CURVES` per mode, `parseCurve`, `curveRuleErrors`)
+    on `/pools.html` (`screens/LevelPools/`), generates the pool slot by slot in
+    a worker (`services/generation/poolClient.ts`, each level re-checked with
+    `solve` for a unique cover), play-tests it and publishes it with
+    `publish_level_pool`. `app/sql/2026-10-20-level-pools.sql` (guarded by
+    `sql/ci/checks/level-pools.sql`): `level_pools` (one row per published
+    version, highest is live) and `pool_levels`; RLS on, readable by all,
+    writable only by that function. The **server picks the level**:
+    `campaign_level(n)` (a player who cleared `n` keeps the version they cleared
+    it on, `campaign_clears.pool_version`), `survival_level(seed, step)` (tier =
+    step, hash pick; a run stores its seed and pool, and `submit_survival_site`
+    re-derives the level), `create_match(opponent, tier)` (random from the match
+    pool, stored in `matches.level`). The client reads them through
+    `services/levels/poolLevelSource.ts` (`levelSource`); `mockLevelSource` stays
+    for tests only (`src/test/setup.ts` swaps it in). A mode with nothing
+    published says so (`usePoolPublished`, `UNPUBLISHED_COPY`). Campaign: 100
+    levels (tiers add up to `CAMPAIGN_LEVELS`); `campaign_clears` itself is still
+    a client upsert of the player's own row.
+  - **Admins and saved generation** (`app/sql/2026-10-07-admin-generation-config.sql`,
+    guarded by `app/sql/ci/checks/admin-generation-config.sql`):
+    `public.admins` (rows added by hand in the SQL editor — data, not a
+    migration — and unreadable from the client), `is_admin()`, and `generation_configs` (`mode`,
+    `effective_from_day`, `schedule` jsonb). Everyone may read the configs;
+    only `save_generation_config`/`delete_generation_config` (security
+    definer, admin-checked, refusing today or earlier) can write them. The
+    admin gate in the app only decides what's shown — Postgres is the check.
+    The game reads the config in force for today (`useDailySchedule`, 5 s
+    timeout) before generating anything; a missing table reads as "nothing
+    saved", since a deploy can go live just before its migration lands. If that read fails or the stored
+    schedule doesn't parse, the game plays `DEFAULT_SCHEDULE` and **doesn't
+    record clears** (`skipSave`: they may not be everyone's puzzles); with no
+    config saved, `DEFAULT_SCHEDULE` *is* the schedule and clears count.
+  - `src/app/` — `App.tsx` (screen routing, `AuthProvider`), the staff badge
+    and the once-per-session orientation (`useOrientation`); `admin/` is the
+    frame both admin pages render in.
   - `src/ui/` (Button, Panel/TabHeader, Tag, Logo, Screen, StaffBadge, Stat,
     Avatar, Field, ListRow/RankRow, ScopeTabs, Message, GradeBadge) and
     `src/sprites/` (PadSprite, CatFlipbook, ThingSprite, PathWeb/PathLit and
@@ -176,14 +209,6 @@ visuals — `app/src/assets/` and the camera system in `app/src/game/camera/` ar
     empty node renders as a drawn "deployment pad" (dashed ring + paw
     stencil, no sprite) rather than the `sleep` pose — `sleep` frames still
     exist in the sticker sheet but are currently unused by the game.
-  - `src/assets/cosmetics/` — the accessories cats wear, drawn over the hired cat
-    in both flip-book frames. File name `<item>-<breed>-<pose>.png` is the
-    contract (`<breed>` is `Breed.key` from `assets/cats`, `<pose>` is `wakeA` or
-    `wakeB`), on the cats' 192x192 canvas and baseline; `index.ts` globs the folder
-    and is the only thing the game imports. **No art is shipped yet**: a missing
-    file means a bare cat, never an error. Cosmetic only — `buildScene` adds an
-    optional `accessory` to a pad and never touches the breed formula or the draw
-    order. See the README there.
   - `src/assets/things/` — the smashables that sit on the cables, cut from a
     destructible-items sticker sheet: four states per item (`idle`, `wobble`,
     `hit`, `broken`) on a shared 128x128 canvas with a common base line
@@ -208,14 +233,12 @@ visuals — `app/src/assets/` and the camera system in `app/src/game/camera/` ar
     sequence that holds on the wreckage) when a cat gets to them. (The old
     `cc-snooze`/`cc-zzz` leftovers are gone.)
   - Supabase backs optional sign-in, the leaderboard, crews and squads
-    (`src/services/`; SQL in `app/sql/`). The puzzle itself still needs no
-    backend, and a signed-out player gets the whole game. Don't add other
+    (`src/services/`; SQL in `app/sql/`, applied to production automatically
+    on merge to `main` by `app/tools/migrate.sh` — see `app/sql/README.md`),
+    and stores the admin-saved generation configs. The puzzle itself still
+    needs no backend — without it, the default schedule plays — and a
+    signed-out player gets the whole game. Don't add other
     persistence (localStorage etc.) without checking with the user first.
-    `app/sql/README.md` has the migration order and the rules for new tables
-    (RLS on the new table only; competitive writes through `security definer`
-    RPCs, never direct table writes). The campaign record, `campaign_clears`,
-    is the first table with RLS. `app/sql/2026-10-08-base-schema.sql` is
-    `profiles`/`site_clears` reconstructed from the repo, not a production dump.
 
 ## The board is a camera, not a fit
 
@@ -246,7 +269,7 @@ graphs grew (150 world units per lattice step in house 1, 40 in the worst house
   `CAT_S`/`THING_S` are plain constants. Tune the feel through the constant
   block at the top of the file, not by reintroducing per-level scaling.
 
-None of this touched `domain/engine.ts` — seeded generation, the uniqueness check and
+None of this touched the generator (now `domain/generation/`) — seeded generation, the uniqueness check and
 day-determinism are exactly as they were.
 
 ## The house is generated from the graph
@@ -288,7 +311,7 @@ cuts the level into rooms and fills each one with a drawn room from
 - Determinism is the one hard rule: seeds come from `houseSeed(lv)` — the
   level's own contents, never the day or the site index, because `layoutFor()`
   runs during render and for levels other than the current one — and the only
-  randomness is `domain/engine.ts`'s seeded RNG (no `Math.random()`, no random sort
+  randomness is `domain/rng.ts`'s seeded RNG (no `Math.random()`, no random sort
   comparators).
 
 ### The room art
@@ -354,10 +377,11 @@ side effects inside render).
 `screens` / `app`. `ui` and `sprites` depend only on `styles`, `assets` and
 `domain/types`.
 
-- `src/domain/` — pure TypeScript: engine, house, cover rules, scoring,
+- `src/domain/` — pure TypeScript: level generation, house, cover rules, scoring,
   calendar, sites, share text. No React, DOM, Supabase or `Math.random()`.
 - `src/services/` — Supabase client, repositories (one file per aggregate:
-  profiles, siteClears, leaderboards, friendships, squads, campaign, streaks, badges, cosmetics), auth provider.
+  profiles, siteClears, leaderboards, friendships, squads, admin,
+  generationConfigs), auth provider, the generation worker clients.
   Repositories return `Result<T>` and log through one shared logger. Components
   never call Supabase directly; they use repositories via hooks.
 - `src/game/` — reducer + selectors, pure camera maths, scene building, input
@@ -387,13 +411,18 @@ side effects inside render).
   pure module gets unit tests. The determinism snapshots in
   `src/domain/determinism.test.ts` must pass unchanged — if one changes,
   the day's puzzles changed, which is a bug unless explicitly intended.
-  The tests freeze `Date.now()` because `makeLevel()` has a wall-clock search
+  The tests freeze `Date.now()` because the generator has a wall-clock search
   budget: with a live clock, a slower device can settle on a different level
   than a faster one for the same day. That is a known, pre-existing gap in the
   "same puzzles for everyone" promise — don't paper over it in tests, and ask
   the user before changing generation (any fix changes the days' puzzles).
 - The layer rules are enforced by `no-restricted-imports` overrides in
   `app/.oxlintrc.json` — fix the dependency, don't disable the rule.
+- Schema changes: a new `app/sql/YYYY-MM-DD-name.sql`, never an edit to one
+  that has merged (the runner checksums applied files and refuses). CI replays
+  every migration onto a Supabase stand-in (`app/sql/ci/supabase-stub.sql`)
+  and runs `app/sql/ci/checks/`; merging applies it to production. No
+  `begin`/`commit` inside a migration — each already runs in a transaction.
 - New board behaviour: put the rule in `game/state/gameReducer.ts` (pure,
   returns an event), react to the event in `GameScreen` (sound, saving, UI
   effects), and draw it from `buildScene`. Don't mutate instance fields or
@@ -411,17 +440,25 @@ npm run build
 npm run lint       # oxlint
 ```
 
+- `npm run db:up` runs a local Supabase for this project (Docker + `psql`;
+  `app/supabase/config.toml`, `app/tools/db-local.sh`; see `app/sql/README.md`):
+  the schema still comes from `app/sql/`, not from the Supabase CLI's own
+  migrations. `db:admin -- <username>` makes a player an admin.
 - Lint is `oxlint` (`.oxlintrc.json`), not ESLint — don't add ESLint config.
 - `npm run check` = lint + `tsc --noEmit` + Vitest + build. It must be green
   before any change is considered done. Tests live beside the code
   (`*.test.ts[x]`) or in `src/__tests__/`.
-- The puzzle generator (`domain/engine.ts`) is deterministic per day via a seed
+- The puzzle generator (`domain/generation/`) is deterministic per day via a seed
   derived from `Date.UTC` epoch + day offset — the same puzzle set must be
   reproducible for all players on a given day. Be careful not to break that
   determinism (e.g. don't introduce `Math.random()` outside the seeded RNG).
 - Levels must keep a **unique** optimal cover — this is what makes the
   puzzle feel deducible rather than guessed. If you touch the generator,
   preserve the uniqueness check rather than relaxing it for convenience.
+  (`maxOptima` can relax it, but only the playground does — the generation
+  config page and `resolveSchedule` refuse it via `gameRuleErrors`; the game stays at
+  1, and the INSIDER hint assumes one solution. Changing that is the user's
+  call.)
 
 ## When designs change again
 

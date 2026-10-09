@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { FriendLink, MatchView } from '../../domain/types';
 import { ok } from '../../services/result';
-import { level, matchRow, playerRow, viewOf } from './matchFixtures';
+import { matchRow, playerRow, viewOf } from './matchFixtures';
 import { MatchLobby } from './MatchLobby';
 import type { LobbyDeps } from './useLobby';
 
@@ -21,11 +21,9 @@ function setup(over: Partial<LobbyDeps> = {}, props: { preselect?: string | null
     record: vi.fn(async () => ok(null)),
     profiles: vi.fn(async () => ok({ a: { id: 'a', username: 'ann' }, b: { id: 'b', username: 'bob' } })),
     closeExpired: vi.fn(async () => ok(0)),
-    getLevel: vi.fn(async () => ok(level)),
     create: vi.fn(async () => ok('new-match')),
     accept: vi.fn(async () => ok(matchRow())),
     decline: vi.fn(async () => ok(matchRow())),
-    newMatchId: () => 'req-1',
     watch: vi.fn(() => vi.fn()),
     ...over,
   };
@@ -38,12 +36,11 @@ const incomingFrom = (id: string, who: string): MatchView =>
   viewOf(matchRow({ id, status: 'pending', created_by: who, opponent_id: 'me', starts_at: null, ends_at: null }), [playerRow(who), playerRow('me')]);
 
 describe('MatchLobby', () => {
-  it('lists your workmates and challenges one with a level from the source', async () => {
+  it('lists your workmates and challenges one, and the server picks the level', async () => {
     const { deps, onOpenMatch } = setup();
     await userEvent.click((await screen.findAllByRole('button', { name: 'CHALLENGE' }))[0]);
     await waitFor(() => expect(onOpenMatch).toHaveBeenCalledWith('new-match'));
-    expect(deps.getLevel).toHaveBeenCalledWith({ mode: 'match', matchId: 'req-1' });
-    expect(deps.create).toHaveBeenCalledWith('a', level);
+    expect(deps.create).toHaveBeenCalledWith('a');
   });
 
   it('puts the workmate picked on the crew roster first', async () => {

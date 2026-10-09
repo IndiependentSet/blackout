@@ -1,4 +1,4 @@
-import { hintLeaf, hintMatching, hintReveal } from '../../domain/engine';
+import { hintLeaf, hintMatching, hintReveal } from '../../domain/hints';
 import type { Hint, HintTier, Level } from '../../domain/types';
 
 export interface HintResult { hint: Hint | null; msg: string }

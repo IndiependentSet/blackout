@@ -1,14 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { RunSummary } from '../../domain/survival';
-import type { Level } from '../../domain/types';
 import { logger } from '../../services/logger';
 import type { Result } from '../../services/result';
 import { startSurvivalRun, submitSurvivalSite } from '../../services/repositories/survival';
 
 /** The two server calls a recorded run makes. */
 export interface SurvivalRecorderRepo {
-  start: () => Promise<Result<string>>;
-  submit: (runId: string, step: number, level: Level, nodes: number[]) => Promise<Result<RunSummary>>;
+  start: (seed: string) => Promise<Result<string>>;
+  submit: (runId: string, step: number, nodes: number[]) => Promise<Result<RunSummary>>;
 }
 
 const SERVER_REPO: SurvivalRecorderRepo = { start: startSurvivalRun, submit: submitSurvivalSite };
@@ -20,9 +19,9 @@ export interface SurvivalRecorder {
   status: RecordStatus;
   /** true when no call is waiting on the server, so the board can be read without missing the last site */
   settled: boolean;
-  /** open the run on the server; the first call wins, later ones do nothing */
-  begin: () => void;
-  record: (step: number, level: Level, nodes: number[]) => void;
+  /** open the run on the server under its seed; the first call wins, later ones do nothing */
+  begin: (seed: string) => void;
+  record: (step: number, nodes: number[]) => void;
 }
 
 /* Registers a survival run on the server for a signed-in player. The run is still played locally whatever happens
@@ -48,24 +47,26 @@ export function useSurvivalRecorder(userId: string | null, repo: SurvivalRecorde
     if (mounted.current) setCalls(c => ({ ...c, pending: c.pending + 1 }));
   }, []);
 
-  const begin = useCallback(() => {
+  const seed = useRef('');
+  const begin = useCallback((runSeed: string) => {
     if (!userId || runId.current) return;
+    seed.current = runSeed;
     open();
-    runId.current = repo.start().then(
+    runId.current = repo.start(runSeed).then(
       r => { settle(r.ok); return r.ok ? r.data : null; },
       e => { logger.error('survival start', e); settle(false); return null; },
     );
   }, [userId, repo, open, settle]);
 
-  const record = useCallback((step: number, level: Level, nodes: number[]) => {
+  const record = useCallback((step: number, nodes: number[]) => {
     if (!userId) return;
-    begin();
+    begin(seed.current);
     open();
     queue.current = queue.current.then(async () => {
       const id = await runId.current;
       if (!id || failed.current) return settle(id !== null && !failed.current);
       try {
-        const r = await repo.submit(id, step, level, nodes);
+        const r = await repo.submit(id, step, nodes);
         settle(r.ok);
       } catch (e) {
         logger.error('survival submit', e);

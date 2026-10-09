@@ -18,13 +18,13 @@ import { Sidebar } from './components/Sidebar';
 import { SitePlaque } from './components/SitePlaque';
 import { bloom, flashScreen, pulseWeb } from './fx';
 import { useClearSaver } from './hooks/useClearSaver';
-import { useLoadout } from './loadout/loadoutContext';
 import { useScoreCard } from './hooks/useScoreCard';
 import { keyAction } from './input/keymap';
 import { HINT_KIND } from './state/hints';
 import { SAVE_FAILED } from './state/scoreCopy';
 import { banner as bannerOf, hud as hudOf, pips as pipsOf, scoredCount, statusMessage } from './state/selectors';
-import { isLastSite, type GameAction, type GameEvent } from './state/gameReducer';
+import { isLastSite } from './state/gameReducer';
+import type { GameEvent } from './state/gameReducer';
 import type { PlaySession } from './session';
 import styles from './GameScreen.module.css';
 
@@ -36,35 +36,33 @@ interface Props {
   /** the signed-in user, if any: only they have clears recorded */
   userId: string | null;
   badge: StaffBadgeInfo;
+  /** the board ignores taps and keys (before a match starts, once a run's clock is out) */
+  locked?: boolean;
+  /** a mode's own strip above the board (countdown, opponent) */
+  hud?: ReactNode;
   onOpenAccount: () => void;
+  /** a mode with no work order leaves this out */
   onOpenWorkOrder?: () => void;
   onOpenHub: () => void;
-  /** a mode's own readout (countdown, opponent), shown above the board */
-  hud?: ReactNode;
-  /** taps, recalls and hints do nothing while true (before a head-to-head starts) */
-  locked?: boolean;
 }
 
-export function GameScreen({ session, userId, badge, onOpenAccount, onOpenWorkOrder, onOpenHub, hud: hudSlot, locked = false }: Props) {
-  const { day, levels, level, state, dispatch, view, set, features, save } = session;
-  const offset = session.siteOffset ?? 0;
+export function GameScreen({ session, userId, badge, locked = false, hud: modeHud, onOpenAccount, onOpenWorkOrder, onOpenHub }: Props) {
+  const { day, levels, level, state, view, set, features, siteOffset = 0 } = session;
+  const dispatch = useCallback<typeof session.dispatch>(a => { if (!locked || a.type === 'keyboard') session.dispatch(a); }, [locked, session]);
   const boardRef = useRef<BoardHandle>(null);
-  const { loadout } = useLoadout();
   const scoreCard = useScoreCard(audio);
   const { copied, copy } = useClipboard();
-  const onSaveError = useCallback((message: string) => dispatch({ type: 'notice', msg: SAVE_FAILED + message }), [dispatch]);
-  const { status: saveStatus, saveClear } = useClearSaver(userId, save, onSaveError);
+  const onSaveError = useCallback((error: string) => session.dispatch({ type: 'notice', msg: SAVE_FAILED + error }), [session]);
+  const { status: save, saveClear } = useClearSaver(userId, session.save, onSaveError, session.onSchedule ?? true);
 
   const results = state.results;
   const idx = state.idx;
 
   /* ---- navigation ---- */
   const goTo = useCallback((i: number) => {
-    if (i >= 0 && i < set.count && levels[i]) dispatch({ type: 'go', idx: i });
-  }, [levels, set, dispatch]);
+    if (Number.isInteger(i) && i >= 0 && i < set.count && levels[i]) dispatch({ type: 'go', idx: i });
+  }, [levels, dispatch, set.count]);
   const advance = () => { if (!isLastSite(idx, set.count)) goTo(idx + 1); };
-  const play = (a: GameAction) => { if (!locked) dispatch(a); };
-  const consult = (tier: HintTier) => { if (level && features.hints) play({ type: 'consult', tier, lv: level }); };
   const next = () => { if (level && isCleared(level, state.placed)) advance(); };
   const cardNext = () => { scoreCard.close(); advance(); };
 
@@ -111,14 +109,14 @@ export function GameScreen({ session, userId, badge, onOpenAccount, onOpenWorkOr
     if (!a) return;
     e.preventDefault();
     switch (a.type) {
-      case 'recall': return play({ type: 'reset' });
+      case 'recall': return dispatch({ type: 'reset' });
       case 'next': return next();
       case 'fit': return boardRef.current?.fit();
       case 'expand': return view.toggleExpanded();
       case 'dim': return view.toggleDim();
       case 'zoom': return boardRef.current?.zoomBy(a.by);
-      case 'consult': return consult(a.tier);
-      case 'activate': return play({ type: 'tap', node: state.focus, lv: level });
+      case 'consult': return features.hints ? dispatch({ type: 'consult', tier: a.tier, lv: level }) : undefined;
+      case 'activate': return dispatch({ type: 'tap', node: state.focus, lv: level });
       case 'move': {
         const node = nearestInDirection(level.nodes, state.focus, a.dir);
         if (node < 0) return;
@@ -130,10 +128,11 @@ export function GameScreen({ session, userId, badge, onOpenAccount, onOpenWorkOr
 
   /* ---- what to show ---- */
   const hud = hudOf(level, state.placed);
-  const banner = bannerOf(level, state.placed, idx, set, offset);
+  const banner = bannerOf(level, state.placed, idx, set, siteOffset);
   const msg = statusMessage(level, state.placed, state.msg);
   const activeTier = (state.hint ? ([1, 2, 3] as HintTier[]).find(t => HINT_KIND[t] === state.hint!.kind) : null) ?? null;
-  const siteName = set.name(idx);
+  const siteName = set.name(idx + siteOffset);
+  const siteNo = idx + 1 + siteOffset;
   const invoiceText = shareText(day, results);
 
   return (
@@ -144,17 +143,17 @@ export function GameScreen({ session, userId, badge, onOpenAccount, onOpenWorkOr
             onOpenAccount={onOpenAccount} onGoSite={goTo} onOpenWorkOrder={onOpenWorkOrder} onOpenHub={onOpenHub} />
 
           <main className={cx(styles.main, view.expanded && styles.wide)}>
-            <SitePlaque siteNo={idx + 1 + offset} level={level} name={siteName} best={results[idx]} />
-            {hudSlot}
+            {modeHud}
+            <SitePlaque siteNo={siteNo} level={level} name={siteName} best={results[idx]} />
             {level ? (
-              <Board ref={boardRef} level={level} siteIdx={idx + offset} placed={state.placed} hint={state.hint}
-                focus={state.focus} kbd={state.kbd} dim={view.dim} expanded={view.expanded} loadout={loadout}
-                onTapNode={node => play({ type: 'tap', node, lv: level })}
+              <Board ref={boardRef} level={level} siteIdx={idx + siteOffset} placed={state.placed} hint={state.hint}
+                focus={state.focus} kbd={state.kbd} dim={view.dim} expanded={view.expanded}
+                onTapNode={node => dispatch({ type: 'tap', node, lv: level })}
                 onToggleExpand={view.toggleExpanded} onToggleDim={view.toggleDim} />
             ) : <BoardPlaceholder />}
             <StatusRow hud={hud} msg={msg} />
-            {features.hints && <HintBar active={activeTier} onConsult={consult} />}
-            <ActionBar banner={banner} onRecall={() => play({ type: 'reset' })} onNext={next} />
+            {features.hints && <HintBar active={activeTier} onConsult={tier => level && dispatch({ type: 'consult', tier, lv: level })} />}
+            <ActionBar banner={banner} onRecall={() => dispatch({ type: 'reset' })} onNext={next} />
           </main>
 
           <RightRail hidden={view.expanded}>
@@ -171,8 +170,8 @@ export function GameScreen({ session, userId, badge, onOpenAccount, onOpenWorkOr
       </div>
 
       {scoreCard.card && (
-        <ScoreCard state={scoreCard.card} day={day} siteNo={idx + 1 + offset} siteName={siteName}
-          nextLabel={banner.nextLabel} save={saveStatus}
+        <ScoreCard state={scoreCard.card} day={day} siteNo={siteNo} siteName={siteName}
+          nextLabel={banner.nextLabel} save={save}
           onReview={scoreCard.close} onNext={cardNext} />
       )}
       <FlashOverlay />

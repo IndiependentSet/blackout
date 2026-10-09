@@ -75,7 +75,7 @@ export function useSurvivalSession(
   const recorder = useSurvivalRecorder(userId, recorderRepo);
   const { begin, record } = recorder;
 
-  useEffect(() => { if (started) begin(); }, [started, begin]);
+  useEffect(() => { if (started) begin(runSeed); }, [started, begin, runSeed]);
 
   const cleared = state.event?.kind === 'cleared';
   /* each clear is banked once, in the commit it happens: `level`, `step` and the cats are still the cleared site's
@@ -86,7 +86,7 @@ export function useSurvivalSession(
   useEffect(() => {
     if (!clearSeq || over || !level || clearSeq <= banked.current) return;
     banked.current = clearSeq;
-    record(step, level, placed);
+    record(step, placed);
   }, [clearSeq, over, level, step, placed, record]);
 
   useEffect(() => {

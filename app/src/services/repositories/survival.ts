@@ -1,5 +1,4 @@
 import type { RunSummary, SurvivalBoardRow } from '../../domain/survival';
-import type { Level } from '../../domain/types';
 import { fail, ok, type Result } from '../result';
 import { supabase } from '../supabase/client';
 import { toResult } from '../supabase/guard';
@@ -13,19 +12,19 @@ const toSummary = (row: RunRow): RunSummary => ({
   sites: Number(row.sites) || 0, perfect: Number(row.perfect) || 0, score: Number(row.score) || 0,
 });
 
-/* The server opens the run and stamps its clock (app/sql/2026-10-14-survival-runs.sql); the client only keeps the id. */
-export async function startSurvivalRun(): Promise<Result<string>> {
-  const { data, error } = await supabase.rpc('start_survival_run');
+/* The server opens the run and stamps its clock (app/sql/2026-10-14-survival-runs.sql); the client only keeps the id.
+   The seed names the run to the level pool, which is how the server knows every site the run is shown. */
+export async function startSurvivalRun(seed: string): Promise<Result<string>> {
+  const { data, error } = await supabase.rpc('start_survival_run', { p_seed: seed });
   const res = toResult('startSurvivalRun', data as string | null, error);
   if (!res.ok) return res;
   return typeof res.data === 'string' ? ok(res.data) : fail('NO SURVIVAL RUN ID');
 }
 
-/* Bank one cleared site. The server checks the cats against the level and its clock; the reply is the run so far. */
-export async function submitSurvivalSite(runId: string, step: number, level: Level, nodes: number[]): Promise<Result<RunSummary>> {
-  const { data, error } = await supabase.rpc('submit_survival_site', {
-    p_run_id: runId, p_step: step, p_level: level, p_nodes: nodes,
-  });
+/* Bank one cleared site. The server derives the level from the run (app/sql/2026-10-20-level-pools.sql), checks the cats
+   against it and against its clock; the reply is the run so far. */
+export async function submitSurvivalSite(runId: string, step: number, nodes: number[]): Promise<Result<RunSummary>> {
+  const { data, error } = await supabase.rpc('submit_survival_site', { p_run_id: runId, p_step: step, p_nodes: nodes });
   const res = toResult('submitSurvivalSite', data as RunRow | null, error);
   if (!res.ok) return res;
   return res.data ? ok(toSummary(res.data)) : fail('NO SURVIVAL REPLY');

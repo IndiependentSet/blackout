@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { groupMatches, otherPlayer, type MatchGroups } from '../../domain/match';
-import type { FriendLink, Friendships, Level, LevelRequest, Match, MatchRecord, MatchView, Profile } from '../../domain/types';
+import type { FriendLink, Friendships, Match, MatchRecord, MatchView, Profile } from '../../domain/types';
 import { useResource } from '../../hooks/useResource';
-import { levelSource } from '../../services/levels';
 import { openInboxChannel } from '../../services/realtime/matchChannel';
 import { getFriendships } from '../../services/repositories/friendships';
 import { acceptMatch, closeExpiredMatches, createMatch, declineMatch, getMatchRecord, listMyMatches } from '../../services/repositories/matches';
@@ -16,12 +15,10 @@ export interface LobbyDeps {
   record: (userId: string) => Promise<Result<MatchRecord | null>>;
   profiles: (ids: string[]) => Promise<Result<Record<string, Profile>>>;
   closeExpired: () => Promise<Result<number>>;
-  getLevel: (req: LevelRequest) => Promise<Result<Level>>;
-  create: (opponentId: string, level: Level) => Promise<Result<string>>;
+  /** the server picks the level, from the 1vs1 pool */
+  create: (opponentId: string) => Promise<Result<string>>;
   accept: (matchId: string) => Promise<Result<Match>>;
   decline: (matchId: string) => Promise<Result<Match>>;
-  /** a fresh name for the level request; the level source decides which puzzle comes back */
-  newMatchId: () => string;
   watch: (userId: string, onChange: () => void) => () => void;
 }
 
@@ -31,11 +28,9 @@ export const defaultLobbyDeps: LobbyDeps = {
   record: getMatchRecord,
   profiles: profilesByIds,
   closeExpired: closeExpiredMatches,
-  getLevel: req => levelSource.getLevel(req),
-  create: createMatch,
+  create: opponentId => createMatch(opponentId),
   accept: acceptMatch,
   decline: declineMatch,
-  newMatchId: () => crypto.randomUUID(),
   watch: (userId, onChange) => openInboxChannel(userId, onChange),
 };
 
@@ -104,10 +99,7 @@ export function useLobby(userId: string, deps: LobbyDeps = defaultLobbyDeps): Lo
     return r;
   };
 
-  const challenge = (friendId: string) => act(async () => {
-    const level = await deps.getLevel({ mode: 'match', matchId: deps.newMatchId() });
-    return level.ok ? deps.create(friendId, level.data) : level;
-  }).then(r => (r.ok ? r.data : null));
+  const challenge = (friendId: string) => act(() => deps.create(friendId)).then(r => (r.ok ? r.data : null));
 
   const accept = (matchId: string) => act(() => deps.accept(matchId)).then(r => r.ok);
   const decline = (matchId: string) => act(() => deps.decline(matchId)).then(() => reload());

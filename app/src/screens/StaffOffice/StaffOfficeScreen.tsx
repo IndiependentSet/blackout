@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { signOut } from '../../services/repositories/auth';
 import { useAuth } from '../../services/auth/authContext';
+import { useIsAdmin } from '../../services/auth/useIsAdmin';
 import { Screen, ScreenHeader } from '../../ui';
 import { CrewScreen } from '../Crew/CrewScreen';
+import { AdminTools } from './AdminTools';
 import { IdCard } from './IdCard';
 import { Leaderboard } from './Leaderboard';
 import { Wardrobe } from './Wardrobe';
@@ -19,6 +21,7 @@ export function StaffOfficeScreen({ onClose, weeklyPerfect, onChallenge }: { onC
   const link = useMagicLink();
   const [email, setEmail] = useState('');
   const [crewOpen, setCrewOpen] = useState(false);
+  const { admin } = useIsAdmin(auth.userId);
 
   if (crewOpen && auth.userId) return <CrewScreen userId={auth.userId} onClose={() => setCrewOpen(false)} onChallenge={onChallenge} />;
 
@@ -42,6 +45,7 @@ export function StaffOfficeScreen({ onClose, weeklyPerfect, onChallenge }: { onC
             onSaved={auth.setHandle} onSignOut={signOut} onOpenCrew={() => setCrewOpen(true)} />
           <Wardrobe />
           <Leaderboard userId={auth.userId} />
+          <AdminTools admin={admin} />
         </div>
       )}
     </Screen>

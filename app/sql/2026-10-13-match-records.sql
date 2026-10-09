@@ -1,6 +1,6 @@
 -- Run once in the Supabase SQL editor (Database > SQL Editor) against the
 -- live project. Not applied automatically — no DB tool available client-side.
--- Run AFTER 2026-10-12-match-rpc.sql (needs match_players and profiles).
+-- Run AFTER 2026-10-13-match-rpc.sql (needs match_players and profiles).
 --
 -- Why: the 1vs1 board is its own: wins and losses, no rating and no points.
 -- It is kept apart from site_clears and from every daily leaderboard view, so

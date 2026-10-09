@@ -1,0 +1,43 @@
+/* The level pools page. Its panels, rows and stage come from Playground.module.css;
+   these are the parts only it has. Colours from tokens.css. */
+.left { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.left > div { max-height: none; }
+.side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.basis { color: var(--muted); font-size: 12px; }
+.dirty { color: var(--amber); font-weight: 800; }
+.meta { display: flex; gap: 14px; margin: 8px 0; font-size: 12px; color: var(--lavender); }
+.meta label { display: flex; align-items: center; gap: 6px; }
+
+.tiers { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 12px; }
+.tiers th { text-align: left; color: var(--lavender); font-weight: 700; padding: 2px 4px; }
+.tiers td { padding: 2px 4px; }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 6px; max-height: 220px; overflow: auto; }
+.cell {
+  display: grid; gap: 2px; text-align: left; padding: 6px 8px; border-radius: 8px; cursor: pointer;
+  background: var(--glass); color: var(--on-dark); border: 2px solid transparent; font: inherit; font-size: 11px;
+}
+.cell b { color: var(--gold); font-size: 12px; }
+.cell span { color: var(--lavender); }
+.cellOpen { border-color: var(--gold); }
+.bad { border-color: var(--rose); }
+.slow { color: var(--rose) !important; font-weight: 800; }
+
+.field { display: grid; gap: 4px; margin: 6px 0; }
+.field input, .json {
+  background: var(--ink); color: var(--on-dark); border: 1px solid var(--muted); border-radius: 6px; font: inherit; padding: 4px 6px;
+}
+.json { width: 100%; min-height: 220px; font-family: ui-monospace, monospace; font-size: 11px; box-sizing: border-box; }
+.errors { margin: 6px 0; padding-left: 18px; color: var(--rose); font-size: 12px; }
+.actions { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.ok { color: var(--mint); font-weight: 800; font-size: 12px; }
+
+.history { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.history li { display: grid; gap: 4px; padding: 6px 0; border-top: 1px solid var(--glass); }
+.history li:first-child { border-top: 0; }
+.histHead { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.histHead b { color: var(--gold); }
+.note { color: var(--lavender); font-size: 12px; overflow-wrap: anywhere; }
+.status { font-size: 10px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; border-radius: 4px; padding: 1px 5px; }
+.live { background: var(--mint); color: var(--ink); }
+.past { background: var(--glass); color: var(--muted); }

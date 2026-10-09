@@ -41,6 +41,10 @@
   --grade-c: #E8A34A;
   --grade-d: #FF8FA8;
 
+  /* chart series, stepped for the dark page (OKLCH L 0.48–0.67, validated for colour-blind separation) */
+  --viz-1: #C08A12;
+  --viz-2: #A65BC4;
+
   /* type */
   --font-display: 'Luckiest Guy', cursive;
   --font-body: 'Nunito', ui-rounded, system-ui, sans-serif;

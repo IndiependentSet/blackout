@@ -30,3 +30,5 @@
 .board { margin: 4px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 2px; }
 .board li { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; font-weight: 900; letter-spacing: .06em; color: var(--text-2); }
 .board .mine { color: var(--violet); }
+
+.unpublished { display: grid; place-items: center; align-content: center; gap: 16px; min-height: 100dvh; padding: 16px; }

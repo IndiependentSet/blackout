@@ -41,23 +41,23 @@ const row = (over: Record<string, unknown> = {}) => ({
 beforeEach(() => { rpcReply = {}; tableReply = {}; rpcCalls.length = 0; queryCalls.length = 0; });
 
 describe('matches: server functions', () => {
-  it('challenges with the graph and returns the new match id', async () => {
+  it('challenges a workmate and returns the new match id', async () => {
     rpcReply = { data: 'm1' };
-    expect(await createMatch('b', level)).toEqual({ ok: true, data: 'm1' });
-    expect(rpcCalls).toEqual([{ fn: 'create_match', args: { p_opponent: 'b', p_level: level } }]);
+    expect(await createMatch('b')).toEqual({ ok: true, data: 'm1' });
+    expect(rpcCalls).toEqual([{ fn: 'create_match', args: { p_opponent: 'b', p_tier: 0 } }]);
   });
   it('reports the server\'s refusal as a Result, not a throw', async () => {
     rpcReply = { error: { message: 'only friends and squad mates can be challenged' } };
-    expect(await createMatch('stranger', level)).toEqual({ ok: false, error: 'only friends and squad mates can be challenged' });
+    expect(await createMatch('stranger')).toEqual({ ok: false, error: 'only friends and squad mates can be challenged' });
   });
   it('fails softly while the migration has not been applied', async () => {
     rpcReply = { error: { message: 'Could not find the function public.create_match in the schema cache' } };
-    const r = await createMatch('b', level);
+    const r = await createMatch('b');
     expect(r.ok).toBe(false);
   });
   it('fails when the reply carries no id', async () => {
     rpcReply = { data: null };
-    expect(await createMatch('b', level)).toEqual({ ok: false, error: 'NO MATCH ID' });
+    expect(await createMatch('b')).toEqual({ ok: false, error: 'NO MATCH ID' });
   });
 
   it('accepts a challenge and returns the match as the server clocked it', async () => {

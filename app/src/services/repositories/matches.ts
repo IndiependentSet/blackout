@@ -1,5 +1,5 @@
 import { isMatchLevel } from '../../domain/match';
-import type { Level, Match, MatchPlayer, MatchRecord, MatchView } from '../../domain/types';
+import type { Match, MatchPlayer, MatchRecord, MatchView } from '../../domain/types';
 import { fail, ok, type Result } from '../result';
 import { supabase } from '../supabase/client';
 import { toResult } from '../supabase/guard';
@@ -30,9 +30,10 @@ const asMatch = (scope: string, data: unknown, error: { message: string } | null
 /* Every change to a match is a server function (app/sql/2026-10-12-match-rpc.sql): the client has no write
    access to the tables, and the server alone decides who won, from its own clock. */
 
-/** Challenge a friend or squad mate on `level`. The reply is the new match's id. */
-export async function createMatch(opponentId: string, level: Level): Promise<Result<string>> {
-  const { data, error } = await supabase.rpc('create_match', { p_opponent: opponentId, p_level: level });
+/** Challenge a friend or squad mate. The server picks the level from the 1vs1 pool, from `tier` (0 is the easier
+    one). The reply is the new match's id. */
+export async function createMatch(opponentId: string, tier: number = 0): Promise<Result<string>> {
+  const { data, error } = await supabase.rpc('create_match', { p_opponent: opponentId, p_tier: tier });
   const res = toResult('createMatch', data as string | null, error);
   if (!res.ok) return res;
   return typeof res.data === 'string' ? ok(res.data) : fail('NO MATCH ID');

@@ -1,0 +1,22 @@
+.btn {
+  flex: 0 0 auto; width: 18px; height: 18px; padding: 0; margin-left: 6px;
+  border: 1.5px solid var(--lavender); border-radius: 50%; background: none; color: var(--lavender);
+  font: italic 900 11px/1 var(--font-body); cursor: pointer; vertical-align: middle;
+}
+.btn:hover, .btn:focus-visible { border-color: var(--gold); color: var(--gold); outline: none; }
+
+/* the UA centres a popover in the viewport; this only dresses it */
+.pop {
+  width: min(420px, calc(100vw - 32px)); box-sizing: border-box; padding: 14px 16px 6px;
+  background: var(--ink); color: var(--on-dark); border: 2px solid var(--gold); border-radius: 14px;
+  box-shadow: var(--lift-lg); font: 14px/1.5 var(--font-body);
+}
+.pop::backdrop { background: rgb(0 0 0 / .5); }
+.pop p { margin: 0 0 10px; }
+.head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.head b { font-family: var(--font-display); font-weight: 400; letter-spacing: .04em; color: var(--gold); font-size: 18px; }
+.close { background: none; border: 0; color: var(--lavender); font-size: 24px; line-height: 1; cursor: pointer; padding: 0 4px; }
+.tag {
+  display: inline-block; margin-right: 6px; padding: 0 6px; border-radius: 5px;
+  background: var(--purple); color: var(--on-dark); font-size: 11px; font-weight: 900; letter-spacing: .04em;
+}

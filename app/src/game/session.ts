@@ -20,6 +20,8 @@ export interface PlaySession {
   /** units already cleared before the one the board holds (survival restarts the board at index 0 for each site) */
   siteOffset?: number;
   features: PlayFeatures;
+  /** false when the saved generation config couldn't be loaded and the default is played: clears then stay unrecorded (daily only) */
+  onSchedule?: boolean;
   /** null when the mode keeps no record of a clear */
   save: ClearSaver | null;
   /** board preferences that survive leaving for another screen */
