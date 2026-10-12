@@ -32,5 +32,8 @@ create function auth.uid() returns uuid language sql stable as $$
 $$;
 grant execute on function auth.uid() to anon, authenticated, service_role;
 
+-- the realtime publication Supabase ships; migrations add tables to it
+create publication supabase_realtime;
+
 -- 2) The handoff schema -----------------------------------------------------
 \ir handoff-schema.sql
