@@ -1,4 +1,5 @@
 import { matchOutcome } from '../../domain/match';
+import { ratingChange, signed } from '../../domain/rating';
 import { formatClock } from '../../domain/survival';
 import type { MatchPlayer, MatchView } from '../../domain/types';
 import { Button, cx } from '../../ui';
@@ -43,12 +44,13 @@ export function MatchResult({ view, userId, opponentName, onOpenLobby, onOpenHub
   const outcome = matchOutcome(match, userId);
   const mine = players.find(p => p.user_id === userId);
   const theirs = players.find(p => p.user_id !== userId);
+  const rating = ratingChange(mine);
 
   return (
     <div className={styles.scrim}>
       <div className={styles.card} role="dialog" aria-label="match result">
         <div className={cx(styles.cardHead, outcome === 'won' && styles.won, outcome === 'lost' && styles.lost)}>
-          <span className={styles.order}>1VS1 · PAR {match.level.k} CATS</span>
+          <span className={styles.order}>1VS1 · {match.ranked ? 'RANKED · ' : ''}PAR {match.level.k} CATS</span>
           <span className={styles.title}>{TITLE[outcome]}</span>
         </div>
         <div className={styles.cardBody}>
@@ -57,6 +59,12 @@ export function MatchResult({ view, userId, opponentName, onOpenLobby, onOpenHub
               <Line name="YOU" player={mine} startsAt={match.starts_at} winner={outcome === 'won'} />
               <Line name={opponentName || 'OPPONENT'} player={theirs} startsAt={match.starts_at} winner={outcome === 'lost'} />
             </>
+          )}
+          {rating && (
+            <div className={styles.row} aria-label="rating change">
+              <span>RATING</span>
+              <span>{rating.before} → {rating.after} ({signed(rating.delta)})</span>
+            </div>
           )}
           <p className={styles.line}>{NOTE[outcome]}</p>
         </div>

@@ -25,7 +25,7 @@ vi.mock('../supabase/client', () => ({
 }));
 vi.mock('../logger', () => ({ logger: { error: vi.fn() } }));
 
-const { acceptMatch, closeExpiredMatches, createMatch, forfeitMatch, getMatch, getMatchRecord, listMyMatches, submitMatch } = await import('./matches');
+const { acceptMatch, closeExpiredMatches, createMatch, findMatch, forfeitMatch, getLadder, getMatch, getMatchRecord, getMyLadderRow, leaveQueue, listMyMatches, submitMatch } = await import('./matches');
 
 const level = {
   nodes: [{ c: 0, r: 0 }, { c: 1, r: 0 }, { c: 2, r: 0 }],
@@ -35,7 +35,7 @@ const level = {
 };
 const row = (over: Record<string, unknown> = {}) => ({
   id: 'm1', level, created_by: 'a', opponent_id: 'b', status: 'pending',
-  created_at: '2026-10-07T10:00:00Z', starts_at: null, ends_at: null, ended_at: null, winner_id: null, ...over,
+  created_at: '2026-10-07T10:00:00Z', starts_at: null, ends_at: null, ended_at: null, winner_id: null, ranked: false, ...over,
 });
 
 beforeEach(() => { rpcReply = {}; tableReply = {}; rpcCalls.length = 0; queryCalls.length = 0; });
@@ -115,5 +115,42 @@ describe('matches: reading', () => {
     tableReply = { data: { user_id: 'a', name: 'a', played: 3, won: 2, lost: 1, drawn: 0 } };
     const r = await getMatchRecord('a');
     expect(r.ok && r.data).toMatchObject({ won: 2, lost: 1 });
+  });
+});
+
+describe('ranked matchmaking', () => {
+  it('asks the server for an opponent at a tier and answers the match id', async () => {
+    rpcReply = { data: 'm9' };
+    expect(await findMatch(1)).toEqual({ ok: true, data: 'm9' });
+    expect(rpcCalls.at(-1)).toEqual({ fn: 'find_match', args: { p_tier: 1 } });
+  });
+  it('answers null while nobody has been found', async () => {
+    rpcReply = { data: null };
+    expect(await findMatch()).toEqual({ ok: true, data: null });
+    expect(rpcCalls.at(-1)).toEqual({ fn: 'find_match', args: { p_tier: 0 } });
+  });
+  it('passes a failure on', async () => {
+    rpcReply = { error: { message: 'no match levels published' } };
+    expect(await findMatch(0)).toEqual({ ok: false, error: 'no match levels published' });
+  });
+  it('leaves the queue', async () => {
+    rpcReply = {};
+    expect(await leaveQueue()).toEqual({ ok: true, data: null });
+    expect(rpcCalls.at(-1)?.fn).toBe('leave_queue');
+  });
+});
+
+describe('the ladder', () => {
+  const r = (user_id: string, rating: number, games = 1) => ({ user_id, username: user_id, rating, games, won: 0, lost: 0, drawn: 0 });
+  it('reads the ranked view, best rating first', async () => {
+    tableReply = { data: [r('a', 1000), r('b', 1100)] };
+    const res = await getLadder(5);
+    expect(res.ok && res.data.map(x => x.user_id)).toEqual(['b', 'a']);
+    expect(queryCalls.some(c => c.table === 'leaderboard_ranked' && c.method === 'limit' && c.args[0] === 5)).toBe(true);
+  });
+  it('reads a player\'s own row, and nothing for a signed-out one', async () => {
+    tableReply = { data: r('a', 1016) };
+    expect(await getMyLadderRow('a')).toEqual({ ok: true, data: r('a', 1016) });
+    expect(await getMyLadderRow(null)).toEqual({ ok: true, data: null });
   });
 });

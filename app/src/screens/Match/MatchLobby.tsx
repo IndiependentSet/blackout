@@ -4,7 +4,11 @@ import { displayName } from '../../domain/profile';
 import type { FriendLink, MatchView } from '../../domain/types';
 import { IS_MOCK_SOURCE } from '../../services/levels';
 import { Button, ListRow, Message, Panel, Screen, ScreenHeader, Stat, Tag, cx } from '../../ui';
+import { FindOpponent } from './FindOpponent';
+import { MatchLadder } from './MatchLadder';
+import type { LadderDeps } from './useLadder';
 import { useLobby, type Lobby, type LobbyDeps } from './useLobby';
+import type { SearchDeps } from './useMatchmaking';
 import styles from './Match.module.css';
 
 interface Props {
@@ -15,6 +19,8 @@ interface Props {
   onBack: () => void;
   /** only a test hands these in */
   deps?: LobbyDeps;
+  searchDeps?: SearchDeps;
+  ladderDeps?: LadderDeps;
 }
 
 const OUTCOME = { won: 'WON', lost: 'LOST', drawn: 'DEAD HEAT', void: 'NO CONTEST', open: '' } as const;
@@ -43,9 +49,10 @@ function FriendRow({ link, picked, taken, busy, onChallenge }: { link: FriendLin
   );
 }
 
-/* The 1vs1 front desk: answer or open the challenges you have, challenge a workmate, see your record. Everything
+/* The 1vs1 front desk: find a ranked opponent, answer or open the challenges you have, challenge a workmate, see your
+   rating, the ladder and your record. Everything
    here is read through the server; a failed read is a message, and the rest of the game never depends on it. */
-export function MatchLobby({ userId, preselect, onOpenMatch, onBack, deps }: Props) {
+export function MatchLobby({ userId, preselect, onOpenMatch, onBack, deps, searchDeps, ladderDeps }: Props) {
   const lobby = useLobby(userId, deps);
   const { groups, friends, record } = lobby;
   const sorted = [...friends].sort((a, b) => Number(b.person.id === preselect) - Number(a.person.id === preselect));
@@ -58,6 +65,10 @@ export function MatchLobby({ userId, preselect, onOpenMatch, onBack, deps }: Pro
       <ScreenHeader title="1VS1 LOBBY" backLabel="DASHBOARD" onBack={onBack} />
       <div className={styles.stack}>
         {lobby.error && <Message tone="error">{lobby.error.toUpperCase()}</Message>}
+
+        <FindOpponent onFound={onOpenMatch} disabled={lobby.busy} deps={searchDeps} />
+
+        <MatchLadder userId={userId} deps={ladderDeps} />
 
         <Panel tab="YOUR RECORD" tone="orchid">
           <div className={styles.record}>

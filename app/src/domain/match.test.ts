@@ -103,7 +103,7 @@ describe('isMatchLevel', () => {
 
 describe('groupMatches', () => {
   const view = (id: string, status: 'pending' | 'active' | 'done' | 'void', created_by: string, opponent_id: string): MatchView => ({
-    match: { id, level: path() as never, created_by, opponent_id, status, created_at: '', starts_at: null, ends_at: null, ended_at: null, winner_id: null },
+    match: { id, level: path() as never, created_by, opponent_id, status, created_at: '', starts_at: null, ends_at: null, ended_at: null, winner_id: null, ranked: false },
     players: [],
   });
 

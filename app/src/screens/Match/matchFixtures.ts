@@ -21,12 +21,13 @@ export function matchRow(over: Partial<Match> = {}): Match {
   return {
     id: 'm1', level, created_by: 'me', opponent_id: 'you', status: 'active',
     created_at: '2026-10-07T10:00:00.000Z', starts_at: new Date(START).toISOString(), ends_at: new Date(END).toISOString(),
-    ended_at: null, winner_id: null, ...over,
+    ended_at: null, winner_id: null, ranked: false, ...over,
   };
 }
 
 export const playerRow = (user_id: string, over: Partial<MatchPlayer> = {}): MatchPlayer => ({
-  match_id: 'm1', user_id, joined_at: null, finished_at: null, cats_used: null, result: null, ...over,
+  match_id: 'm1', user_id, joined_at: null, finished_at: null, cats_used: null, result: null,
+  rating_before: null, rating_after: null, ...over,
 });
 
 export const viewOf = (match: Match, players: MatchPlayer[] = [playerRow('me'), playerRow('you')]): MatchView => ({ match, players });

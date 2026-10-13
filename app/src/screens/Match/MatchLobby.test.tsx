@@ -5,7 +5,9 @@ import type { FriendLink, MatchView } from '../../domain/types';
 import { ok } from '../../services/result';
 import { matchRow, playerRow, viewOf } from './matchFixtures';
 import { MatchLobby } from './MatchLobby';
+import type { LadderDeps } from './useLadder';
 import type { LobbyDeps } from './useLobby';
+import type { SearchDeps } from './useMatchmaking';
 
 vi.mock('../../services/logger', () => ({ logger: { error: vi.fn() } }));
 vi.mock('../../services/supabase/client', () => ({ supabase: {}, APP_BASE_URL: 'http://localhost' }));
@@ -14,7 +16,7 @@ const friend = (id: string, username: string): FriendLink => ({
   row: { id: 'f-' + id, requester_id: 'me', addressee_id: id, status: 'accepted' }, person: { id, username },
 });
 
-function setup(over: Partial<LobbyDeps> = {}, props: { preselect?: string | null } = {}) {
+function setup(over: Partial<LobbyDeps> = {}, props: { preselect?: string | null } = {}, extra: { search?: Partial<SearchDeps>; ladder?: Partial<LadderDeps> } = {}) {
   const deps: LobbyDeps = {
     list: vi.fn(async () => ok([] as MatchView[])),
     friends: vi.fn(async () => ok({ friends: [friend('a', 'ann'), friend('b', 'bob')], incoming: [], outgoing: [] })),
@@ -27,9 +29,11 @@ function setup(over: Partial<LobbyDeps> = {}, props: { preselect?: string | null
     watch: vi.fn(() => vi.fn()),
     ...over,
   };
+  const searchDeps: SearchDeps = { find: vi.fn(async () => ok(null)), leave: vi.fn(async () => ok(null)), now: () => Date.now(), ...extra.search };
+  const ladderDeps: LadderDeps = { ladder: vi.fn(async () => ok([])), mine: vi.fn(async () => ok(null)), ...extra.ladder };
   const handlers = { onOpenMatch: vi.fn(), onBack: vi.fn() };
-  const view = render(<MatchLobby userId="me" deps={deps} {...props} {...handlers} />);
-  return { deps, view, ...handlers };
+  const view = render(<MatchLobby userId="me" deps={deps} searchDeps={searchDeps} ladderDeps={ladderDeps} {...props} {...handlers} />);
+  return { deps, searchDeps, ladderDeps, view, ...handlers };
 }
 
 const incomingFrom = (id: string, who: string): MatchView =>
@@ -122,5 +126,37 @@ describe('MatchLobby', () => {
     const { onBack } = setup();
     await userEvent.click(screen.getByRole('button', { name: /DASHBOARD/ }));
     expect(onBack).toHaveBeenCalledOnce();
+  });
+
+  it('looks for an opponent and opens the match it finds', async () => {
+    const { searchDeps, onOpenMatch } = setup({}, {}, { search: { find: vi.fn(async () => ok('ranked-1')) } });
+    await userEvent.click(await screen.findByRole('button', { name: 'HARD SITE' }));
+    await waitFor(() => expect(onOpenMatch).toHaveBeenCalledWith('ranked-1'));
+    expect(searchDeps.find).toHaveBeenCalledWith(1);
+  });
+
+  it('shows the search while it waits, and leaves the queue when cancelled', async () => {
+    const { searchDeps } = setup();
+    await userEvent.click(await screen.findByRole('button', { name: 'STANDARD SITE' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('LOOKING FOR A WORKMATE');
+    await userEvent.click(screen.getByRole('button', { name: 'CANCEL' }));
+    expect(searchDeps.leave).toHaveBeenCalledOnce();
+    expect(await screen.findByRole('button', { name: 'STANDARD SITE' })).toBeInTheDocument();
+  });
+
+  it('shows the player\'s rating and the ladder, with them marked', async () => {
+    const row = (id: string, username: string, rating: number) => ({ user_id: id, username, rating, games: 4, won: 2, lost: 2, drawn: 0 });
+    setup({}, {}, { ladder: {
+      ladder: vi.fn(async () => ok([row('x', 'zed', 1210), row('me', 'mia', 1103)])),
+      mine: vi.fn(async () => ok(row('me', 'mia', 1103))),
+    } });
+    expect(await screen.findByText('@zed')).toBeInTheDocument();
+    expect(screen.getAllByText('1103').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('#2')).toBeInTheDocument();
+  });
+
+  it('says so when nobody has played a ranked match yet', async () => {
+    setup();
+    expect(await screen.findByText(/NO RANKED MATCHES YET/)).toBeInTheDocument();
   });
 });

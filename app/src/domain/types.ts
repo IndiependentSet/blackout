@@ -215,6 +215,8 @@ export interface Match {
   ends_at: string | null;
   ended_at: string | null;
   winner_id: string | null;
+  /** made by the opponent search, so it moves the Elo rating; a challenge to a friend does not */
+  ranked: boolean;
 }
 
 /** A player's best clear in a match so far, and how the match ended for them. */
@@ -225,12 +227,18 @@ export interface MatchPlayer {
   finished_at: string | null;
   cats_used: number | null;
   result: MatchResult | null;
+  /** the player's rating going into a ranked match and coming out of it; null until it ends (and always for an unranked one) */
+  rating_before: number | null;
+  rating_after: number | null;
 }
 
 export interface MatchView { match: Match; players: MatchPlayer[] }
 
 /** A row of the match_records view: head-to-head wins and losses, no rating. */
 export interface MatchRecord { user_id: string; name: string; played: number; won: number; lost: number; drawn: number }
+
+/** A row of the leaderboard_ranked view: the 1vs1 ladder. */
+export interface LadderRow { user_id: string; username: string | null; rating: number; games: number; won: number; lost: number; drawn: number }
 
 export type CosmeticSlot = 'head' | 'neck';
 

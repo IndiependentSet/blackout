@@ -1,5 +1,6 @@
 import { isMatchLevel } from '../../domain/match';
-import type { Match, MatchPlayer, MatchRecord, MatchView } from '../../domain/types';
+import { sortLadder } from '../../domain/rating';
+import type { LadderRow, Match, MatchPlayer, MatchRecord, MatchView } from '../../domain/types';
 import { fail, ok, type Result } from '../result';
 import { supabase } from '../supabase/client';
 import { toResult } from '../supabase/guard';
@@ -94,4 +95,37 @@ export async function getMatchRecord(userId: string | null): Promise<Result<Matc
   if (!userId) return ok(null);
   const { data, error } = await supabase.from('match_records').select('*').eq('user_id', userId).maybeSingle();
   return toResult('getMatchRecord', (data ?? null) as MatchRecord | null, error);
+}
+
+/** Look for an opponent (ranked). Answers the match id once one is found, or null while you wait: ask again every few
+    seconds, which is also how the server knows you are still there. */
+export async function findMatch(tier: number = 0): Promise<Result<string | null>> {
+  const { data, error } = await supabase.rpc('find_match', { p_tier: tier });
+  const res = toResult('findMatch', data as string | null, error);
+  if (!res.ok) return res;
+  return ok(typeof res.data === 'string' ? res.data : null);
+}
+
+/** Stop looking for an opponent. */
+export async function leaveQueue(): Promise<Result<null>> {
+  const { error } = await supabase.rpc('leave_queue');
+  return toResult('leaveQueue', null, error);
+}
+
+const LADDER_COLUMNS = 'user_id, username, rating, games, won, lost, drawn';
+const LADDER_LIMIT = 20;
+
+/** The ladder, best rating first. */
+export async function getLadder(limit: number = LADDER_LIMIT): Promise<Result<LadderRow[]>> {
+  const { data, error } = await supabase.from('leaderboard_ranked').select(LADDER_COLUMNS)
+    .order('rating', { ascending: false }).order('games', { ascending: false }).limit(limit);
+  const res = toResult('getLadder', (data || []) as LadderRow[], error);
+  return res.ok ? ok(sortLadder(res.data)) : res;
+}
+
+/** The player's own ladder row; null before their first ranked match. */
+export async function getMyLadderRow(userId: string | null): Promise<Result<LadderRow | null>> {
+  if (!userId) return ok(null);
+  const { data, error } = await supabase.from('leaderboard_ranked').select(LADDER_COLUMNS).eq('user_id', userId).maybeSingle();
+  return toResult('getMyLadderRow', (data ?? null) as LadderRow | null, error);
 }
