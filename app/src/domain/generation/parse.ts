@@ -78,9 +78,11 @@ function readMenu(r: Reader, path: string, raw: unknown): string[] | null | unde
 
 function readConstraints(r: Reader, path: string, raw: unknown): LevelConstraints | undefined {
   if (!isObj(raw)) { r.errors.push(`${path}: expected an object`); return undefined; }
-  r.unknownKeys(path, raw, ['minNodes', 'maxK', 'hasDegree']);
+  r.unknownKeys(path, raw, ['minNodes', 'maxNodes', 'minK', 'maxK', 'hasDegree']);
   const out: LevelConstraints = {};
   if ('minNodes' in raw) out.minNodes = r.num(`${path}.minNodes`, raw.minNodes, OPTION_LIMITS.size, true);
+  if ('maxNodes' in raw) out.maxNodes = r.num(`${path}.maxNodes`, raw.maxNodes, OPTION_LIMITS.size, true);
+  if ('minK' in raw) out.minK = r.num(`${path}.minK`, raw.minK, { min: 0, max: OPTION_LIMITS.size.max }, true);
   if ('maxK' in raw) out.maxK = r.num(`${path}.maxK`, raw.maxK, { min: 0, max: OPTION_LIMITS.size.max }, true);
   if ('hasDegree' in raw) out.hasDegree = r.num(`${path}.hasDegree`, raw.hasDegree, { min: 1, max: OPTION_LIMITS.maxDegree.max }, true);
   return Object.fromEntries(Object.entries(out).filter(([, v]) => v !== undefined));
@@ -130,7 +132,8 @@ export function parseSchedule(raw: unknown): ParseResult<GenerationSchedule> {
   return { ok: true, value: { version: 1, sites, retries, fallback } };
 }
 
-const MAX_TIERS = 20;
+/** A campaign is a tier per level; the pool tables keep a tier index to two digits (0 to 99). */
+const MAX_TIERS = 100;
 const MAX_TIER_COUNT = 400;
 
 function readTier(r: Reader, path: string, raw: unknown): CurveTier {

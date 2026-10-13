@@ -1,16 +1,16 @@
 /* What a level pool is made from: a curve of tiers, each asking the generator
    for some number of levels of a size and difficulty. Campaign, survival and
    1vs1 pools are all curves; they differ in how the tiers are read (a
-   campaign tier is a stretch of levels, a survival tier is how deep into a
+   campaign tier is one level of the ramp, a survival tier is how deep into a
    run you are, a 1vs1 tier is a difficulty). Plain JSON, like a schedule, so
    it is stored beside the pool it made. Pure. */
-import { CHAPTERS, chapterSize } from '../campaign';
 import type { PoolMode } from '../gameModes';
 import { rngFromSeed } from '../rng';
-import { CAMPAIGN_LEVELS, type GenOptions, type Stars } from '../types';
-import { constraintFilter, type LevelConstraints } from './constraints';
+import { CAMPAIGN_LEVELS, type GenOptions, type Level, type Stars } from '../types';
+import { constraintFilter, gameConstraints, type LevelConstraints } from './constraints';
 import { generateWith } from './generate';
-import { resolveOptions } from './options';
+import { compareHardness } from './hardness';
+import { MAX_LEVEL_NODES, resolveOptions } from './options';
 import { DEFAULT_SCHEDULE, type SiteOutcome } from './schedule';
 
 export interface CurveTier {
@@ -55,15 +55,30 @@ export function poolSlots(mode: PoolMode, curve: LevelCurve): PoolSlot[] {
 export function generateSlot(curve: LevelCurve, { slot, tier }: PoolSlot): SiteOutcome {
   const rule = curve.tiers[tier];
   if (!rule) throw new RangeError(`no tier ${tier} in the curve`);
-  const accept = constraintFilter(rule.constraints);
+  const accept = constraintFilter(gameConstraints(rule.constraints));
+  /* a retry only counts when it met every rule; the first near miss is kept in case no retry does */
+  let miss: SiteOutcome | null = null;
   for (let salt = 0; salt < curve.retries; salt++) {
     const rng = rngFromSeed(curve.seed * 7919 + slot * 104729 + salt * 31);
-    const { level } = generateWith(rng, rule.size, rule.diff, rule.options, accept);
-    if (level) return { level, salt };
+    const { level, report } = generateWith(rng, rule.size, rule.diff, rule.options, accept);
+    if (level && !report.fallback) return { level, salt };
+    if (level && !miss) miss = { level, salt };
   }
-  const { level } = generateWith(rngFromSeed(curve.seed + slot), rule.size, curve.fallback.diff, curve.fallback.options);
+  if (miss) return miss;
+  const { level } = generateWith(rngFromSeed(curve.seed + slot), rule.size, curve.fallback.diff, curve.fallback.options,
+    constraintFilter(gameConstraints()));
   if (!level) throw new Error(`slot ${slot} produced no level, even with the fallback rules`);
   return { level, salt: null };
+}
+
+/** A campaign's levels laid out easiest first. The ramp aims each slot a little above the one before, but every
+    level is generated on its own seed, so neighbours can land the wrong way round. This hands the generated levels
+    back to the slots in order of measured hardness (domain/generation/hardness.ts), which is what makes every level
+    harder than the last. A slot keeps its number and tier; the level moves, with whatever was learned about it
+    (retry, uniqueness check, time). */
+export function orderByHardness<T extends { slot: number; tier: number; level: Level }>(results: readonly T[]): T[] {
+  const ranked = results.slice().sort((a, b) => compareHardness(a.level, b.level) || a.slot - b.slot);
+  return results.map((r, i) => ({ ...ranked[i], slot: r.slot, tier: r.tier }));
 }
 
 /** What a pool asks of a curve beyond what the generator accepts: its size for the mode, and, as for the
@@ -74,6 +89,9 @@ export function curveRuleErrors(mode: PoolMode, curve: LevelCurve): string[] {
   if (mode === 'campaign' && total !== CAMPAIGN_LEVELS) {
     errors.push(`curve.tiers: a campaign has ${CAMPAIGN_LEVELS} levels, the tiers add up to ${total}`);
   }
+  curve.tiers.forEach((t, i) => {
+    if (t.size > MAX_LEVEL_NODES) errors.push(`curve.tiers[${i}].size: the game plays at most ${MAX_LEVEL_NODES} junctions`);
+  });
   if (total > MAX_POOL) errors.push(`curve.tiers: a pool holds at most ${MAX_POOL} levels, the tiers add up to ${total}`);
   const rules = [
     ...curve.tiers.map((t, i) => ({ path: `curve.tiers[${i}].options`, options: t.options })),
@@ -88,15 +106,43 @@ export function curveRuleErrors(mode: PoolMode, curve: LevelCurve): string[] {
 const tierFrom = (i: number, count: number): CurveTier => ({ count, ...DEFAULT_SCHEDULE.sites[i] });
 const FALLBACK = DEFAULT_SCHEDULE.fallback;
 
+/** Where the campaign's difficulty starts and ends: its first level and its last. */
+const RAMP_FROM = 5;
+const RAMP_TO = MAX_LEVEL_NODES;
+
+/* The campaign as one level per tier, each asking for a little more than the one before. Four things climb
+   together so no stretch of levels plays alike:
+     - junctions: 5 up to 40, quickly at first (a tiny graph has little else to grow), slowly later;
+     - stars: the technique that clears it (1 up to 11 junctions, 2 up to 24, then 3: a smaller graph
+       rarely needs the hardest technique, so asking for it there would only produce near misses);
+     - hardness: from the first 2-star level the greedy cover must fail; from the first 3-star level
+       par must also beat the pairwise-disjoint-paths bound by 1, then by 2;
+     - par floor: par must be at least a share of the junctions, and that share grows from 30% to 50%.
+   None of them ever goes down from one level to the next. */
+export function campaignRamp(levels: number = CAMPAIGN_LEVELS): CurveTier[] {
+  const last = Math.max(1, levels - 1);
+  const sizes = Array.from({ length: levels }, (_, i) => Math.round(RAMP_FROM + (RAMP_TO - RAMP_FROM) * (i / last) ** 0.8));
+  const firstThree = sizes.findIndex(n => n >= 25);
+  return sizes.map((size, i): CurveTier => {
+    const t = i / last;
+    const diff: Stars = size <= 11 ? 1 : size <= 24 ? 2 : 3;
+    const options: Partial<GenOptions> = { budgetMs: size <= 12 ? 400 : size <= 20 ? 800 : size <= 30 ? 2000 : 3000 };
+    if (diff >= 2) options.greedyMustFail = true;
+    if (diff === 3) options.minBoundGap = 1 + Math.min(1, Math.floor((2 * (i - firstThree)) / Math.max(1, levels - firstThree)));
+    return { count: 1, size, diff, options, constraints: { minNodes: size, minK: Math.ceil(size * (0.3 + 0.2 * t)) } };
+  });
+}
+
 /** Where each pool starts from, until an admin publishes another. */
 export const DEFAULT_CURVES: Record<PoolMode, LevelCurve> = {
-  /* the seven chapters, with the daily week's difficulty ramp */
-  campaign: { version: 1, seed: 1, retries: DEFAULT_SCHEDULE.retries, fallback: FALLBACK,
-    tiers: CHAPTERS.map(c => tierFrom(c.site, chapterSize(c))) },
+  /* a hundred levels, each a step harder than the last; the seven chapters only name stretches of it. Made once and
+     frozen, so it can afford more fresh seeds than the daily week to land every level on its target */
+  campaign: { version: 1, seed: 1, retries: 14, fallback: FALLBACK, tiers: campaignRamp() },
   /* a run starts small and deepens: step n plays tier n, the last tier once they run out */
   survival: { version: 1, seed: 1, retries: DEFAULT_SCHEDULE.retries, fallback: FALLBACK,
     tiers: [0, 1, 2, 3, 4].map(i => tierFrom(i, 6)) },
-  /* a challenge picks a tier: a middling puzzle, or a hard one */
+  /* a challenge picks a tier: a middling puzzle, or a hard one. A job publishes a fresh pool every night, with the
+     day as the seed (tools/publish-match-pool.ts), so the maps do not repeat for long */
   match: { version: 1, seed: 1, retries: DEFAULT_SCHEDULE.retries, fallback: FALLBACK,
-    tiers: [tierFrom(3, 10), tierFrom(5, 10)] },
+    tiers: [tierFrom(3, 20), tierFrom(5, 20)] },
 };

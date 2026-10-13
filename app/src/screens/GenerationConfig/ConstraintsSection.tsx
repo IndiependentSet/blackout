@@ -6,6 +6,8 @@ import styles from '../Playground/Playground.module.css';
 type Key = keyof LevelConstraints;
 const ROWS: { k: Key & HelpKey; label: string; start: number; min: number; max: number }[] = [
   { k: 'minNodes', label: 'At least N nodes', start: 4, min: L.size.min, max: L.size.max },
+  { k: 'maxNodes', label: 'At most N nodes', start: 40, min: L.size.min, max: L.size.max },
+  { k: 'minK', label: 'Par at least', start: 2, min: 0, max: L.size.max },
   { k: 'maxK', label: 'Par at most', start: 2, min: 0, max: L.size.max },
   { k: 'hasDegree', label: 'Has degree', start: 3, min: 1, max: L.maxDegree.max },
 ];

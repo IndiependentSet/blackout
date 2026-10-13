@@ -10,7 +10,7 @@
  */
 import { execFileSync } from 'node:child_process';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { DEFAULT_CURVES, curveRuleErrors, generateSlot, poolSlots, solve } from '../src/domain/generation';
+import { DEFAULT_CURVES, curveRuleErrors, generateSlot, orderByHardness, poolSlots, solve } from '../src/domain/generation';
 
 const POOL_MODES = ['campaign', 'survival', 'match'] as const;
 type PoolMode = (typeof POOL_MODES)[number];
@@ -91,7 +91,7 @@ async function publishPools(modes: readonly PoolMode[]) {
       process.stdout.write(`\r${mode}: ${i + 1}/${slots.length}`);
     }
     const version = must(`publish ${mode}`, await admin.rpc('publish_level_pool', {
-      p_mode: mode, p_curve: curve, p_levels: entries, p_note: 'local seed',
+      p_mode: mode, p_curve: curve, p_levels: mode === 'campaign' ? orderByHardness(entries) : entries, p_note: 'local seed',
     }));
     console.log(`\r${mode}: published v${version} (${slots.length} levels, ${Math.round((Date.now() - t0) / 1000)} s)`);
   }

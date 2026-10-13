@@ -61,6 +61,15 @@ describe('parseSchedule', () => {
     expect(errorsOf(s)).toEqual(['schedule.sites[0].options: minDegree 4 is above maxDegree 3']);
   });
 
+  it('reads the node and par bounds of a site\'s constraints', () => {
+    const s = clone();
+    s.sites[1].constraints = { minNodes: 10, maxNodes: 12, minK: 3, maxK: 6 };
+    const r = parseSchedule(s);
+    expect(r.ok && r.value.sites[1].constraints).toEqual({ minNodes: 10, maxNodes: 12, minK: 3, maxK: 6 });
+    s.sites[1].constraints = { maxNodes: 500 };
+    expect(errorsOf(s)).toHaveLength(1);
+  });
+
   it('names unknown settings instead of ignoring them', () => {
     const s = clone();
     s.sites[0].options.planar = true;

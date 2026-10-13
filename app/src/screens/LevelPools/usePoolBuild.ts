@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { PoolMode } from '../../domain/gameModes';
-import { poolSlots, type LevelCurve } from '../../domain/generation';
+import { orderByHardness, poolSlots, type LevelCurve } from '../../domain/generation';
 import { generateSlotAsync, type SlotResult } from '../../services/generation/poolClient';
 
 export type BuildStatus = 'running' | 'done' | 'stopped' | 'error';
@@ -40,7 +40,8 @@ export function usePoolBuild(mode: PoolMode, curve: LevelCurve, generate: Genera
       results.push(r.data);
       setBuild(b => b && { ...b, results: results.slice() });
     }
-    setBuild(b => b && { ...b, status: 'done' });
+    /* a campaign gets harder with every level: lay the finished pool out easiest first */
+    setBuild(b => b && { ...b, status: 'done', results: mode === 'campaign' ? orderByHardness(results) : results });
   }, [mode, curve, key, generate]);
 
   const stop = useCallback(() => {

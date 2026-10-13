@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { poolSlots, type LevelCurve } from '../../domain/generation';
+import { compareHardness, generate, poolSlots, type LevelCurve } from '../../domain/generation';
 import type { Level } from '../../domain/types';
 import { fail, ok } from '../../services/result';
 import type { SlotResult } from '../../services/generation/poolClient';
@@ -20,6 +20,19 @@ describe('usePoolBuild', () => {
     expect(result.current.build?.status).toBe('done');
     expect(result.current.build?.results.map(r => r.slot)).toEqual(poolSlots('survival', curve).map(s => s.slot));
     expect(publishBlockers(result.current.build, result.current.current)).toEqual([]);
+  });
+
+  it('lays a finished campaign out easiest first', async () => {
+    const sizes = [12, 6, 9];
+    const gen = vi.fn(async (_c: LevelCurve, slot: { slot: number; tier: number }) => {
+      const { level } = generate({ seed: slot.slot, size: sizes[slot.slot - 1], diff: 1, options: { clock: false } });
+      return ok({ ...slot, level: level as Level, salt: 0, unique: true, ms: 1 } satisfies SlotResult);
+    });
+    const { result } = renderHook(() => usePoolBuild('campaign', curve, gen));
+    await act(async () => { await result.current.start(); });
+    const levels = result.current.build!.results.map(r => r.level);
+    expect(result.current.build!.results.map(r => r.slot)).toEqual([1, 2, 3]);
+    for (let i = 1; i < levels.length; i++) expect(compareHardness(levels[i - 1], levels[i])).toBeLessThanOrEqual(0);
   });
 
   it('stops on the first failure and says why', async () => {

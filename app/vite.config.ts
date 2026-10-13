@@ -19,6 +19,8 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['src/test/setup.ts'],
+    /* the game's week now reaches 40 junctions; with the clock frozen (as the determinism tests do) a generated week takes several seconds */
+    testTimeout: 90_000,
     css: { modules: { classNameStrategy: 'non-scoped' } },
     include: ['src/**/*.test.{ts,tsx,js}'],
     env: { VITE_SUPABASE_URL: 'https://example.supabase.co', VITE_SUPABASE_ANON_KEY: 'test-key' },

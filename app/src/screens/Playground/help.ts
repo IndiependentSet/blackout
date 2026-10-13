@@ -23,7 +23,7 @@ type StatKey = 'stat.par' | 'stat.optima' | 'stat.stars' | 'stat.greedy' | 'stat
   | 'stat.bipartite' | 'stat.triangles' | 'stat.components' | 'stat.attempts' | 'stat.repairs' | 'stat.visits'
   | 'stat.time' | 'stat.rejected';
 /** the generation config page's own settings and readouts */
-type ScheduleKey = 'retries' | 'fallback' | 'minNodes' | 'maxK' | 'hasDegree' | 'effectiveDay' | 'previewDay' | 'week' | 'history';
+type ScheduleKey = 'retries' | 'fallback' | 'minNodes' | 'maxNodes' | 'minK' | 'maxK' | 'hasDegree' | 'effectiveDay' | 'previewDay' | 'week' | 'history';
 export type HelpKey = ParamKey | 'weights' | GadgetKey | ViewKey | VarietyKey | StatKey | ScheduleKey;
 
 export const HELP: Record<HelpKey, HelpEntry> = {
@@ -362,6 +362,18 @@ export const HELP: Record<HelpKey, HelpEntry> = {
     what: 'Reject a level with fewer junctions than this.',
     effect: 'The generator can come in under the target size; this makes the site retry instead.',
     game: 'Site 1: 4.',
+  },
+  maxNodes: {
+    title: 'At most N nodes',
+    what: 'Reject a level with more junctions than this.',
+    effect: 'The generator can overshoot the target size by a couple of junctions; this makes the site retry instead.',
+    game: 'Every daily site and campaign level: 40 at most.',
+  },
+  minK: {
+    title: 'Par at least',
+    what: 'Reject a level whose par (minimum number of cats) is below this.',
+    effect: 'Par grows with the junction count but not by a fixed rule; this keeps a level from coming out easier than its neighbours.',
+    game: 'Campaign: a par floor that rises level by level.',
   },
   maxK: {
     title: 'Par at most',
