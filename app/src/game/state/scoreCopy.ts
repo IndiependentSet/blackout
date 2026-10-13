@@ -5,9 +5,9 @@ export type SaveStatus =
   | { kind: 'saving' } | { kind: 'saved' } | { kind: 'anon' } | { kind: 'offSchedule' } | { kind: 'error'; message: string };
 
 /** Why a clear isn't written to the leaderboard, or null when it should be.
-    Off schedule (today's generation config couldn't be loaded, so the level
-    may not be the one everyone else got) wins over signed out: signing in
-    wouldn't help. */
+    Off schedule (today's published week isn't there yet, so the device built
+    its own and the level may not be the one everyone else got) wins over
+    signed out: signing in wouldn't help. */
 export function skipSave(userId: string | null, onSchedule: boolean): SaveStatus | null {
   if (!onSchedule) return { kind: 'offSchedule' };
   if (!userId) return { kind: 'anon' };

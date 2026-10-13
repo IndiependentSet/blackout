@@ -28,13 +28,14 @@ import divaWakeB from './diva-wakeB.png';
 /* where the cats' feet sit on the sprite canvas, as a fraction of its side */
 export const CAT_BASELINE = 182 / 192;
 
-export interface Breed { name: string; sleep: string; wakeA: string; wakeB: string }
+/* `key` is the breed's file stem, which the cosmetics art (`<item>-<key>-<pose>.png`) is named after. */
+export interface Breed { key: string; name: string; sleep: string; wakeA: string; wakeB: string }
 
 export const BREEDS: Breed[] = [
-  { name: 'MR. WHISKERS', sleep: whiskersSleep, wakeA: whiskersWakeA, wakeB: whiskersWakeB },
-  { name: 'NINJA', sleep: ninjaSleep, wakeA: ninjaWakeA, wakeB: ninjaWakeB },
-  { name: 'PRINCESS FLUFF', sleep: fluffSleep, wakeA: fluffWakeA, wakeB: fluffWakeB },
-  { name: 'CHAOS', sleep: chaosSleep, wakeA: chaosWakeA, wakeB: chaosWakeB },
-  { name: 'TROUBLE', sleep: troubleSleep, wakeA: troubleWakeA, wakeB: troubleWakeB },
-  { name: 'DIVA', sleep: divaSleep, wakeA: divaWakeA, wakeB: divaWakeB },
+  { key: 'whiskers', name: 'MR. WHISKERS', sleep: whiskersSleep, wakeA: whiskersWakeA, wakeB: whiskersWakeB },
+  { key: 'ninja', name: 'NINJA', sleep: ninjaSleep, wakeA: ninjaWakeA, wakeB: ninjaWakeB },
+  { key: 'fluff', name: 'PRINCESS FLUFF', sleep: fluffSleep, wakeA: fluffWakeA, wakeB: fluffWakeB },
+  { key: 'chaos', name: 'CHAOS', sleep: chaosSleep, wakeA: chaosWakeA, wakeB: chaosWakeB },
+  { key: 'trouble', name: 'TROUBLE', sleep: troubleSleep, wakeA: troubleWakeA, wakeB: troubleWakeB },
+  { key: 'diva', name: 'DIVA', sleep: divaSleep, wakeA: divaWakeA, wakeB: divaWakeB },
 ];

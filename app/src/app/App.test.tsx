@@ -10,15 +10,27 @@ vi.mock('../services/supabase/client', () => ({
       onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
       signOut: () => Promise.resolve(),
     },
-    /* the one read a signed-out player makes: today's generation config (none saved here) */
+    /* the reads a signed-out player makes: today's published week and generation config (neither saved here) */
     from: (table: string) => {
-      if (table !== 'generation_configs') throw new Error('signed-out play must only read the generation config');
+      if (table === 'daily_levels') {
+        const published = { select: () => published, eq: () => published, order: () => Promise.resolve({ data: [], error: null }) };
+        return published;
+      }
+      if (table !== 'generation_configs') throw new Error('signed-out play must only read the daily week and the generation config');
       const query = { select: () => query, eq: () => query, lte: () => query, order: () => query,
         limit: () => Promise.resolve({ data: [], error: null }) };
       return query;
     },
   },
 }));
+
+/* jsdom has no Worker: the device-built week comes from a small stand-in (the real one is a worker call) */
+vi.mock('../services/generation/scheduleClient', async () => {
+  const { generate } = await import('../domain/generation');
+  const { ok } = await import('../services/result');
+  return { siteLevelAsync: async (_s: unknown, seed: number, idx: number) =>
+    ok(generate({ seed: seed + idx, size: 6, diff: 1, options: { clock: false } }).level) };
+});
 
 const { default: App } = await import('./App');
 
@@ -30,9 +42,9 @@ const hudReads = () => {
 };
 
 describe('the app, signed out', () => {
-  it('opens on the work order, with the orientation for a first-time visitor', async () => {
+  it('opens on the dashboard, with the orientation for a first-time visitor', async () => {
     render(<App />);
-    expect(screen.getByText(/WORK ORDER #/)).toBeInTheDocument();
+    expect(screen.getByText(/DAILY SHIFT #/)).toBeInTheDocument();
     expect(await screen.findByRole('dialog', { name: /How CATASTROPHE INC. works/ })).toBeInTheDocument();
   });
 
@@ -41,13 +53,14 @@ describe('the app, signed out', () => {
     await screen.findByRole('dialog');
     first.unmount();
     render(<App />);
-    await waitFor(() => expect(screen.getByText(/WORK ORDER #/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/DAILY SHIFT #/)).toBeInTheDocument());
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('clocks in, plays a hire from the keyboard, and recalls it', async () => {
     sessionStorage.setItem('cc-howto-seen', '1');
     render(<App />);
+    await userEvent.click(screen.getByRole('button', { name: 'OPEN WORK ORDER' }));
     await userEvent.click(screen.getByRole('button', { name: 'CLOCK IN' }));
 
     expect(await screen.findByRole('application', { name: 'cat cover grid' }, { timeout: 15000 })).toBeInTheDocument();
@@ -62,6 +75,7 @@ describe('the app, signed out', () => {
   it('shows the site plaque and lets you re-read the work order', async () => {
     sessionStorage.setItem('cc-howto-seen', '1');
     render(<App />);
+    await userEvent.click(screen.getByRole('button', { name: 'OPEN WORK ORDER' }));
     await userEvent.click(screen.getByRole('button', { name: 'CLOCK IN' }));
     expect(await screen.findByText('THE STUDIO FLAT')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'RE-READ WORK ORDER' }));
@@ -70,4 +84,21 @@ describe('the app, signed out', () => {
     await screen.findByRole('application', {}, { timeout: 15000 });
     expect(screen.getByText('THE STUDIO FLAT')).toBeInTheDocument();
   }, 40000);
+
+  it('goes from the dashboard to the work order and back', async () => {
+    sessionStorage.setItem('cc-howto-seen', '1');
+    render(<App />);
+    await userEvent.click(screen.getByRole('button', { name: 'OPEN WORK ORDER' }));
+    expect(screen.getByText(/WORK ORDER #/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'BACK' }));
+    expect(screen.getByText(/DAILY SHIFT #/)).toBeInTheDocument();
+  });
+
+  it('sends a signed-out player who picks the campaign to the staff office', async () => {
+    sessionStorage.setItem('cc-howto-seen', '1');
+    render(<App />);
+    await userEvent.click(screen.getByRole('button', { name: 'SIGN IN' }));
+    expect(screen.queryByText(/DAILY SHIFT #/)).toBeNull();
+  });
 });
+

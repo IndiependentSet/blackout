@@ -50,6 +50,10 @@ describe('game rules', () => {
     const fb = checkGameSchedule({ ...DEFAULT_SCHEDULE, fallback: { diff: 1, options: { maxOptima: 0 } } });
     expect(fb.ok).toBe(false);
   });
+  it('refuses a site bigger than the game plays', () => {
+    const big = { ...DEFAULT_SCHEDULE, sites: DEFAULT_SCHEDULE.sites.map((st, i) => (i === 6 ? { ...st, size: 41 } : st)) };
+    expect(checkGameSchedule(big)).toEqual({ ok: false, errors: ['schedule.sites[6].size: the game plays at most 40 junctions'] });
+  });
   it('never plays one, even if it was stored', () => {
     expect(resolveSchedule(row(1, 1, relaxed)).source).toBe('invalid');
   });

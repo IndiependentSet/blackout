@@ -14,10 +14,11 @@ interface Props {
   onClockIn: () => void;
   onHowItWorks: () => void;
   onOpenAccount: () => void;
+  onBack: () => void;
 }
 
 /* The work order: the brief, shown before play and again via RE-READ WORK ORDER. */
-export function WorkOrderScreen({ day, siteNo, badge, keysEnabled, onClockIn, onHowItWorks, onOpenAccount }: Props) {
+export function WorkOrderScreen({ day, siteNo, badge, keysEnabled, onClockIn, onHowItWorks, onOpenAccount, onBack }: Props) {
   useWindowKey(e => {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClockIn(); }
   }, keysEnabled);
@@ -56,7 +57,7 @@ export function WorkOrderScreen({ day, siteNo, badge, keysEnabled, onClockIn, on
                 ))}
               </div>
               <div className={styles.footer}>
-                <span className={styles.week}>7 SITES · ONE WORKING WEEK</span>
+                <span className={styles.week}>7 SITES · ONE WORKING DAY</span>
                 <span className={styles.goal}>Come in on budget and the invoice reads PURR-FECT.</span>
               </div>
             </Panel>
@@ -69,6 +70,7 @@ export function WorkOrderScreen({ day, siteNo, badge, keysEnabled, onClockIn, on
         </div>
 
         <div className={styles.actions}>
+          <Button variant="glass" size="xl" onClick={onBack}>BACK</Button>
           <Button variant="accent" size="xl" onClick={onHowItWorks}>HOW IT WORKS</Button>
           <Button variant="primary" size="xl" onClick={onClockIn} style={{ padding: '0 34px', fontSize: 26 }}>CLOCK IN</Button>
           <span className={styles.hint}>OR PRESS ENTER · SITE {siteNo} IS WAITING</span>

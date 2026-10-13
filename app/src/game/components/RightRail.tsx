@@ -3,7 +3,7 @@ import { Button, Tag, cx } from '../../ui';
 import { KEY_LEGEND, PROCEDURE } from '../copy';
 import styles from './RightRail.module.css';
 
-/** Right of the board: the procedure, the invoice, and (once the week is done) the shareable invoice. */
+/** Right of the board: the procedure, the invoice, and (once the shift is done) the shareable invoice. */
 export function RightRail({ hidden, children }: { hidden: boolean; children: ReactNode }) {
   return <aside className={cx(styles.aside, hidden && styles.hidden)}>{children}</aside>;
 }
@@ -27,7 +27,7 @@ export function Procedure() {
   );
 }
 
-/** Running total for the week, and what going over (or staying under) budget means on this site. */
+/** Running total for the day, and what going over (or staying under) budget means on this site. */
 export function Invoice({ total, scored, par }: { total: number; scored: string; par: number | null }) {
   return (
     <>
@@ -53,11 +53,11 @@ export function Invoice({ total, scored, par }: { total: number; scored: string;
   );
 }
 
-/** Once all seven sites are scored: the week's invoice as shareable text. */
+/** Once all seven sites are scored: the day's invoice as shareable text. */
 export function ShareCard({ text, copied, onCopy }: { text: string; copied: boolean; onCopy: () => void }) {
   return (
     <div className={cx(styles.card, styles.share)}>
-      <div className={styles.shareHead}>WEEKLY INVOICE</div>
+      <div className={styles.shareHead}>DAILY INVOICE</div>
       <div className={styles.shareText}>{text}</div>
       <Button variant="primary" onClick={onCopy}>{copied ? 'COPIED!' : 'COPY INVOICE'}</Button>
     </div>

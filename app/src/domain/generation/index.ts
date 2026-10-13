@@ -3,7 +3,7 @@
 
 // settings
 export type { GenOptions, GenReport, Strategy } from '../types';
-export { DEFAULT_GEN, OPTION_LIMITS, STRATEGIES, resolveOptions, type Limit } from './options';
+export { DEFAULT_GEN, MAX_LEVEL_NODES, OPTION_LIMITS, STRATEGIES, resolveOptions, type Limit } from './options';
 export { GADGET_NAMES, menuFor, type GadgetName } from './gadgets';
 export type { LevelConstraints } from './constraints';
 
@@ -11,9 +11,14 @@ export type { LevelConstraints } from './constraints';
 export {
   DEFAULT_SCHEDULE, levelForSite, levelForSiteReport, levelsForDay, type GenerationSchedule, type SiteOutcome, type SiteRule,
 } from './schedule';
-export { parseOptions, parseSchedule, type ParseResult } from './parse';
+export { parseCurve, parseOptions, parseSchedule, type ParseResult } from './parse';
+
+// level pools: a curve of tiers, made ahead of time
+export {
+  DEFAULT_CURVES, campaignRamp, curveRuleErrors, generateSlot, orderByHardness, poolSlots, type CurveTier, type LevelCurve, type PoolSlot,
+} from './curve';
 
 // on demand
 export { generate, type GenerateRequest, type GenerateResult } from './generate';
 export { KEPT_OPTIMA, difficulty, solve, type SolveResult } from './solver';
-export { greedyCover, matchingBound } from './hardness';
+export { compareHardness, greedyCover, levelHardness, matchingBound } from './hardness';

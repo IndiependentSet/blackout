@@ -1,25 +1,21 @@
-import { useCallback, useReducer, useState, type Dispatch } from 'react';
+import { useCallback, useReducer, useState } from 'react';
 import { dayNumber, daySeed } from '../domain/calendar';
-import type { Level } from '../domain/types';
+import { DAILY_SET } from '../domain/sites';
+import type { PlayFeatures } from '../domain/types';
+import { recordClear } from '../services/repositories/siteClears';
 import { prefersMoreContrast } from './env';
+import { useDailyLevels } from './hooks/useDailyLevels';
 import { useDailySchedule } from './hooks/useDailySchedule';
 import { useLevels } from './hooks/useLevels';
-import { gameReducer, initialGameState, type GameAction, type GameState } from './state/gameReducer';
+import type { ClearSaver, PlaySession } from './session';
+import { gameReducer, initialGameState } from './state/gameReducer';
 
-export interface GameSession {
-  /** the work-order number everyone shares today */
-  day: number;
-  /** the week's levels; null while one is still being generated */
-  levels: (Level | null)[];
-  /** false when today's generation config couldn't be loaded and the default
-      week is being played: clears then stay off the leaderboard */
+const DAILY_FEATURES: PlayFeatures = { hints: true, invoice: true, share: true };
+
+export interface GameSession extends PlaySession {
+  /** false when today's published week isn't there (or today's generation config couldn't be loaded) and the
+      device is building the week itself: those levels may not be everyone's, so their clears stay off the leaderboard */
   onSchedule: boolean;
-  /** the open site's level */
-  level: Level | null;
-  state: GameState;
-  dispatch: Dispatch<GameAction>;
-  /** board preferences that survive leaving for another screen */
-  view: { expanded: boolean; dim: boolean; toggleExpanded: () => void; toggleDim: () => void };
 }
 
 /* Everything about today's game that has to outlive any one screen: the week's
@@ -27,8 +23,13 @@ export interface GameSession {
    the work order, the game and the account screens so none of them loses it. */
 export function useGameSession(): GameSession {
   const [day] = useState(() => dayNumber());
-  const { schedule, onSchedule } = useDailySchedule(day);
-  const levels = useLevels(daySeed(day), schedule);
+  const published = useDailyLevels(day);
+  const { schedule } = useDailySchedule(day);
+  /* The published week is the game. Only when it isn't there does the device build one from the saved config
+     (waiting to know that first, so a published week never costs a generation), and that week doesn't count. */
+  const built = useLevels(daySeed(day), published.status === 'missing' ? schedule : null);
+  const levels = published.levels ?? built;
+  const onSchedule = published.status !== 'missing';
   const [state, dispatch] = useReducer(gameReducer, undefined, initialGameState);
   const [expanded, setExpanded] = useState(false);
   /* someone who has asked their system for more contrast gets the house
@@ -38,8 +39,12 @@ export function useGameSession(): GameSession {
   const toggleExpanded = useCallback(() => setExpanded(v => !v), []);
   const toggleDim = useCallback(() => setDim(v => !v), []);
 
+  const save = useCallback<ClearSaver>(
+    (userId, idx, run) => recordClear(userId, day, idx, run.used, run.par, run.stars), [day]);
+
   return {
     day, levels, onSchedule, level: levels[state.idx], state, dispatch,
+    set: DAILY_SET, features: DAILY_FEATURES, save,
     view: { expanded, dim, toggleExpanded, toggleDim },
   };
 }

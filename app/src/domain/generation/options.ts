@@ -13,6 +13,9 @@ export const DEFAULT_GEN: GenOptions = {
   attempts: 400, repairs: 18, budgetMs: 500, solverCap: 600000, clock: true,
 };
 
+/** The biggest level the game plays, daily or campaign: more junctions than this and a house stops fitting a screen of thought. */
+export const MAX_LEVEL_NODES = 40;
+
 export const STRATEGIES: readonly Strategy[] = ['gadgets', 'free'];
 
 export interface Limit { min: number; max: number; step?: number }

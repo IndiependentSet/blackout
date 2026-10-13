@@ -2,7 +2,7 @@
    schedule the game runs from it. The stored schedule is untrusted JSON, so it
    always goes through parseSchedule; anything that doesn't parse falls back
    to the default. Pure. */
-import { DEFAULT_SCHEDULE, parseSchedule, resolveOptions, type GenerationSchedule } from './generation';
+import { DEFAULT_SCHEDULE, MAX_LEVEL_NODES, parseSchedule, resolveOptions, type GenerationSchedule } from './generation';
 import type { GameMode } from './gameModes';
 
 export interface StoredConfig {
@@ -44,9 +44,13 @@ export function gameRuleErrors(schedule: GenerationSchedule): string[] {
     ...schedule.sites.map((s, i) => ({ path: `schedule.sites[${i}].options`, options: s.options })),
     { path: 'schedule.fallback.options', options: schedule.fallback.options },
   ];
-  return rules
+  const errors = rules
     .filter(r => resolveOptions(r.options).maxOptima !== 1)
     .map(r => `${r.path}.maxOptima: the game needs a unique optimal cover (1)`);
+  schedule.sites.forEach((s, i) => {
+    if (s.size > MAX_LEVEL_NODES) errors.push(`schedule.sites[${i}].size: the game plays at most ${MAX_LEVEL_NODES} junctions`);
+  });
+  return errors;
 }
 
 /** Check untrusted JSON as a schedule the game can run: parseSchedule, then the game's own rules. */

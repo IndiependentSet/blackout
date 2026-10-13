@@ -2,6 +2,15 @@
 -- the saved generation configs. Rolled back at the end, so it leaves nothing.
 begin;
 
+-- Act as a user in a check. Sets both settings auth.uid() can read: the stub
+-- (CI) reads request.uid, Supabase reads the JWT claims. Transaction-local.
+create or replace function public.act_as(p_uid uuid) returns void
+language sql as $$
+  select set_config('request.uid', p_uid::text, true),
+         set_config('request.jwt.claim.sub', p_uid::text, true),
+         set_config('request.jwt.claims', json_build_object('sub', p_uid, 'role', 'authenticated')::text, true);
+$$;
+
 insert into auth.users (id) values
   ('c1000000-0000-0000-0000-000000000001'), ('c1000000-0000-0000-0000-000000000002');
 insert into public.profiles (id, username) values
@@ -35,7 +44,7 @@ begin
 
   -- signed in, not an admin: refused by the function and by the table
   set local role authenticated;
-  perform set_config('request.uid', 'c1000000-0000-0000-0000-000000000002', true);
+  perform public.act_as('c1000000-0000-0000-0000-000000000002');
   if public.is_admin() then raise exception 'a player counts as an admin'; end if;
   begin
     perform public.save_generation_config('daily', today + 1, sched, '');
@@ -49,7 +58,7 @@ begin
   end;
 
   -- an admin: never today, never a non-schedule; tomorrow on, re-saving replaces
-  perform set_config('request.uid', 'c1000000-0000-0000-0000-000000000001', true);
+  perform public.act_as('c1000000-0000-0000-0000-000000000001');
   if not public.is_admin() then raise exception 'the admin is not an admin'; end if;
   begin
     perform public.save_generation_config('daily', today, sched, '');
