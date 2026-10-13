@@ -3,7 +3,12 @@
 import { levelForSiteReport, type GenerationSchedule } from '../../domain/generation';
 import type { Level } from '../../domain/types';
 
-export interface PreviewRequest { schedule: GenerationSchedule; daySeed: number }
+export interface PreviewRequest {
+  schedule: GenerationSchedule;
+  daySeed: number;
+  /** make only this site (the game builds its week one site at a time) */
+  only?: number;
+}
 
 export interface SitePreview {
   level: Level;
@@ -13,10 +18,11 @@ export interface SitePreview {
   ms: number;
 }
 
-export function previewDay({ schedule, daySeed }: PreviewRequest, now: () => number = () => performance.now()): SitePreview[] {
-  return schedule.sites.map((_, i) => {
+export function previewDay({ schedule, daySeed, only }: PreviewRequest, now: () => number = () => performance.now()): SitePreview[] {
+  return schedule.sites.flatMap((_, i) => {
+    if (only !== undefined && only !== i) return [];
     const t0 = now();
     const { level, salt } = levelForSiteReport(schedule, daySeed, i);
-    return { level, salt, ms: Math.round(now() - t0) };
+    return [{ level, salt, ms: Math.round(now() - t0) }];
   });
 }

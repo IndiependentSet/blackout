@@ -1,50 +1,65 @@
-import { act, renderHook } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { DEFAULT_SCHEDULE, levelForSite } from '../../domain/generation';
+import { act, renderHook, waitFor } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { DEFAULT_SCHEDULE, generate } from '../../domain/generation';
+import type { Level } from '../../domain/types';
+import { fail, ok } from '../../services/result';
 import { useLevels } from './useLevels';
 
-beforeEach(() => { vi.useFakeTimers(); vi.spyOn(Date, 'now').mockReturnValue(0); });
-afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); });
+const lvl = (seed: number): Level => generate({ seed, size: 6, diff: 1, options: { clock: false } }).level as Level;
+const builder = () => vi.fn(async (_s: unknown, seed: number, idx: number) => ok(lvl(seed + idx)));
 
 describe('useLevels', () => {
-  it('starts with nothing and builds the week one site at a time', () => {
-    const { result } = renderHook(() => useLevels(12, DEFAULT_SCHEDULE));
+  it('starts with nothing and builds the week one site at a time, in order', async () => {
+    const build = builder();
+    const { result } = renderHook(() => useLevels(12, DEFAULT_SCHEDULE, build as never));
     expect(result.current.every(l => l === null)).toBe(true);
-
-    act(() => { vi.advanceTimersByTime(1); });
-    expect(result.current[0]).not.toBeNull();
-    expect(result.current[1]).toBeNull();
-
-    act(() => { vi.advanceTimersByTime(50); });
-    expect(result.current[1]).not.toBeNull();
-
-    act(() => { vi.advanceTimersByTime(1000); });
-    expect(result.current.every(l => l !== null)).toBe(true);
+    await waitFor(() => expect(result.current.every(l => l !== null)).toBe(true));
     expect(result.current).toHaveLength(7);
+    expect(build.mock.calls.map(c => c[2])).toEqual([0, 1, 2, 3, 4, 5, 6]);
+    expect(result.current[3]).toEqual(lvl(15));
   });
 
-  it('stops building when unmounted', () => {
-    const { result, unmount } = renderHook(() => useLevels(12, DEFAULT_SCHEDULE));
-    act(() => { vi.advanceTimersByTime(1); });
+  it('never has two sites building at once', async () => {
+    let running = 0, peak = 0;
+    const build = vi.fn(async (_s: unknown, seed: number, idx: number) => {
+      peak = Math.max(peak, ++running);
+      await Promise.resolve();
+      running--;
+      return ok(lvl(seed + idx));
+    });
+    const { result } = renderHook(() => useLevels(12, DEFAULT_SCHEDULE, build as never));
+    await waitFor(() => expect(result.current[6]).not.toBeNull());
+    expect(peak).toBe(1);
+  });
+
+  it('stops building when unmounted', async () => {
+    const signals: AbortSignal[] = [];
+    const build = vi.fn((_s: unknown, seed: number, idx: number, o?: { signal?: AbortSignal }) => {
+      if (o?.signal) signals.push(o.signal);
+      return new Promise<ReturnType<typeof ok<Level>>>(res => setTimeout(() => res(ok(lvl(seed + idx))), 5));
+    });
+    const { unmount } = renderHook(() => useLevels(12, DEFAULT_SCHEDULE, build as never));
+    await waitFor(() => expect(build).toHaveBeenCalledTimes(1));
     unmount();
-    act(() => { vi.advanceTimersByTime(1000); });
-    expect(result.current.filter(Boolean)).toHaveLength(1);
+    expect(signals[0].aborted).toBe(true);
+    await act(async () => { await new Promise(r => setTimeout(r, 30)); });
+    expect(build).toHaveBeenCalledTimes(1);
   });
 
-  it('waits for the schedule', () => {
-    const { result, rerender } = renderHook(({ s }) => useLevels(12, s), { initialProps: { s: null as typeof DEFAULT_SCHEDULE | null } });
-    act(() => { vi.advanceTimersByTime(1000); });
-    expect(result.current.every(l => l === null)).toBe(true);
+  it('waits for the schedule', async () => {
+    const build = builder();
+    const { result, rerender } = renderHook(({ s }) => useLevels(12, s, build as never), { initialProps: { s: null as typeof DEFAULT_SCHEDULE | null } });
+    await act(async () => { await new Promise(r => setTimeout(r, 20)); });
+    expect(build).not.toHaveBeenCalled();
     rerender({ s: DEFAULT_SCHEDULE });
-    act(() => { vi.advanceTimersByTime(1); });
-    expect(result.current[0]).toEqual(levelForSite(DEFAULT_SCHEDULE, 12, 0));
+    await waitFor(() => expect(result.current[0]).not.toBeNull());
   });
 
-  it('builds from the schedule it is given', () => {
-    const custom = { ...DEFAULT_SCHEDULE, sites: DEFAULT_SCHEDULE.sites.map((s, i) => (i === 0 ? { size: 9, diff: 2 as const, options: {} } : s)) };
-    const { result } = renderHook(() => useLevels(12, custom));
-    act(() => { vi.advanceTimersByTime(1); });
-    expect(result.current[0]).toEqual(levelForSite(custom, 12, 0));
-    expect(result.current[0]).not.toEqual(levelForSite(DEFAULT_SCHEDULE, 12, 0));
+  it('leaves a site that fails to build empty and carries on', async () => {
+    const build = vi.fn(async (_s: unknown, seed: number, idx: number) => (idx === 1 ? fail('worker died') : ok(lvl(seed + idx))));
+    const { result } = renderHook(() => useLevels(12, DEFAULT_SCHEDULE, build as never));
+    await waitFor(() => expect(result.current[6]).not.toBeNull());
+    expect(result.current[1]).toBeNull();
+    expect(result.current[0]).not.toBeNull();
   });
 });

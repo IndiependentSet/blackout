@@ -10,15 +10,27 @@ vi.mock('../services/supabase/client', () => ({
       onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
       signOut: () => Promise.resolve(),
     },
-    /* the one read a signed-out player makes: today's generation config (none saved here) */
+    /* the reads a signed-out player makes: today's published week and generation config (neither saved here) */
     from: (table: string) => {
-      if (table !== 'generation_configs') throw new Error('signed-out play must only read the generation config');
+      if (table === 'daily_levels') {
+        const published = { select: () => published, eq: () => published, order: () => Promise.resolve({ data: [], error: null }) };
+        return published;
+      }
+      if (table !== 'generation_configs') throw new Error('signed-out play must only read the daily week and the generation config');
       const query = { select: () => query, eq: () => query, lte: () => query, order: () => query,
         limit: () => Promise.resolve({ data: [], error: null }) };
       return query;
     },
   },
 }));
+
+/* jsdom has no Worker: the device-built week comes from a small stand-in (the real one is a worker call) */
+vi.mock('../services/generation/scheduleClient', async () => {
+  const { generate } = await import('../domain/generation');
+  const { ok } = await import('../services/result');
+  return { siteLevelAsync: async (_s: unknown, seed: number, idx: number) =>
+    ok(generate({ seed: seed + idx, size: 6, diff: 1, options: { clock: false } }).level) };
+});
 
 const { default: App } = await import('./App');
 

@@ -13,6 +13,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "check": "npm run lint && npm run typecheck && npm run test && npm run build",
+    "daily:publish": "npx --yes tsx tools/publish-daily.ts",
     "db:up": "tools/db-local.sh up",
     "db:down": "tools/db-local.sh down",
     "db:reset": "tools/db-local.sh reset",
