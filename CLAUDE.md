@@ -202,7 +202,7 @@ visuals — `app/src/assets/` and the camera system in `app/src/game/camera/` ar
     `app/tools/publish-match-pool.ts`): `DEFAULT_CURVES.match` (20 + 20 levels) seeded with the day number, every level
     re-checked with `solve`, published through `publish_match_pool_system` — service role only, match mode only, keeps the
     newest seven pools (a running match keeps its level in `matches.level`). `publish_level_pool` is now admin check +
-    `publish_pool_unchecked`. Same secrets as `publish-daily`. Both publish workflows also run after a successful `migrate` (`workflow_run`), so a deploy never leaves the daily week or the match pool empty; both are idempotent. Until a pool exists the server answers `no match levels published` and the lobby says so (`isUnpublished` → `UNPUBLISHED_COPY`).
+    `publish_pool_unchecked`. Same secrets as `publish-daily`. The jobs run as `service_role`, which bypasses RLS but not GRANTs: a table they read needs `grant select … to service_role` in its migration (the CI stub grants everything by default, so CI cannot catch a missing one). Both publish workflows also run after a successful `migrate` (`workflow_run`), so a deploy never leaves the daily week or the match pool empty; both are idempotent. Until a pool exists the server answers `no match levels published` and the lobby says so (`isUnpublished` → `UNPUBLISHED_COPY`).
   - **Admins and saved generation** (`app/sql/2026-10-07-admin-generation-config.sql`,
     guarded by `app/sql/ci/checks/admin-generation-config.sql`):
     `public.admins` (rows added by hand in the SQL editor — data, not a
