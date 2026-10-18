@@ -1,5 +1,5 @@
--- Run once in the Supabase SQL editor (Database > SQL Editor) against the
--- live project. Not applied automatically — no DB tool available client-side.
+-- Applied to production automatically on merge to main (app/tools/migrate.sh;
+-- see app/sql/README.md). Files run in filename order, so the "Run AFTER" notes below are the dependencies, not steps to do by hand.
 -- Run AFTER 2026-10-13-match-rpc.sql (needs match_players and profiles).
 --
 -- Why: the 1vs1 board is its own: wins and losses, no rating and no points.

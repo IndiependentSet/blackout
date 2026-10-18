@@ -1,5 +1,5 @@
--- Run once in the Supabase SQL editor (Database > SQL Editor) against the
--- live project. Not applied automatically — no DB tool available client-side.
+-- Applied to production automatically on merge to main (app/tools/migrate.sh;
+-- see app/sql/README.md). Files run in filename order, so the "Run AFTER" notes below are the dependencies, not steps to do by hand.
 -- Run AFTER 2026-09-08-merge-nickname-username.sql (needs site_clears).
 --
 -- Why: the dashboard and the staff ID card show a daily streak. It is derived

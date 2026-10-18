@@ -1,5 +1,5 @@
--- Run once in the Supabase SQL editor (Database > SQL Editor) against the
--- live project. Not applied automatically — no DB tool available client-side.
+-- Applied to production automatically on merge to main (app/tools/migrate.sh;
+-- see app/sql/README.md). Files run in filename order, so the "Run AFTER" notes below are the dependencies, not steps to do by hand.
 -- No earlier migration is needed: these are pure functions over jsonb.
 -- Run BEFORE 2026-10-12-match-rpc.sql (and before the survival RPC file).
 --
