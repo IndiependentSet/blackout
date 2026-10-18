@@ -1,6 +1,6 @@
 -- Run once in the Supabase SQL editor (Database > SQL Editor) against the
 -- live project. Not applied automatically — no DB tool available client-side.
--- Run AFTER 2026-10-08-base-schema.sql / 2026-09-08-merge-nickname-username.sql
+-- Run AFTER 2026-09-08-merge-nickname-username.sql
 -- (needs profiles.username) and AFTER 2026-10-11-cover-is-valid.sql (this file
 -- calls public.level_is_valid and public.cover_is_valid, which that file
 -- creates). Read app/sql/README.md
