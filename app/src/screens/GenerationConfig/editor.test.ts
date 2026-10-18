@@ -14,7 +14,8 @@ describe('generation config editor', () => {
   it('edits only the open site', () => {
     let s = editorReducer(initialEditor(), { type: 'tab', tab: 3 });
     s = editorReducer(s, { type: 'params', action: { type: 'set', patch: { size: 16, crossings: true } } });
-    expect(s.schedule.sites[3]).toEqual({ size: 16, diff: 2, options: { budgetMs: 400, crossings: true } });
+    const site = DEFAULT_SCHEDULE.sites[3];
+    expect(s.schedule.sites[3]).toEqual({ ...site, size: 16, options: { ...site.options, crossings: true } });
     expect(s.schedule.sites.filter((_, i) => i !== 3)).toEqual(DEFAULT_SCHEDULE.sites.filter((_, i) => i !== 3));
     expect(s.dirty).toBe(true);
     expect(parseSchedule(s.schedule).ok).toBe(true);
@@ -24,7 +25,7 @@ describe('generation config editor', () => {
     let s = editorReducer(initialEditor(), { type: 'params', action: { type: 'set', patch: { diff: 2 } } });
     expect(s.schedule.sites[0].constraints).toEqual(DEFAULT_SCHEDULE.sites[0].constraints);
     s = editorReducer(s, { type: 'constraints', patch: { maxK: 3, hasDegree: null } });
-    expect(s.schedule.sites[0].constraints).toEqual({ minNodes: 4, maxK: 3 });
+    expect(s.schedule.sites[0].constraints).toEqual({ minNodes: 5, maxK: 3 });
     s = editorReducer(s, { type: 'constraints', patch: { maxK: null, minNodes: null } });
     expect(s.schedule.sites[0]).not.toHaveProperty('constraints');
   });

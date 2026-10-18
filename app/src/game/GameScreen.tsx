@@ -1,13 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, type ReactNode } from 'react';
 import { shareText } from '../domain/invoice';
 import { totalScore } from '../domain/scoring';
-import { isSiteIndex, LAST_SITE, SITE_COUNT, SITES } from '../domain/sites';
 import { nearestInDirection } from '../domain/navigation';
 import { isCleared } from '../domain/cover';
 import type { HintTier } from '../domain/types';
 import { useClipboard } from '../hooks/useClipboard';
 import { useWindowKey } from '../hooks/useWindowKey';
-import { recordClear } from '../services/repositories/siteClears';
 import { cx, type StaffBadgeInfo } from '../ui';
 import { audio } from './audio/AudioService';
 import { Board, type BoardHandle } from './components/Board';
@@ -19,42 +17,52 @@ import { ScoreCard } from './components/ScoreCard';
 import { Sidebar } from './components/Sidebar';
 import { SitePlaque } from './components/SitePlaque';
 import { bloom, flashScreen, pulseWeb } from './fx';
+import { useClearSaver } from './hooks/useClearSaver';
 import { useScoreCard } from './hooks/useScoreCard';
 import { keyAction } from './input/keymap';
 import { HINT_KIND } from './state/hints';
-import { SAVE_FAILED, skipSave, type SaveStatus } from './state/scoreCopy';
+import { SAVE_FAILED } from './state/scoreCopy';
 import { banner as bannerOf, hud as hudOf, pips as pipsOf, scoredCount, statusMessage } from './state/selectors';
+import { isLastSite } from './state/gameReducer';
 import type { GameEvent } from './state/gameReducer';
-import type { GameSession } from './useGameSession';
+import type { PlaySession } from './session';
 import styles from './GameScreen.module.css';
 
 /** the fanfare and flash get this long before the score card slides in */
 const CARD_DELAY_MS = 760;
 
 interface Props {
-  session: GameSession;
+  session: PlaySession;
   /** the signed-in user, if any: only they have clears recorded */
   userId: string | null;
   badge: StaffBadgeInfo;
+  /** the board ignores taps and keys (before a match starts, once a run's clock is out) */
+  locked?: boolean;
+  /** a mode's own strip above the board (countdown, opponent) */
+  hud?: ReactNode;
   onOpenAccount: () => void;
-  onOpenWorkOrder: () => void;
+  /** a mode with no work order leaves this out */
+  onOpenWorkOrder?: () => void;
+  onOpenHub: () => void;
 }
 
-export function GameScreen({ session, userId, badge, onOpenAccount, onOpenWorkOrder }: Props) {
-  const { day, levels, level, state, dispatch, view } = session;
+export function GameScreen({ session, userId, badge, locked = false, hud: modeHud, onOpenAccount, onOpenWorkOrder, onOpenHub }: Props) {
+  const { day, levels, level, state, view, set, features, siteOffset = 0 } = session;
+  const dispatch = useCallback<typeof session.dispatch>(a => { if (!locked || a.type === 'keyboard') session.dispatch(a); }, [locked, session]);
   const boardRef = useRef<BoardHandle>(null);
   const scoreCard = useScoreCard(audio);
   const { copied, copy } = useClipboard();
-  const [save, setSave] = useState<SaveStatus | null>(null);
+  const onSaveError = useCallback((error: string) => session.dispatch({ type: 'notice', msg: SAVE_FAILED + error }), [session]);
+  const { status: save, saveClear } = useClearSaver(userId, session.save, onSaveError, session.onSchedule ?? true);
 
   const results = state.results;
   const idx = state.idx;
 
   /* ---- navigation ---- */
   const goTo = useCallback((i: number) => {
-    if (isSiteIndex(i) && levels[i]) dispatch({ type: 'go', idx: i });
-  }, [levels, dispatch]);
-  const advance = () => { if (idx < LAST_SITE) goTo(idx + 1); };
+    if (Number.isInteger(i) && i >= 0 && i < set.count && levels[i]) dispatch({ type: 'go', idx: i });
+  }, [levels, dispatch, set.count]);
+  const advance = () => { if (!isLastSite(idx, set.count)) goTo(idx + 1); };
   const next = () => { if (level && isCleared(level, state.placed)) advance(); };
   const cardNext = () => { scoreCard.close(); advance(); };
 
@@ -78,7 +86,7 @@ export function GameScreen({ session, userId, badge, onOpenAccount, onOpenWorkOr
         if (e.kind === 'cleared') {
           flashScreen(); audio.fanfare();
           scoreCard.openAfter(CARD_DELAY_MS, e.run, e.prevScore);
-          saveClear(e);
+          saveClear(idx, e.run, e.consulted);
         }
         break;
       case 'recalled': audio.chirp(e.count, false); break;
@@ -86,17 +94,6 @@ export function GameScreen({ session, userId, badge, onOpenAccount, onOpenWorkOr
       case 'reset': pulseWeb(); break;
       case 'entered': scoreCard.close(); break;
     }
-  }
-
-  function saveClear(e: Extract<GameEvent, { kind: 'cleared' }>) {
-    const skip = skipSave(userId, session.onSchedule);
-    if (skip || !userId) return setSave(skip);
-    setSave({ kind: 'saving' });
-    recordClear(userId, day, idx, e.run.used, e.run.par, e.run.stars).then(r => {
-      if (r.ok) return setSave({ kind: 'saved' });
-      setSave({ kind: 'error', message: r.error });
-      dispatch({ type: 'notice', msg: SAVE_FAILED + r.error });
-    });
   }
 
   /* ---- keyboard ---- */
@@ -118,7 +115,7 @@ export function GameScreen({ session, userId, badge, onOpenAccount, onOpenWorkOr
       case 'expand': return view.toggleExpanded();
       case 'dim': return view.toggleDim();
       case 'zoom': return boardRef.current?.zoomBy(a.by);
-      case 'consult': return dispatch({ type: 'consult', tier: a.tier, lv: level });
+      case 'consult': return features.hints ? dispatch({ type: 'consult', tier: a.tier, lv: level }) : undefined;
       case 'activate': return dispatch({ type: 'tap', node: state.focus, lv: level });
       case 'move': {
         const node = nearestInDirection(level.nodes, state.focus, a.dir);
@@ -131,36 +128,40 @@ export function GameScreen({ session, userId, badge, onOpenAccount, onOpenWorkOr
 
   /* ---- what to show ---- */
   const hud = hudOf(level, state.placed);
-  const banner = bannerOf(level, state.placed, idx);
+  const banner = bannerOf(level, state.placed, idx, set, siteOffset);
   const msg = statusMessage(level, state.placed, state.msg);
   const activeTier = (state.hint ? ([1, 2, 3] as HintTier[]).find(t => HINT_KIND[t] === state.hint!.kind) : null) ?? null;
-  const siteName = SITES[idx];
+  const siteName = set.name(idx + siteOffset);
+  const siteNo = idx + 1 + siteOffset;
   const invoiceText = shareText(day, results);
 
   return (
     <>
       <div className={styles.page}>
         <div className={styles.cols}>
-          <Sidebar hidden={view.expanded} badge={badge} pips={pipsOf(results, levels, idx)}
-            onOpenAccount={onOpenAccount} onGoSite={goTo} onOpenWorkOrder={onOpenWorkOrder} />
+          <Sidebar hidden={view.expanded} badge={badge} pips={pipsOf(results, levels, idx, set)} set={set}
+            onOpenAccount={onOpenAccount} onGoSite={goTo} onOpenWorkOrder={onOpenWorkOrder} onOpenHub={onOpenHub} />
 
           <main className={cx(styles.main, view.expanded && styles.wide)}>
-            <SitePlaque siteNo={idx + 1} level={level} name={siteName} best={results[idx]} />
+            {modeHud}
+            <SitePlaque siteNo={siteNo} level={level} name={siteName} best={results[idx]} />
             {level ? (
-              <Board ref={boardRef} level={level} siteIdx={idx} placed={state.placed} hint={state.hint}
+              <Board ref={boardRef} level={level} siteIdx={idx + siteOffset} placed={state.placed} hint={state.hint}
                 focus={state.focus} kbd={state.kbd} dim={view.dim} expanded={view.expanded}
                 onTapNode={node => dispatch({ type: 'tap', node, lv: level })}
                 onToggleExpand={view.toggleExpanded} onToggleDim={view.toggleDim} />
             ) : <BoardPlaceholder />}
             <StatusRow hud={hud} msg={msg} />
-            <HintBar active={activeTier} onConsult={tier => level && dispatch({ type: 'consult', tier, lv: level })} />
+            {features.hints && <HintBar active={activeTier} onConsult={tier => level && dispatch({ type: 'consult', tier, lv: level })} />}
             <ActionBar banner={banner} onRecall={() => dispatch({ type: 'reset' })} onNext={next} />
           </main>
 
           <RightRail hidden={view.expanded}>
             <Procedure />
-            <Invoice total={totalScore(results)} scored={scoredCount(results) + '/' + SITE_COUNT + ' SCORED'} par={level ? level.k : null} />
-            {scoredCount(results) === SITE_COUNT && (
+            {features.invoice && (
+              <Invoice total={totalScore(results)} scored={scoredCount(results) + '/' + set.count + ' SCORED'} par={level ? level.k : null} />
+            )}
+            {features.share && scoredCount(results) === set.count && (
               <ShareCard text={invoiceText} copied={copied} onCopy={() => copy(invoiceText)} />
             )}
             <KeyLegend />
@@ -169,7 +170,7 @@ export function GameScreen({ session, userId, badge, onOpenAccount, onOpenWorkOr
       </div>
 
       {scoreCard.card && (
-        <ScoreCard state={scoreCard.card} day={day} siteNo={idx + 1} siteName={siteName}
+        <ScoreCard state={scoreCard.card} day={day} siteNo={siteNo} siteName={siteName}
           nextLabel={banner.nextLabel} save={save}
           onReview={scoreCard.close} onNext={cardNext} />
       )}

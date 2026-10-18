@@ -36,7 +36,7 @@ done
 say() { echo "$@" >&2; }
 die() { say "error: $*"; exit 1; }
 psql_() { psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 "$@"; }
-sha() { sha256sum "$1" | cut -d' ' -f1; }
+sha() { if command -v sha256sum >/dev/null; then sha256sum "$1"; else shasum -a 256 "$1"; fi | cut -d' ' -f1; }
 
 # ---- the migrations on disk -------------------------------------------------
 files=()

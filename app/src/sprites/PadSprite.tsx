@@ -1,4 +1,5 @@
 import type { Breed } from '../assets/cats';
+import type { AccessoryArt } from '../domain/types';
 import { CatFlipbook } from './CatFlipbook';
 import { CAT_FOOT } from './geometry';
 import { PawStencil } from './PawStencil';
@@ -18,12 +19,14 @@ interface Props {
   bloomId?: string;
   /** fill for the shadow under the pad */
   shadow?: string;
+  /** what the hired cat wears */
+  accessory?: AccessoryArt;
 }
 
 /* A deployment pad at the origin of its own coordinate space: a slowly-turning
    dashed ring with a paw stencil while empty, which fades out under the cat
    that drops onto it. The caller positions and scales it. */
-export function PadSprite({ breed, hired, pulsing, focused, bloomId, shadow = CONTACT_SHADOW }: Props) {
+export function PadSprite({ breed, hired, pulsing, focused, bloomId, shadow = CONTACT_SHADOW, accessory }: Props) {
   const emptyO = hired ? 0 : 0.9;
   return (
     <>
@@ -43,7 +46,7 @@ export function PadSprite({ breed, hired, pulsing, focused, bloomId, shadow = CO
 
       {hired && (
         <g style={{ animation: 'cc-drop 480ms cubic-bezier(.2,1.2,.3,1) both', transformOrigin: `0px ${CAT_FOOT}px` }}>
-          <CatFlipbook breed={breed} title={breed.name + ' — on site'} />
+          <CatFlipbook breed={breed} title={breed.name + ' — on site'} accessory={accessory} />
         </g>
       )}
       <g opacity={hired ? 1 : 0}>

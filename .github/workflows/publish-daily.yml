@@ -1,0 +1,51 @@
+name: publish-daily
+# Generates the day's seven levels and stores them in public.daily_levels, so
+# every player plays the same week (app/tools/publish-daily.ts). Runs at 00:00
+# GMT, when a puzzle day starts; a second run a quarter of an hour later is a
+# safety net (scheduled runs can start late or be dropped), and does nothing if
+# the first one finished. One-time setup: the SUPABASE_URL and
+# SUPABASE_SERVICE_ROLE_KEY secrets on the `production` environment.
+on:
+  schedule:
+    - cron: '0 0 * * *'
+    - cron: '15 0 * * *'
+  workflow_dispatch:
+    inputs:
+      day:
+        description: 'Puzzle day number (empty = today, GMT)'
+        required: false
+permissions:
+  contents: read
+concurrency:
+  group: publish-daily
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: app
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+      - name: Check the secrets are set
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "::error::Set the SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY secrets on the 'production' environment."
+            exit 1
+          fi
+      - name: Publish the day
+        env:
+          DAY: ${{ inputs.day }}
+        run: |
+          if [ -n "$DAY" ]; then npm run daily:publish -- --day "$DAY"; else npm run daily:publish; fi

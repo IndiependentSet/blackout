@@ -1,0 +1,57 @@
+/* ---- above the board while a match is on ---- */
+.hud {
+  display: flex; flex-direction: column; gap: 8px; padding: 8px 14px 10px; box-sizing: border-box;
+  border: var(--bd); border-radius: 10px; box-shadow: var(--lift-sm); background: var(--paper); color: var(--text);
+}
+.hudTop { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.clock { font-family: var(--font-display); font-size: 30px; line-height: 1; color: var(--violet); font-variant-numeric: tabular-nums; }
+.low { color: var(--danger); animation: cc-teeter 700ms ease-in-out infinite alternate; }
+.go { font-family: var(--font-display); font-size: 30px; line-height: 1; color: var(--danger); }
+.count { font-family: var(--font-display); font-size: 44px; line-height: 1; color: var(--danger); animation: cc-teeter 500ms ease-in-out infinite alternate; }
+.stat { font-size: 13px; font-weight: 900; letter-spacing: .1em; color: var(--text-2); }
+.note { font-size: 12px; font-weight: 900; letter-spacing: .12em; color: var(--text-4); }
+.warn { font-size: 12px; font-weight: 900; letter-spacing: .12em; color: var(--danger); }
+.spacer { flex: 1; }
+
+.bars { display: flex; flex-direction: column; gap: 5px; }
+.barRow { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 900; letter-spacing: .08em; color: var(--text-2); }
+.barName { width: 96px; flex: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.track { position: relative; flex: 1; height: 12px; overflow: hidden; border: 2.5px solid var(--ink); border-radius: 8px; background: var(--cream); }
+.fill { position: absolute; inset: 0 auto 0 0; background: var(--violet); transition: width 180ms ease-out; }
+.theirs { background: var(--pink); }
+.dot { display: inline-block; width: 9px; height: 9px; margin-right: 6px; border: 2px solid var(--ink); border-radius: 50%; background: var(--mint); }
+.away { background: var(--muted); }
+
+/* ---- the sheet that closes a match, and the waiting room ---- */
+.scrim {
+  position: fixed; inset: 0; z-index: 25; display: flex; align-items: center; justify-content: center; padding: 18px;
+  background: color-mix(in srgb, var(--ink-deep) 72%, transparent); animation: cc-fadein 220ms ease-out both;
+}
+.card {
+  width: 100%; max-width: 380px; overflow: hidden; padding-bottom: 16px;
+  background: var(--parchment); border: 4px solid var(--ink); border-radius: 6px 20px 6px 20px;
+  box-shadow: 0 10px 0 var(--ink); animation: cc-cardin 460ms cubic-bezier(.2, 1.2, .3, 1) both;
+}
+.cardHead { display: flex; flex-direction: column; gap: 2px; padding: 12px 18px 11px; border-bottom: 4px solid var(--ink); background: var(--orchid); }
+.won { background: var(--mint); }
+.lost { background: var(--rose); }
+.order { font-size: 11px; font-weight: 900; letter-spacing: .22em; color: var(--ink); }
+.title { font-family: var(--font-display); font-size: 28px; line-height: 1.05; color: var(--ink); }
+.cardBody { padding: 14px 18px 0; display: flex; flex-direction: column; gap: 8px; }
+.row { display: flex; justify-content: space-between; font-size: 14px; font-weight: 900; letter-spacing: .06em; color: var(--text); border-bottom: 2px dotted var(--text-4); padding-bottom: 4px; }
+.winner { color: var(--violet); }
+.line { font-size: 13px; font-weight: 800; line-height: 1.5; color: var(--text-2); text-wrap: pretty; }
+.actions { margin: 12px 18px 0; display: flex; gap: 8px; }
+
+.waiting { min-height: 100vh; box-sizing: border-box; display: flex; align-items: center; justify-content: center; padding: 18px; background: var(--page); }
+.waitCard { max-width: 420px; }
+
+/* ---- the lobby ---- */
+.stack { display: flex; flex-direction: column; gap: 16px; }
+.record { display: flex; gap: 8px; flex-wrap: wrap; }
+.list { display: flex; flex-direction: column; gap: 8px; }
+.item { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: var(--cream); border: 2.5px solid var(--ink); border-radius: 10px; padding: 8px 10px 8px 12px; }
+.itemName { flex: 1 1 120px; min-width: 0; font-size: 14px; font-weight: 900; color: var(--text); }
+.itemNote { font-size: 11.5px; font-weight: 800; letter-spacing: .05em; color: var(--text-3); }
+.empty { text-align: center; padding: 14px 10px; font-size: 12.5px; font-weight: 800; color: var(--text-4); line-height: 1.5; }
+.picked { background: color-mix(in srgb, var(--gold) 40%, var(--cream)); }

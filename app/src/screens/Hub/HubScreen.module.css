@@ -1,0 +1,24 @@
+.page {
+  min-height: 100vh; box-sizing: border-box; padding: 26px 16px 40px;
+  color: var(--on-dark); background: var(--page);
+}
+.inner { max-width: 1080px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; align-items: flex-start; }
+
+.masthead {
+  display: flex; flex-wrap: wrap; align-items: flex-end; gap: 18px; width: 100%; box-sizing: border-box;
+  border-bottom: 4px dashed rgba(247, 179, 43, .35); padding-bottom: 18px;
+}
+.brand { display: flex; flex-direction: column; }
+.kicker { font-family: var(--font-display); font-size: 15px; letter-spacing: .34em; color: var(--orchid); margin-bottom: 8px; line-height: .82; }
+.blurbWrap { flex: 1 1 220px; min-width: 200px; display: flex; flex-direction: column; gap: 6px; padding-bottom: 8px; }
+.division { font-size: 13px; font-weight: 900; letter-spacing: .16em; color: var(--muted); }
+.tagline { font-size: 17px; font-weight: 800; line-height: 1.4; color: var(--on-dark); text-wrap: pretty; }
+.tagline b { color: var(--pink); font-weight: 900; }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; width: 100%; }
+.card { border-radius: 4px 16px 8px 16px; gap: 14px; height: 100%; box-sizing: border-box; }
+.blurb { margin: 0; font-size: 14.5px; font-weight: 700; line-height: 1.5; color: var(--text-2); text-wrap: pretty; }
+.stat { font-family: var(--font-display); font-size: 18px; color: var(--violet); }
+.cta { margin-top: auto; display: flex; }
+
+.actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }

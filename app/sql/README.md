@@ -48,6 +48,22 @@ RLS is off project-wide. Access control is GRANTs plus `security definer`
 functions, and every migration that adds a table or function should say who
 may do what with it.
 
+## A local Supabase
+
+`npm run db:up` starts a real local Supabase (Docker; config in
+`app/supabase/config.toml`, which leaves the schema to this folder), loads the
+original schema (`ci/handoff-schema.sql`), runs every migration here through
+`tools/migrate.sh`, and writes `app/.env.local` so `npm run dev` talks to it.
+`npm run local` does it all in one go: start, schema, test data
+(`tools/local.ts`: boss = admin, alice and bob = friends, and the three default
+level pools published) and the dev server. `npm run local:login -- alice` prints
+a one-click sign-in link (mails also land in Mailpit,
+http://127.0.0.1:55324). The admin pages are `/generation.html`, `/pools.html`
+and `/playground.html`; for your own account, `npm run db:admin -- <username>`. `npm run db:reset`
+wipes and rebuilds, `npm run db:down` stops it, `npm run db:psql` opens a
+psql. Needs Docker and `psql` (`brew install libpq`). Delete `.env.local` to
+point the app back at `.env`.
+
 ## Running it yourself
 
 ```sh

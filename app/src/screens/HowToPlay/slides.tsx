@@ -31,7 +31,7 @@ export function slides(sites: readonly string[]): Slide[] {
     { kicker: 'STUCK?', title: 'CONSULT THE EXPERTS.',
       body: 'Every site has exactly one purr-fect crew, and it can always be worked out. If you can’t, three consultants are on call.',
       demo: <ConsultDemo /> },
-    { kicker: 'THE WEEKLY INVOICE', title: <>{sites.length} SITES. {pink('ONE WORKING WEEK.')}</>,
+    { kicker: 'THE DAILY INVOICE', title: <>{sites.length} SITES. {pink('ONE WORKING DAY.')}</>,
       body: 'Seven fresh sites every day, the same for every crew in the company, each one bigger than the last. Bring all seven in on budget and the invoice reads PURR-FECT.',
       demo: <WeekDemo sites={sites} /> },
   ];

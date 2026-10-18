@@ -12,6 +12,11 @@ vi.mock('../../services/repositories/auth', () => ({
 }));
 vi.mock('../../services/repositories/profiles', () => ({ setUsername: (...a: unknown[]) => setUsername(...a) }));
 vi.mock('../../services/repositories/siteClears', () => ({ getAllTimeCount: () => Promise.resolve(ok(12)) }));
+vi.mock('../../services/repositories/streaks', () => ({
+  NO_STREAK: { current: 0, best: 0 }, getStreak: () => Promise.resolve(ok({ current: 3, best: 5 })),
+}));
+const listBadgesOf = vi.fn();
+vi.mock('../../services/repositories/badges', () => ({ listBadgesOf: (...a: unknown[]) => listBadgesOf(...a) }));
 vi.mock('../../services/repositories/leaderboards', () => ({
   getLeaderboard: () => Promise.resolve(ok([
     { user_id: 'me', username: 'meow', score: 40 }, { user_id: 'u2', username: 'zed', score: 25 },
@@ -29,7 +34,7 @@ const auth = (over: Partial<AuthState> = {}): AuthState => ({
 const renderWith = (a: AuthState) => render(
   <AuthContext.Provider value={a}><StaffOfficeScreen onClose={() => {}} weeklyPerfect={3} /></AuthContext.Provider>);
 
-beforeEach(() => { vi.clearAllMocks(); });
+beforeEach(() => { vi.clearAllMocks(); listBadgesOf.mockResolvedValue(ok([])); });
 
 describe('Staff Office, signed out', () => {
   it('shows a loading note until the session is known', () => {
@@ -75,6 +80,8 @@ describe('Staff Office, signed in', () => {
     expect(screen.getByText('ann@example.com')).toBeInTheDocument();
     expect(screen.getByText('3/7')).toBeInTheDocument();
     expect(await screen.findByText('12')).toBeInTheDocument();
+    expect(await screen.findByText('DAY STREAK · BEST 5')).toBeInTheDocument();
+    expect(screen.getByText('3', { selector: 'div' })).toBeInTheDocument();
     expect(await screen.findByText('@meow (YOU)')).toBeInTheDocument();
     expect(screen.getByText('@zed')).toBeInTheDocument();
   });
@@ -101,6 +108,32 @@ describe('Staff Office, signed in', () => {
     expect(screen.getByRole('button', { name: 'CANCEL' })).toBeInTheDocument();
   });
 
+  it('shows the badges the server has awarded, in catalogue order', async () => {
+    listBadgesOf.mockResolvedValue(ok([
+      { id: 'first-duel-win', earnedAt: '2026-10-02T10:00:00Z' },
+      { id: 'streak-7', earnedAt: '2026-10-01T10:00:00Z' },
+    ]));
+    renderWith(signedIn());
+    expect(await screen.findByText('BADGES · 2')).toBeInTheDocument();
+    const names = screen.getAllByRole('listitem').map(li => li.firstElementChild?.textContent);
+    expect(names).toEqual(['WEEK ON THE JOB', 'FIRST BLOOD']);
+    expect(listBadgesOf).toHaveBeenCalledWith('me');
+  });
+
+  it('says so when there are no badges yet', async () => {
+    renderWith(signedIn());
+    expect(await screen.findByText('NO BADGES YET')).toBeInTheDocument();
+  });
+
+  it('hides the shelf, and breaks nothing, when badges cannot be read', async () => {
+    listBadgesOf.mockResolvedValue(fail('relation "player_badges" does not exist'));
+    renderWith(signedIn());
+    expect(await screen.findByText('12')).toBeInTheDocument();
+    await waitFor(() => expect(listBadgesOf).toHaveBeenCalled());
+    expect(screen.queryByText(/BADGES/)).not.toBeInTheDocument();
+    expect(screen.getByText('@meow')).toBeInTheDocument();
+  });
+
   it('opens the crew roster', async () => {
     renderWith(signedIn());
     await userEvent.click(screen.getByRole('button', { name: /CREW ROSTER/ }));
@@ -110,9 +143,12 @@ describe('Staff Office, signed in', () => {
   it('offers the admin tools only to an admin', async () => {
     renderWith(signedIn());
     await screen.findByText('@meow (YOU)');
-    expect(screen.queryByRole('button', { name: /ADMIN TOOLS/ })).toBeNull();
+    expect(screen.queryByText('ADMIN TOOLS')).toBeNull();
     isAdmin.mockResolvedValueOnce(ok(true));
     renderWith(auth({ userId: 'boss', email: 'b@example.com', username: 'boss', handle: '@boss' }));
-    expect(await screen.findByRole('button', { name: /ADMIN TOOLS/ })).toBeInTheDocument();
+    expect(await screen.findByText('ADMIN TOOLS')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Level pools/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Generation config/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Playground/ })).toBeInTheDocument();
   });
 });

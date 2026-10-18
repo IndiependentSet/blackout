@@ -1,0 +1,42 @@
+.page {
+  min-height: 100vh; box-sizing: border-box; padding: 26px 16px 40px;
+  color: var(--on-dark); background: var(--page);
+}
+.inner { max-width: 1080px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; align-items: flex-start; }
+
+.masthead {
+  display: flex; flex-wrap: wrap; align-items: flex-end; gap: 18px; width: 100%; box-sizing: border-box;
+  border-bottom: 4px dashed var(--amber); padding-bottom: 18px;
+}
+.brand { display: flex; flex-direction: column; }
+.kicker { font-family: var(--font-display); font-size: 15px; letter-spacing: .34em; color: var(--orchid); margin-bottom: 8px; line-height: .82; }
+.blurbWrap { flex: 1 1 220px; min-width: 200px; display: flex; flex-direction: column; gap: 6px; padding-bottom: 8px; }
+.division { font-size: 13px; font-weight: 900; letter-spacing: .16em; color: var(--muted); }
+.tagline { font-size: 17px; font-weight: 800; line-height: 1.4; color: var(--on-dark); text-wrap: pretty; }
+
+.notes { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.note { font-size: 13px; font-weight: 900; letter-spacing: .12em; color: var(--muted); }
+
+.chapters { display: flex; flex-direction: column; gap: 22px; width: 100%; }
+.chapter { width: 100%; }
+.chapterShut { opacity: .55; }
+.head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; align-items: baseline; }
+.progress { font-family: var(--font-display); font-size: 17px; color: var(--violet); }
+.shut { font-size: 13px; font-weight: 900; letter-spacing: .1em; color: var(--text-3); }
+
+.levels { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 10px; }
+.level {
+  display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 4px 6px;
+  border: var(--bd); border-radius: 8px; box-shadow: var(--lift-sm);
+  background: var(--paper); color: var(--text); font-family: var(--font-display); font-size: 20px; cursor: pointer;
+}
+.level:hover:not(:disabled) { background: var(--gold); }
+.level:focus-visible { outline: 3px solid var(--violet); outline-offset: 2px; }
+.level:disabled { cursor: not-allowed; background: var(--cream); color: var(--text-4); box-shadow: none; }
+.next { background: var(--gold); }
+.cleared { background: var(--mint); }
+.stars { font-family: var(--font-body); font-size: 12px; letter-spacing: .08em; color: var(--text-2); line-height: 1; }
+
+.gate { max-width: 460px; }
+.gateText { margin: 0; font-size: 15px; font-weight: 700; line-height: 1.5; color: var(--text-2); text-wrap: pretty; }
+.actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }

@@ -8,7 +8,27 @@ beforeAll(() => { vi.spyOn(Date, 'now').mockReturnValue(0); });
 afterAll(() => { vi.restoreAllMocks(); });
 
 /* the closure makeLevelForDay() used for site 1 before the schedule became data */
-const oldSiteOne = (lv: Level) => lv.nodes.length >= 4 && lv.adj.some(a => a.length === 3) && lv.k <= 2;
+const oldSiteOne = (lv: Level) => lv.nodes.length >= 5 && lv.adj.some(a => a.length === 3) && lv.k <= 2;
+
+describe('DEFAULT_SCHEDULE', () => {
+  const sites = DEFAULT_SCHEDULE.sites;
+  it('climbs from a warm-up to a 40-junction finale, a step bigger every site', () => {
+    expect(sites).toHaveLength(7);
+    expect(sites[0].size).toBe(5);
+    expect(sites[sites.length - 1].size).toBe(40);
+    sites.forEach((s, i) => { if (i) expect(s.size).toBeGreaterThan(sites[i - 1].size); });
+  });
+  it('never asks for fewer stars or an easier bound than the site before', () => {
+    sites.forEach((s, i) => {
+      if (!i) return;
+      expect(s.diff).toBeGreaterThanOrEqual(sites[i - 1].diff);
+      expect(s.options.minBoundGap ?? 0).toBeGreaterThanOrEqual(sites[i - 1].options.minBoundGap ?? 0);
+    });
+  });
+  it('keeps the unique cover', () => {
+    for (const s of sites) expect(s.options.maxOptima ?? 1).toBe(1);
+  });
+});
 
 describe('schedule', () => {
   it('compiles site 1\'s constraints to the filter it replaced', () => {

@@ -1,7 +1,8 @@
 import { BREEDS, type Breed } from '../../assets/cats';
+import { accessoryFor } from '../../assets/cosmetics';
 import { THINGS, type Thing } from '../../assets/things';
 import { coveredEdges } from '../../domain/cover';
-import type { Hint } from '../../domain/types';
+import type { AccessoryArt, Hint, Loadout } from '../../domain/types';
 import { CAT_FOOT, CAT_TOP, THING_FOOT } from '../../sprites';
 import { CAT_S, MAP_H, MAP_W, THING_S } from '../constants';
 import type { Layout } from '../layout/layout';
@@ -14,6 +15,8 @@ interface SpriteBase { key: string; x: number; y: number; scale: number; base: n
 export interface ThingItem extends SpriteBase { kind: 'thing'; thing: Thing; smashed: boolean; index: number }
 export interface PadItem extends SpriteBase {
   kind: 'pad'; node: number; breed: Breed; hired: boolean; pulsing: boolean; focused: boolean;
+  /** what the cat wears; absent when the player is bare or the art isn't drawn yet */
+  accessory?: AccessoryArt;
 }
 export type SpriteItem = ThingItem | PadItem;
 
@@ -35,6 +38,8 @@ export interface SceneInput {
   focus: number;
   /** only show the focus ring once the keyboard has been used */
   kbd: boolean;
+  /** the player's accessories; cosmetic only, never changes who sits where */
+  loadout?: Loadout;
 }
 
 const PATH_MARGIN = 60;
@@ -42,7 +47,7 @@ const PATH_MARGIN = 60;
 /* Everything that depends on the game but not on where the camera is. Culling
    against the frame happens per frame in the view layer, so panning never
    rebuilds this. */
-export function buildScene({ layout, siteIdx, placed, hint, focus, kbd }: SceneInput): Scene {
+export function buildScene({ layout, siteIdx, placed, hint, focus, kbd, loadout }: SceneInput): Scene {
   const { lv, pos, plan } = layout;
   const hired = new Set(placed);
   const lit = coveredEdges(lv, placed);
@@ -76,10 +81,12 @@ export function buildScene({ layout, siteIdx, placed, hint, focus, kbd }: SceneI
     const pointedAt = !!hint && (
       (hint.kind === 'leaf' && (i === hint.leaf || i === hint.forced))
       || (hint.kind === 'reveal' && i === hint.node));
+    const accessory = accessoryFor(loadout, breed.key);
     sprites.push({
       kind: 'pad', key: 'n' + i, node: i, x: p.x, y: p.y, scale: CAT_S, base: p.y + CAT_FOOT * CAT_S,
       bounds: [p.x - 40, p.y + CAT_TOP * CAT_S, p.x + 40, p.y + 30],
       breed, hired: hired.has(i), pulsing: pointedAt, focused: kbd && i === focus,
+      ...(accessory && { accessory }),
     });
   });
 

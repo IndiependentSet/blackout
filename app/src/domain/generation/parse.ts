@@ -5,6 +5,7 @@ import type { GenOptions, Stars, Strategy } from '../types';
 import type { LevelConstraints } from './constraints';
 import { isGadget } from './gadgets';
 import { OPTION_LIMITS, STRATEGIES, resolveOptions, type Limit } from './options';
+import type { CurveTier, LevelCurve } from './curve';
 import type { GenerationSchedule, SiteRule } from './schedule';
 
 export type ParseResult<T> = { ok: true; value: T } | { ok: false; errors: string[] };
@@ -77,18 +78,20 @@ function readMenu(r: Reader, path: string, raw: unknown): string[] | null | unde
 
 function readConstraints(r: Reader, path: string, raw: unknown): LevelConstraints | undefined {
   if (!isObj(raw)) { r.errors.push(`${path}: expected an object`); return undefined; }
-  r.unknownKeys(path, raw, ['minNodes', 'maxK', 'hasDegree']);
+  r.unknownKeys(path, raw, ['minNodes', 'maxNodes', 'minK', 'maxK', 'hasDegree']);
   const out: LevelConstraints = {};
   if ('minNodes' in raw) out.minNodes = r.num(`${path}.minNodes`, raw.minNodes, OPTION_LIMITS.size, true);
+  if ('maxNodes' in raw) out.maxNodes = r.num(`${path}.maxNodes`, raw.maxNodes, OPTION_LIMITS.size, true);
+  if ('minK' in raw) out.minK = r.num(`${path}.minK`, raw.minK, { min: 0, max: OPTION_LIMITS.size.max }, true);
   if ('maxK' in raw) out.maxK = r.num(`${path}.maxK`, raw.maxK, { min: 0, max: OPTION_LIMITS.size.max }, true);
   if ('hasDegree' in raw) out.hasDegree = r.num(`${path}.hasDegree`, raw.hasDegree, { min: 1, max: OPTION_LIMITS.maxDegree.max }, true);
   return Object.fromEntries(Object.entries(out).filter(([, v]) => v !== undefined));
 }
 
-function readSite(r: Reader, path: string, raw: unknown): SiteRule {
+function readSite(r: Reader, path: string, raw: unknown, extraKeys: readonly string[] = []): SiteRule {
   const site: SiteRule = { size: 0, diff: 1, options: {} };
   if (!isObj(raw)) { r.errors.push(`${path}: expected an object`); return site; }
-  r.unknownKeys(path, raw, ['size', 'diff', 'options', 'constraints']);
+  r.unknownKeys(path, raw, ['size', 'diff', 'options', 'constraints', ...extraKeys]);
   site.size = r.num(`${path}.size`, raw.size, OPTION_LIMITS.size, true) ?? 0;
   site.diff = r.stars(`${path}.diff`, raw.diff) ?? 1;
   site.options = 'options' in raw ? readOptions(r, `${path}.options`, raw.options) : {};
@@ -127,4 +130,41 @@ export function parseSchedule(raw: unknown): ParseResult<GenerationSchedule> {
   }
   if (r.errors.length) return { ok: false, errors: r.errors };
   return { ok: true, value: { version: 1, sites, retries, fallback } };
+}
+
+/** A campaign is a tier per level; the pool tables keep a tier index to two digits (0 to 99). */
+const MAX_TIERS = 100;
+const MAX_TIER_COUNT = 400;
+
+function readTier(r: Reader, path: string, raw: unknown): CurveTier {
+  const rule = readSite(r, path, raw, ['count']);
+  const count = isObj(raw) ? r.num(`${path}.count`, raw.count, { min: 1, max: MAX_TIER_COUNT }, true) ?? 1 : 1;
+  return { count, ...rule };
+}
+
+/** Check a whole curve (the rules a level pool is generated from). On success the value is a clean copy holding only known fields. */
+export function parseCurve(raw: unknown): ParseResult<LevelCurve> {
+  const r = new Reader();
+  if (!isObj(raw)) return { ok: false, errors: ['curve: expected an object'] };
+  r.unknownKeys('curve', raw, ['version', 'seed', 'tiers', 'retries', 'fallback']);
+  if (raw.version !== 1) r.errors.push(`curve.version: expected 1, got ${JSON.stringify(raw.version)}`);
+  const seed = r.num('curve.seed', raw.seed, { min: 0, max: 1_000_000 }, true) ?? 0;
+  let tiers: CurveTier[] = [];
+  if (!Array.isArray(raw.tiers) || !raw.tiers.length) r.errors.push('curve.tiers: expected a list with at least one tier');
+  else {
+    if (raw.tiers.length > MAX_TIERS) r.errors.push(`curve.tiers: at most ${MAX_TIERS} tiers, got ${raw.tiers.length}`);
+    tiers = raw.tiers.map((t: unknown, i: number) => readTier(r, `curve.tiers[${i}]`, t));
+  }
+  const retries = r.num('curve.retries', raw.retries, { min: 1, max: MAX_RETRIES }, true) ?? 1;
+  let fallback: LevelCurve['fallback'] = { diff: 1, options: {} };
+  if (!isObj(raw.fallback)) r.errors.push('curve.fallback: expected an object');
+  else {
+    r.unknownKeys('curve.fallback', raw.fallback, ['diff', 'options']);
+    fallback = {
+      diff: r.stars('curve.fallback.diff', raw.fallback.diff) ?? 1,
+      options: 'options' in raw.fallback ? readOptions(r, 'curve.fallback.options', raw.fallback.options) : {},
+    };
+  }
+  if (r.errors.length) return { ok: false, errors: r.errors };
+  return { ok: true, value: { version: 1, seed, tiers, retries, fallback } };
 }

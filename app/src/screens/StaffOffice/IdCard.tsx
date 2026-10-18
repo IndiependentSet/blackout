@@ -1,8 +1,10 @@
 import { SITE_COUNT } from '../../domain/sites';
 import { displayName, initial } from '../../domain/profile';
+import { useStreak } from '../../game/hooks/useStreak';
 import { getAllTimeCount } from '../../services/repositories/siteClears';
 import { useResource } from '../../hooks/useResource';
 import { Avatar, Button, Field, Message, Panel, Stat } from '../../ui';
+import { BadgeShelf } from './BadgeShelf';
 import { useHandleEditor } from './useHandleEditor';
 import styles from './StaffOffice.module.css';
 
@@ -21,6 +23,7 @@ interface Props {
 export function IdCard({ userId, email, username, weeklyPerfect, onSaved, onSignOut, onOpenCrew }: Props) {
   const handle = useHandleEditor(userId, username, onSaved);
   const allTime = useResource('alltime:' + userId, () => getAllTimeCount(userId));
+  const streak = useStreak(userId);
 
   return (
     <Panel tab="STAFF ID CARD" tone="orchid">
@@ -50,8 +53,11 @@ export function IdCard({ userId, email, username, weeklyPerfect, onSaved, onSign
       <div className={styles.stats}>
         <Stat value={`${weeklyPerfect}/${SITE_COUNT}`} label="THIS WEEK PURR-FECT" />
         <Stat tone="lilac" value={allTime.data ?? 0} label="ALL-TIME SITES CLEARED" />
+        <Stat value={streak.current} label={streak.best > streak.current ? `DAY STREAK · BEST ${streak.best}` : 'DAY STREAK'} />
       </div>
       {allTime.error && <Message tone="error">COULDN&apos;T LOAD STATS — {allTime.error}</Message>}
+
+      <BadgeShelf userId={userId} />
 
       <Button variant="paper" size="chip" className={styles.crewLink} onClick={onOpenCrew} style={{ minHeight: 46, padding: '0 14px', fontSize: 12.5 }}>
         <span>CREW ROSTER &amp; SQUADS</span>

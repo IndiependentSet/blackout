@@ -46,7 +46,7 @@ describe('playground params', () => {
 
   it('loads a site preset from the game ramp and keeps the seed', () => {
     const p = paramsReducer({ ...DEFAULT_PARAMS, seed: 9, crossings: true }, { type: 'site', idx: 6 });
-    expect(p).toMatchObject({ seed: 9, size: 30, diff: 3, budgetMs: 700, crossings: false });
+    expect(p).toMatchObject({ seed: 9, size: 40, diff: 3, budgetMs: 3000, crossings: false });
   });
 });
 

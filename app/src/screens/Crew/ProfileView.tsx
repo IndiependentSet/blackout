@@ -2,6 +2,7 @@ import { SITE_COUNT } from '../../domain/sites';
 import { displayName, initial } from '../../domain/profile';
 import type { Profile } from '../../domain/types';
 import { Avatar, Button, Panel, Stat } from '../../ui';
+import { BadgeShelf } from '../StaffOffice/BadgeShelf';
 import { NO_SCORES, type Scores } from './versus';
 import { PROFILE_ACTION, STANDING, type Relation } from './relation';
 import styles from './Crew.module.css';
@@ -34,6 +35,7 @@ export function ProfileView({ person, relation, score, onAdd, onRemove, onAccept
           <Stat basis={130} value={`${s.week_score}/${SITE_COUNT}`} label="THIS WEEK ON BUDGET" />
           <Stat basis={130} tone="lilac" value={s.score} label="ALL-TIME SITES CLEARED" />
         </div>
+        <BadgeShelf userId={person.id} />
         <div className={styles.buttons}>
           <Button disabled={relation === 'outgoing'} variant={relation === 'outgoing' ? 'muted' : relation === 'friend' ? 'secondary' : 'primary'}
             size="md" onClick={act} style={{ flex: '1 1 150px', opacity: relation === 'outgoing' ? 0.6 : 1 }}>{PROFILE_ACTION[relation]}</Button>

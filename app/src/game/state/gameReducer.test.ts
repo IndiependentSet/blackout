@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { Hint, Level } from '../../domain/types';
-import { gameReducer, initialGameState, REFUSED_MSG, type GameState } from './gameReducer';
+import type { Hint, HintTier, Level } from '../../domain/types';
+import { gameReducer, initialGameState, isLastSite, REFUSED_MSG, type GameState } from './gameReducer';
 
 /* a path 0-1-2-3: the unique optimal cover is {1, 2}, so par is 2 */
 const lv: Level = {
@@ -93,5 +93,63 @@ describe('other actions', () => {
     const a = gameReducer(initialGameState(), { type: 'keyboard' });
     expect(a.kbd).toBe(true);
     expect(gameReducer(a, { type: 'keyboard' })).toBe(a);
+  });
+});
+
+describe('a set of any size', () => {
+  it('starts with one empty result per level', () => {
+    expect(initialGameState(1).results).toEqual([null]);
+    expect(initialGameState(12).results).toHaveLength(12);
+  });
+
+  it('go is limited by the set, not by the seven daily sites', () => {
+    const one = initialGameState(1);
+    expect(gameReducer(one, { type: 'go', idx: 1 })).toBe(one);
+    const twelve = initialGameState(12);
+    expect(gameReducer(twelve, { type: 'go', idx: 11 })).toMatchObject({ idx: 11 });
+    expect(gameReducer(twelve, { type: 'go', idx: 12 })).toBe(twelve);
+  });
+
+  it('knows the last level of a set', () => {
+    expect(isLastSite(6)).toBe(true);
+    expect(isLastSite(5)).toBe(false);
+    expect(isLastSite(0, 1)).toBe(true);
+    expect(isLastSite(11, 12)).toBe(true);
+    expect(isLastSite(10, 12)).toBe(false);
+  });
+
+  it('restart goes back to a fresh set but keeps the event numbering climbing', () => {
+    const played = run(1, 2);
+    const seq = played.event!.seq;
+    const again = gameReducer(played, { type: 'restart', count: 1 });
+    expect(again).toMatchObject({ idx: 0, placed: [], results: [null], consulted: 0, hint: null });
+    expect(again.event).toMatchObject({ kind: 'entered', idx: 0, seq: seq + 1 });
+  });
+});
+
+describe('consulted', () => {
+  const consult = (s: GameState, tier: HintTier) => gameReducer(s, { type: 'consult', tier, lv });
+
+  it('remembers the highest tier asked for', () => {
+    expect(initialGameState().consulted).toBe(0);
+    const s = consult(consult(consult(initialGameState(), 2), 1), 3);
+    expect(s.consulted).toBe(3);
+    expect(consult(consult(initialGameState(), 2), 1).consulted).toBe(2);
+  });
+
+  it('survives hiring and recalling within the same attempt', () => {
+    expect(tap(consult(initialGameState(), 3), 0).consulted).toBe(3);
+  });
+
+  it('is cleared by reset and by go', () => {
+    const asked = consult(initialGameState(), 2);
+    expect(gameReducer(asked, { type: 'reset' }).consulted).toBe(0);
+    expect(gameReducer(asked, { type: 'go', idx: 1 }).consulted).toBe(0);
+  });
+
+  it('is reported with the clear', () => {
+    const s = [1, 2].reduce(tap, consult(initialGameState(), 3));
+    expect(s.event).toMatchObject({ kind: 'cleared', consulted: 3 });
+    expect([1, 2].reduce(tap, initialGameState()).event).toMatchObject({ kind: 'cleared', consulted: 0 });
   });
 });

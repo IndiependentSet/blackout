@@ -4,7 +4,7 @@
    everyone" contract, so it stays fixed whatever the schedule says. Pure. */
 import type { GenOptions, Level, Stars } from '../types';
 import type { LevelConstraints } from './constraints';
-import { constraintFilter } from './constraints';
+import { constraintFilter, gameConstraints } from './constraints';
 import { generateWith } from './generate';
 import { rngFromSeed } from '../rng';
 
@@ -27,20 +27,22 @@ export interface GenerationSchedule {
   fallback: { diff: Stars; options: Partial<GenOptions> };
 }
 
-/** The week the game has always played: the difficulty ramp, a longer search
-    budget for the big sites, and a gentle first site. */
+/** The week the game plays: seven sites that climb from a five-junction warm-up to a forty-junction
+    finale. Each one asks for more than the last: more junctions, more stars (the technique that
+    clears it), a level the greedy cover gets wrong, and a par that cannot be reached by counting
+    disjoint paths alone. The big sites get a longer search budget. */
 export const DEFAULT_SCHEDULE: GenerationSchedule = {
   version: 1,
   sites: [
-    { size: 4, diff: 1, options: { budgetMs: 400 }, constraints: { minNodes: 4, maxK: 2, hasDegree: 3 } },
-    { size: 7, diff: 1, options: { budgetMs: 400 } },
-    { size: 10, diff: 2, options: { budgetMs: 400 } },
-    { size: 14, diff: 2, options: { budgetMs: 400 } },
-    { size: 18, diff: 3, options: { budgetMs: 700 } },
-    { size: 24, diff: 3, options: { budgetMs: 700 } },
-    { size: 30, diff: 3, options: { budgetMs: 700 } },
+    { size: 5, diff: 1, options: { budgetMs: 400 }, constraints: { minNodes: 5, maxK: 2, hasDegree: 3 } },
+    { size: 10, diff: 1, options: { budgetMs: 400 }, constraints: { minNodes: 10 } },
+    { size: 16, diff: 2, options: { budgetMs: 600, greedyMustFail: true }, constraints: { minNodes: 16 } },
+    { size: 22, diff: 2, options: { budgetMs: 1000, greedyMustFail: true }, constraints: { minNodes: 22 } },
+    { size: 28, diff: 3, options: { minBoundGap: 1, budgetMs: 2000, greedyMustFail: true }, constraints: { minNodes: 28 } },
+    { size: 34, diff: 3, options: { minBoundGap: 2, budgetMs: 3000, greedyMustFail: true }, constraints: { minNodes: 34 } },
+    { size: 40, diff: 3, options: { minBoundGap: 2, budgetMs: 3000, greedyMustFail: true }, constraints: { minNodes: 40 } },
   ],
-  retries: 6,
+  retries: 8,
   fallback: { diff: 1, options: { budgetMs: 900 } },
 };
 
@@ -55,13 +57,18 @@ export interface SiteOutcome {
 export function levelForSiteReport(schedule: GenerationSchedule, daySeed: number, idx: number): SiteOutcome {
   const site = schedule.sites[idx];
   if (!site) throw new RangeError(`no site ${idx} in the schedule`);
-  const accept = constraintFilter(site.constraints);
+  const accept = constraintFilter(gameConstraints(site.constraints));
+  /* a retry only counts when it met every rule; the first near miss is kept in case no retry does */
+  let miss: SiteOutcome | null = null;
   for (let salt = 0; salt < schedule.retries; salt++) {
     const rng = rngFromSeed(daySeed * 7919 + idx * 104729 + salt * 31);
-    const { level } = generateWith(rng, site.size, site.diff, site.options, accept);
-    if (level) return { level, salt };
+    const { level, report } = generateWith(rng, site.size, site.diff, site.options, accept);
+    if (level && !report.fallback) return { level, salt };
+    if (level && !miss) miss = { level, salt };
   }
-  const { level } = generateWith(rngFromSeed(daySeed + idx), site.size, schedule.fallback.diff, schedule.fallback.options);
+  if (miss) return miss;
+  const { level } = generateWith(rngFromSeed(daySeed + idx), site.size, schedule.fallback.diff, schedule.fallback.options,
+    constraintFilter(gameConstraints()));
   if (!level) throw new Error(`site ${idx} produced no level, even with the fallback rules`);
   return { level, salt: null };
 }
