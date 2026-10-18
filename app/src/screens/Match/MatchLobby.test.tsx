@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { FriendLink, MatchView } from '../../domain/types';
+import { UNPUBLISHED_COPY } from '../../services/repositories/levelPools';
 import { ok } from '../../services/result';
 import { matchRow, playerRow, viewOf } from './matchFixtures';
 import { MatchLobby } from './MatchLobby';
@@ -71,6 +72,12 @@ describe('MatchLobby', () => {
     await userEvent.click((await screen.findAllByRole('button', { name: 'CHALLENGE' }))[0]);
     expect(await screen.findByText('ONLY FRIENDS AND SQUAD MATES CAN BE CHALLENGED')).toBeInTheDocument();
     expect(onOpenMatch).not.toHaveBeenCalled();
+  });
+
+  it('says the 1vs1 levels are not published yet instead of showing the raw error', async () => {
+    setup({ create: vi.fn(async () => ({ ok: false as const, error: 'no match levels published' })) });
+    await userEvent.click((await screen.findAllByRole('button', { name: 'CHALLENGE' }))[0]);
+    expect(await screen.findByText(UNPUBLISHED_COPY)).toBeInTheDocument();
   });
 
   it('accepts a challenge and opens it', async () => {
