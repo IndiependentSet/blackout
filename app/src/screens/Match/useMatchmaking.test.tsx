@@ -1,5 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { UNPUBLISHED_COPY } from '../../services/repositories/levelPools';
 import { fail, ok } from '../../services/result';
 import { SEARCH_GIVE_UP_MS, SEARCH_POLL_MS, useMatchmaking, type SearchDeps } from './useMatchmaking';
 
@@ -70,11 +71,11 @@ describe('useMatchmaking', () => {
   });
 
   it('reports a failure and stops', async () => {
-    const d = deps([fail('NO MATCH LEVELS PUBLISHED')]);
+    const d = deps([fail('SIGN IN FIRST')]);
     const { result } = renderHook(() => useMatchmaking(vi.fn(), d));
     act(() => result.current.start(0));
     await flush();
-    expect(result.current.search).toEqual({ status: 'error', message: 'NO MATCH LEVELS PUBLISHED' });
+    expect(result.current.search).toEqual({ status: 'error', message: 'SIGN IN FIRST' });
     await act(async () => { await vi.advanceTimersByTimeAsync(SEARCH_POLL_MS * 2); });
     expect(d.find).toHaveBeenCalledTimes(1);
   });
@@ -97,5 +98,13 @@ describe('useMatchmaking', () => {
     act(() => result.current.cancel());
     await act(async () => { answer(ok('late')); await Promise.resolve(); });
     expect(onFound).not.toHaveBeenCalled();
+  });
+
+  it('says so, in plain words, when no match levels have been published yet', async () => {
+    const d = deps([fail('no match levels published')]);
+    const { result } = renderHook(() => useMatchmaking(vi.fn(), d));
+    act(() => result.current.start(0));
+    await flush();
+    expect(result.current.search).toEqual({ status: 'error', message: UNPUBLISHED_COPY });
   });
 });

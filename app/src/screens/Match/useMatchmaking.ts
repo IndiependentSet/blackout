@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { UNPUBLISHED_COPY, isUnpublished } from '../../services/repositories/levelPools';
 import { findMatch, leaveQueue } from '../../services/repositories/matches';
 import type { Result } from '../../services/result';
 
@@ -56,7 +57,7 @@ export function useMatchmaking(onFound: (matchId: string) => void, deps: SearchD
     const ask = async () => {
       const r = await deps.find(tier);
       if (run.current !== me) return;
-      if (!r.ok) { searching.current = false; setSearch({ status: 'error', message: r.error }); return; }
+      if (!r.ok) { searching.current = false; setSearch({ status: 'error', message: isUnpublished(r.error) ? UNPUBLISHED_COPY : r.error }); return; }
       if (r.data) { searching.current = false; setSearch({ status: 'idle' }); found.current(r.data); return; }
       if (deps.now() - startedAt >= SEARCH_GIVE_UP_MS) { stop(); setSearch({ status: 'timeout' }); return; }
       timer.current = setTimeout(ask, SEARCH_POLL_MS);

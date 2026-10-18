@@ -3,6 +3,7 @@ import { groupMatches, otherPlayer, type MatchGroups } from '../../domain/match'
 import type { FriendLink, Friendships, Match, MatchRecord, MatchView, Profile } from '../../domain/types';
 import { useResource } from '../../hooks/useResource';
 import { openInboxChannel } from '../../services/realtime/matchChannel';
+import { UNPUBLISHED_COPY, isUnpublished } from '../../services/repositories/levelPools';
 import { getFriendships } from '../../services/repositories/friendships';
 import { acceptMatch, closeExpiredMatches, createMatch, declineMatch, getMatchRecord, listMyMatches } from '../../services/repositories/matches';
 import { profilesByIds } from '../../services/repositories/profiles';
@@ -95,7 +96,7 @@ export function useLobby(userId: string, deps: LobbyDeps = defaultLobbyDeps): Lo
     const r = await work();
     if (!alive.current) return r;
     setBusy(false);
-    if (!r.ok) setActionError(r.error);
+    if (!r.ok) setActionError(isUnpublished(r.error) ? UNPUBLISHED_COPY : r.error);
     return r;
   };
 

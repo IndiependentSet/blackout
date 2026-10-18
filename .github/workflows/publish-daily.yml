@@ -9,6 +9,10 @@ on:
   schedule:
     - cron: '0 0 * * *'
     - cron: '15 0 * * *'
+  # right after a migration lands, so a deploy that adds a table or function never leaves the game without its levels
+  workflow_run:
+    workflows: [migrate]
+    types: [completed]
   workflow_dispatch:
     inputs:
       day:
@@ -21,6 +25,8 @@ concurrency:
   cancel-in-progress: false
 jobs:
   publish:
+    # a workflow_run fires on a failed migrate too
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 20
