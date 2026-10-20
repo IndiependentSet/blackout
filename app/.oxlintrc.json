@@ -19,7 +19,8 @@
         "patterns": [
           {
             "group": [
-              "**/domain/generation/*", "./generation/*"
+              "**/domain/generation/*",
+              "./generation/*"
             ],
             "message": "Level generation has one public API: import from domain/generation, not its files."
           }
@@ -61,7 +62,8 @@
               },
               {
                 "group": [
-                  "**/domain/generation/*", "./generation/*"
+                  "**/domain/generation/*",
+                  "./generation/*"
                 ],
                 "message": "Level generation has one public API: import from domain/generation, not its files."
               }
@@ -99,7 +101,8 @@
               },
               {
                 "group": [
-                  "**/domain/generation/*", "./generation/*"
+                  "**/domain/generation/*",
+                  "./generation/*"
                 ],
                 "message": "Level generation has one public API: import from domain/generation, not its files."
               }
@@ -111,7 +114,7 @@
     {
       "files": [
         "src/ui/**",
-        "src/sprites/**"
+        "src/themes/catastrophe/sprites/**"
       ],
       "rules": {
         "no-restricted-imports": [
@@ -129,7 +132,8 @@
               },
               {
                 "group": [
-                  "**/domain/generation/*", "./generation/*"
+                  "**/domain/generation/*",
+                  "./generation/*"
                 ],
                 "message": "Level generation has one public API: import from domain/generation, not its files."
               }
@@ -150,13 +154,15 @@
               {
                 "group": [
                   "**/screens/**",
-                  "**/app/**"
+                  "**/app/**",
+                  "**/themes/**"
                 ],
-                "message": "game/ must not depend on screens or the app shell."
+                "message": "game/ must not depend on screens, the app shell or a theme."
               },
               {
                 "group": [
-                  "**/domain/generation/*", "./generation/*"
+                  "**/domain/generation/*",
+                  "./generation/*"
                 ],
                 "message": "Level generation has one public API: import from domain/generation, not its files."
               }
@@ -195,6 +201,63 @@
                   "**/hooks/**"
                 ],
                 "message": "domain/ is the bottom layer: it imports nothing from the layers above it."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "src/themes/catastrophe/**"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "**/themes/stargazer/**",
+                  "**/app/**"
+                ],
+                "message": "A theme stands alone: it must not import the other theme or the app shell."
+              },
+              {
+                "group": [
+                  "**/domain/generation/*",
+                  "./generation/*"
+                ],
+                "message": "Level generation has one public API: import from domain/generation, not its files."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "src/themes/stargazer/**"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "**/themes/catastrophe/**",
+                  "**/app/**",
+                  "**/ui/**"
+                ],
+                "message": "A theme stands alone: it must not import the other theme, the app shell or the CATASTROPHE INC. ui kit."
+              },
+              {
+                "group": [
+                  "**/domain/generation/*",
+                  "./generation/*"
+                ],
+                "message": "Level generation has one public API: import from domain/generation, not its files."
               }
             ]
           }
