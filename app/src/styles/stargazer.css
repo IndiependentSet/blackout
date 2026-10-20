@@ -1,4 +1,4 @@
-/* Tokens for the trial Stargazer look (Rebrand Proposals 4c, Organic design
+/* Tokens for the trial Stargazer look (Stargazer.dc.html, Organic design
    system). Scoped to `.sg` so they never touch the CATASTROPHE INC. tokens. */
 @import url('https://fonts.googleapis.com/css2?family=Caprasimo&family=Figtree:wght@400;600;700;800&display=swap');
 
@@ -6,22 +6,37 @@
   --sg-font-heading: "Caprasimo", system-ui, sans-serif;
   --sg-font-body: "Figtree", system-ui, sans-serif;
 
-  --sg-bg: #f5ead8;
-  --sg-accent: #c67139;
-  --sg-accent-100: #fff2eb;
-  --sg-accent-300: #ffc6a5;
-  --sg-accent-600: #b2622d;
-  --sg-accent-700: #8c491a;
-  --sg-accent-800: #643312;
+  /* the night */
+  --sg-night-0: #0a0e27;
+  --sg-night-1: #141a40;
+  --sg-night-2: #1e2558;
+  --sg-dusk: #2a2452;
+  --sg-twinkle: #fff6e0;
 
-  --sg-night-200: #e1eecc;
-  --sg-night-300: #ccdbb2;
-  --sg-night-400: #aebf92;
-  --sg-night-500: #8fa073;
-  --sg-night-600: #728157;
-  --sg-night-700: #56633f;
-  --sg-night-800: #3d472b;
-  --sg-night-900: #272e1b;
+  /* text */
+  --sg-text: #f3ecdf;
+  --sg-text-soft: #b9bfe6;
+  --sg-text-faint: #7d86c4;
+  --sg-on-gold: #1a1640;
 
-  --sg-shadow-lg: 0 12px 32px color-mix(in srgb, #2e2b25 22%, transparent);
+  /* star gold: lit stars and lines, the primary action */
+  --sg-gold: #ffd98a;
+  --sg-gold-hover: #ffe7b3;
+  --sg-gold-line: #ffe6a8;
+  --sg-gold-dim: #b98f4a;
+  --sg-cream: #fff4d6;
+  --sg-glow-core: #ffe2a0;
+  --sg-glow-edge: #ffb867;
+
+  /* unlit sky */
+  --sg-line-dark: #5a64a8;
+  --sg-star-halo: #aab4ff;
+  --sg-star-dim: #c9cff5;
+  --sg-next: #3a4280;
+  --sg-next-ring: #4a5390;
+
+  /* aurora mint: the telescope */
+  --sg-mint: #8fe3c0;
+
+  --sg-shadow: 0 30px 80px rgba(0, 0, 0, .5);
 }
