@@ -1,0 +1,27 @@
+/* Tokens for the trial Stargazer look (Rebrand Proposals 4c, Organic design
+   system). Scoped to `.sg` so they never touch the CATASTROPHE INC. tokens. */
+@import url('https://fonts.googleapis.com/css2?family=Caprasimo&family=Figtree:wght@400;600;700;800&display=swap');
+
+.sg {
+  --sg-font-heading: "Caprasimo", system-ui, sans-serif;
+  --sg-font-body: "Figtree", system-ui, sans-serif;
+
+  --sg-bg: #f5ead8;
+  --sg-accent: #c67139;
+  --sg-accent-100: #fff2eb;
+  --sg-accent-300: #ffc6a5;
+  --sg-accent-600: #b2622d;
+  --sg-accent-700: #8c491a;
+  --sg-accent-800: #643312;
+
+  --sg-night-200: #e1eecc;
+  --sg-night-300: #ccdbb2;
+  --sg-night-400: #aebf92;
+  --sg-night-500: #8fa073;
+  --sg-night-600: #728157;
+  --sg-night-700: #56633f;
+  --sg-night-800: #3d472b;
+  --sg-night-900: #272e1b;
+
+  --sg-shadow-lg: 0 12px 32px color-mix(in srgb, #2e2b25 22%, transparent);
+}

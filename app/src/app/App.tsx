@@ -9,6 +9,7 @@ import { useStreak } from '../game/hooks/useStreak';
 import { useSurvivalBest } from '../game/hooks/useSurvivalRanking';
 import { LoadoutProvider } from '../game/loadout/LoadoutProvider';
 import { useGameSession } from '../game/useGameSession';
+import { StargazerScreen } from '../game/stargazer/StargazerScreen';
 import { CampaignPlay } from '../screens/Campaign/CampaignPlay';
 import { CampaignScreen } from '../screens/Campaign/CampaignScreen';
 import { HubScreen } from '../screens/Hub/HubScreen';
@@ -21,7 +22,9 @@ import { WorkOrderScreen } from '../screens/WorkOrder/WorkOrderScreen';
 import { perfectCount } from '../game/state/selectors';
 import { AuthProvider } from '../services/auth/AuthProvider';
 import { useAuth } from '../services/auth/authContext';
+import { SkinSwitch } from './SkinSwitch';
 import { staffBadge } from './staffBadge';
+import { useSkin } from './useSkin';
 import { useOrientation } from './useOrientation';
 
 type Screen = 'hub' | 'workOrder' | 'game' | 'account' | 'campaign' | 'campaignPlay' | 'survival' | 'match' | 'matchPlay';
@@ -33,6 +36,7 @@ function Shell() {
   const session = useGameSession();
   const { clears, record, save: saveClear, persistence } = useCampaignClears(auth.userId);
   const [screen, setScreen] = useState<Screen>('hub');
+  const [skin, toggleSkin] = useSkin();
   const streak = useStreak(auth.userId, screen === 'hub');
   const challenges = useIncomingChallenges(auth.userId, screen === 'hub');
   const [matchId, setMatchId] = useState<string | null>(null);
@@ -96,10 +100,17 @@ function Shell() {
     );
   }
 
+  if (screen === 'game' && skin === 'stargazer') {
+    return <StargazerScreen session={session} userId={auth.userId} onOpenHub={() => setScreen('hub')} onSwitchSkin={toggleSkin} />;
+  }
+
   if (screen === 'game') {
     return (
-      <GameScreen session={session} userId={auth.userId} badge={badge}
-        onOpenAccount={() => openAccount('game')} onOpenWorkOrder={() => setScreen('workOrder')} onOpenHub={() => setScreen('hub')} />
+      <>
+        <GameScreen session={session} userId={auth.userId} badge={badge}
+          onOpenAccount={() => openAccount('game')} onOpenWorkOrder={() => setScreen('workOrder')} onOpenHub={() => setScreen('hub')} />
+        <SkinSwitch onSwitch={toggleSkin} />
+      </>
     );
   }
 
