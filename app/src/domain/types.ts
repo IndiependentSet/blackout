@@ -258,3 +258,10 @@ export type Loadout = Record<CosmeticSlot, string | null>;
 
 /** The worn art for one cat's two flip-book frames, back to front. */
 export interface AccessoryArt { wakeA: string[]; wakeB: string[] }
+
+/** A night's figure, as drawn in a player's atlas: the night's last sky, without its answer. */
+export interface SkyFigure { nodes: Cell[]; edges: Edge[] }
+/** A constellation a player has named (the `sky_names` table): one per night. */
+export interface SkyName { day: number; name: string; figure: SkyFigure }
+/** How a player's night went, from their clears: skies charted and how many of them at par. */
+export interface Night { day: number; charted: number; perfect: number }

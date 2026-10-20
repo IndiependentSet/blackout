@@ -19,7 +19,7 @@ export interface Sky {
 }
 
 /** The level drawn as a patch of sky: stars on the lattice, lines lit once a star at either end is. */
-export function skyOf(lv: Level, placed: number[]): Sky {
+export function skyOf(lv: Pick<Level, 'nodes' | 'edges'>, placed: readonly number[]): Sky {
   const lit = new Set(placed);
   const covered = coveredEdges(lv, placed);
   const cs = lv.nodes.map(n => n.c);

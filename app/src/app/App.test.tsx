@@ -34,14 +34,16 @@ vi.mock('../services/generation/scheduleClient', async () => {
 
 const { default: App } = await import('./App');
 
-beforeEach(() => { sessionStorage.clear(); });
+beforeEach(() => { sessionStorage.clear(); window.history.replaceState(null, '', '/'); });
 
 const hudReads = () => {
   const label = screen.getByText('cats hired');
   return (label.previousElementSibling as HTMLElement).textContent;
 };
 
-describe('the app, signed out', () => {
+describe('the hidden CATASTROPHE INC. look, signed out', () => {
+  beforeEach(() => { window.history.replaceState(null, '', '/?skin=catastrophe'); });
+
   it('opens on the dashboard, with the orientation for a first-time visitor', async () => {
     render(<App />);
     expect(screen.getByText(/DAILY SHIFT #/)).toBeInTheDocument();
@@ -102,3 +104,46 @@ describe('the app, signed out', () => {
   });
 });
 
+
+describe('Stargazer, the default look, signed out', () => {
+  it('opens on the first night for a first-time visitor, then on tonight', async () => {
+    render(<App />);
+    expect(await screen.findByText('The sky is full of figures no one has named.')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'I’ve played before' }));
+    expect(screen.getByText(/of 7 skies charted/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Start tonight' })).toBeInTheDocument();
+  });
+
+  it('starts tonight from the first night and lights a star from the keyboard', async () => {
+    render(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Start my first sky' }));
+    expect(screen.getByText('Sky 1 of 7')).toBeInTheDocument();
+    await screen.findByRole('group', { name: 'Sky' }, { timeout: 15000 });
+    const lit = () => screen.getByText(/stars? lit/).previousElementSibling?.textContent;
+    expect(lit()).toBe('0');
+    await userEvent.keyboard('{Enter}');
+    expect(lit()).toBe('1');
+    await userEvent.keyboard('{Enter}');
+    expect(lit()).toBe('0');
+  }, 40000);
+
+  it('sends a signed-out player who opens the voyage to sign in', async () => {
+    sessionStorage.setItem('cc-howto-seen', '1');
+    render(<App />);
+    await userEvent.click(screen.getByRole('button', { name: /Voyage/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    expect(screen.getByText(/Sign in to keep your atlas/)).toBeInTheDocument();
+  });
+
+  it('opens the cats after seven quick taps on the title, and comes back', async () => {
+    sessionStorage.setItem('cc-howto-seen', '1');
+    render(<App />);
+    const title = screen.getByRole('button', { name: 'Stargazer' });
+    for (let i = 0; i < 7; i++) await userEvent.click(title);
+    expect(await screen.findByText(/DAILY SHIFT #/)).toBeInTheDocument();
+    expect(window.location.search).toBe('?skin=catastrophe');
+    await userEvent.click(screen.getByRole('button', { name: /Back to Stargazer/ }));
+    expect(screen.getByRole('button', { name: 'Stargazer' })).toBeInTheDocument();
+    expect(window.location.search).toBe('');
+  });
+});

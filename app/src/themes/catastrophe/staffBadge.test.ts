@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { scoreRun } from '../domain/scoring';
+import { scoreRun } from '../../domain/scoring';
 import { staffBadge } from './staffBadge';
 
 const lv = { stars: 1 as const, k: 2 };

@@ -19,9 +19,9 @@ const NONE: CampaignClears = new Map();
    not be reached, or a save fails, the record carries on in memory and
    `persistence` says so. A record belongs to the account that made it: another
    account (or none) starts from an empty one. */
-export function useCampaignClears(userId: string | null): {
-  clears: CampaignClears; record: RecordClear; save: SaveClear; persistence: Persistence;
-} {
+export interface CampaignRecord { clears: CampaignClears; record: RecordClear; save: SaveClear; persistence: Persistence }
+
+export function useCampaignClears(userId: string | null): CampaignRecord {
   const [store, setStore] = useState<{ owner: string | null; clears: CampaignClears }>({ owner: null, clears: NONE });
   const [failedFor, setFailedFor] = useState<string | null>(null);
   const remote = useResource<CampaignClear[]>(userId ? 'campaign:' + userId : null, () => getCampaignClears(userId));

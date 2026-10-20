@@ -1,31 +1,9 @@
-import { memo, type ReactNode } from 'react';
-import { cx } from '../../../ui';
-import { SCOPES, starfield, type Scope, type SkyEntry } from './sky';
+import type { ReactNode } from 'react';
+import { cx } from '../kit/cx';
+import { Icon } from '../kit/icons';
+import { MiniStar } from '../kit/MiniStar';
+import { SCOPES, type Scope, type SkyEntry } from './sky';
 import styles from './Stargazer.module.css';
-
-/** A small four-point star, 13 units from tip to centre (the sky list and header). */
-const MINI_STAR = 'M0 -13 C1.4 -3.5 3.5 -1.4 13 0 C3.5 1.4 1.4 3.5 0 13 C-1.4 3.5 -3.5 1.4 -13 0 C-3.5 -1.4 -1.4 -3.5 0 -13 Z';
-
-const FIELD_MOBILE = starfield(7, 70);
-const FIELD_DESKTOP = starfield(21, 160);
-
-/** Twinkling background stars behind everything; decorative only. */
-export const Starfield = memo(function Starfield({ wide }: { wide: boolean }) {
-  return (
-    <div className={styles.field} aria-hidden="true">
-      {(wide ? FIELD_DESKTOP : FIELD_MOBILE).map((s, i) => (
-        <div key={i} className={styles.twinkle}
-          style={{ left: s.x + '%', top: s.y + '%', width: s.r, height: s.r, animationDuration: s.dur + 's', animationDelay: s.delay + 's' }} />
-      ))}
-    </div>
-  );
-});
-
-export const Icon = ({ children, size = 22 }: { children: ReactNode; size?: number }) => (
-  <svg viewBox="0 0 24 24" width={size} height={size} className={styles.iconSvg} aria-hidden="true">{children}</svg>
-);
-export const BackIcon = () => <Icon><path d="m15 18-6-6 6-6" /></Icon>;
-export const ResetIcon = () => <Icon><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /></Icon>;
 
 const SCOPE_ICONS: Record<Scope, ReactNode> = {
   spot: <><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" /><circle cx="12" cy="12" r="3" /></>,
@@ -62,7 +40,7 @@ export function SkyList({ skies, canOpen, onOpen }: { skies: SkyEntry[]; canOpen
       {skies.map((k, i) => (
         <button key={k.n} className={cx(styles.skyRow, k.state === 'cur' && styles.skyRowCur, k.state === 'next' && styles.skyRowNext)}
           disabled={!canOpen(i)} onClick={() => onOpen(i)}>
-          <svg viewBox="-16 -16 32 32" width="22" height="22" aria-hidden="true"><path d={MINI_STAR} className={cx(styles.miniStar, styles[k.state])} /></svg>
+          <MiniStar state={k.state} size={22} />
           <b>Sky {k.n}</b>
           <span className={styles.skyNote}>{k.note}</span>
         </button>

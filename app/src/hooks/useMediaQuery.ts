@@ -1,14 +1,17 @@
 import { useSyncExternalStore } from 'react';
 
-/** Whether a CSS media query currently matches, kept live as the window changes. */
+const listFor = (query: string): MediaQueryList | null =>
+  typeof window !== 'undefined' && typeof window.matchMedia === 'function' ? window.matchMedia(query) : null;
+
+/** Whether a CSS media query currently matches, kept live as the window changes. False where there is no matchMedia. */
 export function useMediaQuery(query: string): boolean {
   return useSyncExternalStore(
     notify => {
-      const list = window.matchMedia(query);
-      list.addEventListener('change', notify);
-      return () => list.removeEventListener('change', notify);
+      const list = listFor(query);
+      list?.addEventListener('change', notify);
+      return () => list?.removeEventListener('change', notify);
     },
-    () => window.matchMedia(query).matches,
+    () => listFor(query)?.matches ?? false,
     () => false,
   );
 }

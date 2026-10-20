@@ -31,15 +31,31 @@ History (see `git log --oneline`):
    **kept the app's own cat/thing sprite art and camera/pan/zoom/minimap
    engine** rather than reverting to the prototype's inline-SVG-drawn cats —
    that art and engine were built after the CAT_COVER.dc.html prototype and
-   are considered better than what any `.dc.html` file draws. **This is the
-   current, live design intent.**
+   are considered better than what any `.dc.html` file draws.
+7. The game was rebranded as **Stargazer** (Claude Design: *Rebrand Proposals*
+   and *Stargazer.dc.html*, not checked in; the handoff lived outside this
+   repo). Same mechanic: the board is a patch of night sky, a node is a star, a
+   lit star lights every line touching it, par is the solver's minimum. Seven
+   skies a night; the seventh night's figure can be named and kept in an atlas.
+   Modes are renamed, not changed: Daily → **Tonight**, Campaign → **Voyage**
+   (one world per chapter), Survival → **Meteor Rush**, 1vs1 → **Star Duel**,
+   Staff office → **Observatory** (Me), How to play + Work order → **First
+   night**, the three consultants → the **Telescope** (Spot = INSIDER, Count =
+   ESTIMATE, Sweep only highlights dark lines). **Stargazer is the current,
+   live design intent and the default.** CATASTROPHE INC. is kept, whole and
+   working, as a hidden alternative (an easter egg): tap the "Stargazer" title
+   on Tonight seven times, or open `?skin=catastrophe`; its pages carry a
+   "Back to Stargazer" pill. Design details with nothing behind them yet (sky
+   themes/telescopes to unlock, the 88 real constellations on Sundays, a Rush
+   time bonus) were deliberately left out: the rules and data are the game's own.
 
 `README.md` and `chats/chat1.md` describe the *original* BLACKOUT brief, not
 the current theme — read them for the underlying puzzle rules (par/K, hint
 tiers, generation approach), but don't treat their neon/city theme language
-as the current spec. `project/CATASTROPHE_INC.dc.html` is the current design
-source of truth for story/copy; it is NOT the source of truth for cat/thing
-visuals — `app/src/assets/` and the camera system in `app/src/game/camera/` are.
+as the current spec. For the hidden CATASTROPHE INC. look,
+`project/CATASTROPHE_INC.dc.html` is the source of truth for story/copy; it is
+NOT the source of truth for cat/thing visuals — `app/src/assets/` and the
+camera system in `app/src/themes/catastrophe/game/camera/` are.
 
 ## Layout
 
@@ -75,21 +91,43 @@ visuals — `app/src/assets/` and the camera system in `app/src/game/camera/` ar
     `useIsAdmin`), and `generation/` (worker clients: `generateAsync` for
     one level on demand, `previewDayAsync` for a schedule's whole day, both
     over the shared `workerCall`).
-  - `src/game/` — the playable board. `state/` (pure reducer that turns taps
-    into numbered events, selectors, hints, score-card copy), `camera/` (pure
-    maths + `useCamera`), `layout/layout.ts` (lattice → world, memoized per
-    level), `scene/` (`buildScene`/minimap/`cable`: the pure replacement for
-    the old `renderVals`), `input/` (pointer hook, keymap), `audio/`
+  - `src/game/` — everything about play that both themes share, and no
+    drawing: `state/` (pure reducer that turns taps into numbered events,
+    selectors, hints, score-card copy), `input/keymap.ts`, `audio/`
     (`AudioService`: Web Audio chirps/crashes/fanfare plus the recorded
     crackles in `src/assets/sfx/`), `hooks/` (`useDailySchedule` — today's
     saved generation config —, the levels queue that generates the week from
-    it, score card),
-    `fx.ts` (one-shot Web Animations), `components/` (Board — which owns the
-    camera — and its layers, HUD, score card, side rails), `GameScreen.tsx`
-    and `useGameSession.ts` (what has to outlive a screen).
-  - `src/screens/` — `WorkOrder/`, `StaffOffice/` (sign-in, ID card,
-    leaderboard), `Crew/` (roster, squads, profiles), `HowToPlay/`, and the
-    dev-only `Playground/` (below).
+    it, score card, streak, `useNights` — each night's charted/at-par count
+    from `site_clears`, for the moon calendars —, `useSkyNames`,
+    `usePlayerStats`), the sessions (`useGameSession`, `useCampaignSession`,
+    `useSurvivalSession`, `useMatchSession`), `useAppState.ts` (what has to
+    outlive every screen and both themes), `useOrientation.ts`, and the logic
+    the old screens used to carry: `match/` (lobby, matchmaking, ladder, one
+    live match), `crew/` (friends, squads, player search), `account/`
+    (magic link, handle editor).
+  - **`src/themes/`** — the two looks. Each theme is a whole front end over
+    `game/`, and lint forbids either from importing the other (or `app/`), so
+    one can be dropped without touching the other.
+    - `themes/stargazer/` — **the game.** `StargazerApp.tsx` (page routing),
+      `tokens.css` (the theme's only raw colours/fonts, scoped to `.sg`),
+      `copy.ts` (planet names, name ideas, share text, week/month calendars),
+      `kit/` (Page and its skies, Starfield, Button, TabBar, Moon, MiniStar,
+      Planet, Figure — a still sky for previews, results and the atlas —,
+      icons), `play/` (`SkyPlay` — the one board screen every mode uses, phone
+      column or desktop three-column —, `SkyBoard`, the telescope, `sky.ts`)
+      and `screens/` (Tonight, FirstNight, Sky — daily play and Night
+      charted —, Atlas, Voyage, Rush, Duel, Observatory). It never imports
+      `src/ui/` (that kit is CATASTROPHE INC.'s).
+    - `themes/catastrophe/` — the hidden CATASTROPHE INC. look, unchanged:
+      `CatastropheApp.tsx`, `game/` (`GameScreen`, `components/` — Board,
+      which owns the camera, its layers, HUD, score card, side rails —,
+      `camera/`, `layout/layout.ts` (lattice → world, memoized per level),
+      `scene/` (`buildScene`/minimap/`cable`), `fx.ts`, `copy.ts`,
+      `input/useBoardPointer.ts`), `sprites/`, `screens/` (Hub, WorkOrder,
+      HowToPlay, Campaign, Survival, Match, StaffOffice, Crew), the staff
+      badge and the "Back to Stargazer" pill.
+  - `src/screens/` — the admin pages only: `Playground/`, `GenerationConfig/`,
+    `LevelPools/` (below). They use the CATASTROPHE INC. board and ui kit.
   - **`src/domain/generation/`** — level generation as its own module, with
     **one public API, `index.ts`**: nothing outside the folder imports its
     files (lint-enforced by `no-restricted-imports`). Inside: `options.ts`
@@ -203,6 +241,13 @@ visuals — `app/src/assets/` and the camera system in `app/src/game/camera/` ar
     re-checked with `solve`, published through `publish_match_pool_system` — service role only, match mode only, keeps the
     newest seven pools (a running match keeps its level in `matches.level`). `publish_level_pool` is now admin check +
     `publish_pool_unchecked`. Same secrets as `publish-daily`. The jobs run as `service_role`, which bypasses RLS but not GRANTs: a table they read needs `grant select … to service_role` in its migration (the CI stub grants everything by default, so CI cannot catch a missing one). Both publish workflows also run after a successful `migrate` (`workflow_run`), so a deploy never leaves the daily week or the match pool empty; both are idempotent. Until a pool exists the server answers `no match levels published` and the lobby says so (`isUnpublished` → `UNPUBLISHED_COPY`).
+  - **Named constellations** (`app/sql/2026-10-25-sky-names.sql`, guarded by
+    `sql/ci/checks/sky-names.sql`): `sky_names (user_id, day_number, name,
+    figure)`, one row per player per night, upserted to rename. Row level
+    security: a player reads and writes only their own rows. `figure` is the
+    night's last sky without its answer (`domain/nights.ts` `figureOf`),
+    copied in so the atlas never re-reads old weeks; cosmetic, nothing scores
+    from it. Read through `repositories/skyNames.ts` and `useSkyNames`.
   - **Admins and saved generation** (`app/sql/2026-10-07-admin-generation-config.sql`,
     guarded by `app/sql/ci/checks/admin-generation-config.sql`):
     `public.admins` (rows added by hand in the SQL editor — data, not a
@@ -217,18 +262,21 @@ visuals — `app/src/assets/` and the camera system in `app/src/game/camera/` ar
     schedule doesn't parse, the game plays `DEFAULT_SCHEDULE` and **doesn't
     record clears** (`skipSave`: they may not be everyone's puzzles); with no
     config saved, `DEFAULT_SCHEDULE` *is* the schedule and clears count.
-  - `src/app/` — `App.tsx` (screen routing, `AuthProvider`), the staff badge
-    and the once-per-session orientation (`useOrientation`); `admin/` is the
+  - `src/app/` — `App.tsx` (the providers, the shared `useAppState()`, and
+    which theme draws it) and `useTheme.ts` (Stargazer unless the URL says
+    `?skin=catastrophe`; kept in the URL, not storage); `admin/` is the
     frame both admin pages render in.
   - `src/ui/` (Button, Panel/TabHeader, Tag, Logo, Screen, StaffBadge, Stat,
-    Avatar, Field, ListRow/RankRow, ScopeTabs, Message, GradeBadge) and
-    `src/sprites/` (PadSprite, CatFlipbook, ThingSprite, PathWeb/PathLit and
+    Avatar, Field, ListRow/RankRow, ScopeTabs, Message, GradeBadge — the
+    CATASTROPHE INC. kit, also used by the admin pages) and
+    `src/themes/catastrophe/sprites/` (PadSprite, CatFlipbook, ThingSprite, PathWeb/PathLit and
     the two-tone path theme): shared presentation used by the board, the
     work order and the orientation alike — never re-draw a pad, cat or path
     somewhere else. `src/hooks/` holds generic hooks (`useResource`,
     `useWindowKey`, `useClipboard`, `useCulled`).
   - `src/styles/tokens.css` — the only home of raw colours, font stacks and
-    the sticker border/shadow recipe. `styles/global.css` holds the `cc-*`
+    the sticker border/shadow recipe (CATASTROPHE INC. and the admin pages);
+    Stargazer's are in `src/themes/stargazer/tokens.css`. `styles/global.css` holds the `cc-*`
     keyframes.
   - `src/assets/rooms/` — the drawn rooms the house is filled with, plus the
     `raw/` originals they are trimmed from. Filename is the contract and
@@ -277,12 +325,16 @@ visuals — `app/src/assets/` and the camera system in `app/src/game/camera/` ar
 
 ## The board is a camera, not a fit
 
+*(This and the next section are the CATASTROPHE INC. board, in `themes/catastrophe/`.
+Stargazer's `SkyBoard` is a plain SVG fitted to the sky — a small graph needs no
+camera — with its star size growing for big skies, capped, in `play/sky.ts`.)*
+
 Levels used to be scaled down to fit a fixed viewBox, so spacing collapsed as
 graphs grew (150 world units per lattice step in house 1, 40 in the worst house
 7 — where a smashable ended up wider than the cable it sat on). Instead:
 
 - **One fixed `SPACING` (130) for every house.** A cat is the same size in
-  house 7 as in house 1. `layoutFor()` (`game/layout/layout.ts`) maps
+  house 7 as in house 1. `layoutFor()` (`themes/catastrophe/game/layout/layout.ts`) maps
   lattice → world at that scale and memoizes per level object.
 - **The board is a camera over that world**, `{x, y, z}` driving the SVG's
   **viewBox**. Keep it in the viewBox: `useBoardPointer` maps client → world through
@@ -372,7 +424,7 @@ The art brackets the puzzle on both sides of the value scale — `music-1`'s dar
 wood is as dark as the paths' casing, and lamp cores and window bays are
 *brighter* than the old bone dash was. No single tone can win against both, so
 every piece of the puzzle layer is drawn **two-tone**: a near-black core with a
-light rim outside it (`PATH_INK` / `PATH_RIM` / `PATH_DASH` in `src/sprites/theme.ts`).
+light rim outside it (`PATH_INK` / `PATH_RIM` / `PATH_DASH` in `src/themes/catastrophe/sprites/theme.ts`).
 Whichever half loses against a given room, the other one carries the edge.
 
 - Paths: a `#150C06` scrim, a cream rim, the dark casing, then dashes brighter
@@ -398,9 +450,11 @@ Code comments, variable names (`BLACKOUT engine`, `bo-*` CSS classes in the
 old prototype), the `cc-*` CSS keyframe prefix, the `CatCoverGame`
 name in old commits, and this repo's own name (`blackout`) are all leftovers
 from earlier pivots (BLACKOUT, then CAT COVER). Don't be misled by them —
-the shipped app is now CATASTROPHE INC. When adding new code, use
-CATASTROPHE INC.-appropriate naming (SITES, pads, hire/recall, budget); you
-don't need to rename existing leftovers unless asked.
+the shipped app is now Stargazer. Shared code (`domain/`, `game/`,
+`services/`) still speaks CATASTROPHE INC. (sites, pads, hire/recall, cats);
+that is fine — rename only if asked. In `themes/stargazer/` use Stargazer's
+words: skies, stars (lit/dim), lines (lit/dark), par, nights, the atlas,
+the telescope; in `themes/catastrophe/` keep the cat words.
 
 ## Engineering standards (the default for ALL new work)
 
@@ -409,8 +463,9 @@ don't reintroduce the old patterns (god components, inline styles, copy-paste,
 side effects inside render).
 
 **Layers and dependency direction** — `domain` ← `game` / `services` ←
-`screens` / `app`. `ui` and `sprites` depend only on `styles`, `assets` and
-`domain/types`.
+`themes/*` / `screens` (admin) ← `app`. `ui` and `themes/catastrophe/sprites`
+depend only on `styles`, `assets` and `domain/types`. A theme never imports
+the other theme or `app/`; Stargazer never imports `ui/`.
 
 - `src/domain/` — pure TypeScript: level generation, house, cover rules, scoring,
   calendar, sites, share text. No React, DOM, Supabase or `Math.random()`.
@@ -419,11 +474,12 @@ side effects inside render).
   generationConfigs), auth provider, the generation worker clients.
   Repositories return `Result<T>` and log through one shared logger. Components
   never call Supabase directly; they use repositories via hooks.
-- `src/game/` — reducer + selectors, pure camera maths, scene building, input
-  hooks, audio service, and the board components.
-- `src/screens/`, `src/ui/`, `src/sprites/`, `src/styles/` — screens, shared
-  primitives (Button, Card, TabHeader, Logo, GradeBadge), the cat/pad/thing
-  sprite components, and design tokens.
+- `src/game/` — reducer + selectors, sessions, input keymap, audio service,
+  and the hooks both themes read their data through. No drawing.
+- `src/themes/<theme>/` — a theme's pages, its board and its tokens.
+- `src/screens/` (admin), `src/ui/`, `src/styles/` — the admin pages, the
+  CATASTROPHE INC. primitives (Button, Card, TabHeader, Logo, GradeBadge), and
+  design tokens.
 
 **Rules**
 
@@ -459,8 +515,9 @@ side effects inside render).
   and runs `app/sql/ci/checks/`; merging applies it to production. No
   `begin`/`commit` inside a migration — each already runs in a transaction.
 - New board behaviour: put the rule in `game/state/gameReducer.ts` (pure,
-  returns an event), react to the event in `GameScreen` (sound, saving, UI
-  effects), and draw it from `buildScene`. Don't mutate instance fields or
+  returns an event), react to the event in each theme's board screen
+  (`SkyPlay` for Stargazer, `GameScreen` for CATASTROPHE INC.: sound, saving,
+  UI effects), and draw it there (`SkyBoard`; `buildScene` for the house). Don't mutate instance fields or
   query the DOM from render. New server data: a repository returning
   `Result<T>`, consumed through `useResource`, never a bare `.then(setState)`.
 - Keep this file in sync with the structure when you move things.

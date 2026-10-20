@@ -218,7 +218,9 @@
             "patterns": [
               {
                 "group": [
+                  "**/themes/stargazer",
                   "**/themes/stargazer/**",
+                  "**/app",
                   "**/app/**"
                 ],
                 "message": "A theme stands alone: it must not import the other theme or the app shell."
@@ -246,8 +248,11 @@
             "patterns": [
               {
                 "group": [
+                  "**/themes/catastrophe",
                   "**/themes/catastrophe/**",
+                  "**/app",
                   "**/app/**",
+                  "**/ui",
                   "**/ui/**"
                 ],
                 "message": "A theme stands alone: it must not import the other theme, the app shell or the CATASTROPHE INC. ui kit."
