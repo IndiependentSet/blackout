@@ -11,6 +11,8 @@
 .page.tone-rush { --sg-line-dark: var(--sg-rush-line); }
 .page.tone-duel { --sg-line-dark: var(--sg-duel-line); --sg-star-halo: var(--sg-duel-halo); --sg-star-dim: var(--sg-duel-star); }
 .pageWide { height: 100vh; height: 100dvh; overflow: hidden; }
+/* a phone page is the visible screen exactly: nothing below it to scroll to */
+.page:not(.pageWide) { min-height: 0; height: 100vh; height: 100dvh; overflow: hidden; }
 .column {
   position: relative; max-width: 560px; height: 100vh; height: 100dvh; margin: 0 auto; box-sizing: border-box;
   display: flex; flex-direction: column; gap: 14px; padding: 50px 20px 18px;

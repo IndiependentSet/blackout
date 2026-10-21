@@ -73,3 +73,10 @@
 
   --sg-shadow: 0 30px 80px rgba(0, 0, 0, .5);
 }
+
+/* While Stargazer is showing, the document behind it is the night too, and does not rubber-band: a bounce or a
+   browser bar sliding away shows sky, never the CATASTROPHE INC. purple from styles/global.css. */
+html:has(.sg), html:has(.sg) body {
+  background: #0a0e27;
+  overscroll-behavior: none;
+}

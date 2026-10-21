@@ -12,6 +12,8 @@ body {
 
 #root {
   min-height: 100vh;
+  /* on phones 100vh is the screen with the browser bars hidden; dvh is what is actually visible */
+  min-height: 100dvh;
 }
 
 a { color: #F7B32B; text-decoration: none; }
