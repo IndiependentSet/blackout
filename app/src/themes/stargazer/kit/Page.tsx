@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import '../tokens.css';
 import { cx } from './cx';
 import { Meteors, Starfield } from './Starfield';
@@ -45,7 +45,7 @@ export const Eyebrow = ({ children, tone = 'mint' }: { children: ReactNode; tone
 
 /** A round initial for a player. */
 export const Avatar = ({ letter, size = 40, tone = 'gold' }: { letter: string; size?: number; tone?: 'gold' | 'mint' | 'soft' | 'mars' }) => (
-  <div className={cx(styles.avatar, styles['avatar-' + tone])} style={{ width: size, height: size, fontSize: size * 0.43 }} aria-hidden="true">{letter}</div>
+  <div className={cx(styles.avatar, styles['avatar-' + tone])} style={{ '--avatar': size + 'px' } as CSSProperties} aria-hidden="true">{letter}</div>
 );
 
 /** A one-line notice in a soft panel (loading, an error, an empty list). */

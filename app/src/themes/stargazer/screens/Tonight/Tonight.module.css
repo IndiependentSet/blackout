@@ -19,11 +19,12 @@
   background: linear-gradient(160deg, var(--sg-night-2), var(--sg-night-3)); border-radius: 36px; padding: 20px 20px 18px;
   display: flex; flex-direction: column; gap: 12px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .06);
 }
-.nightText { display: flex; flex-direction: column; gap: 12px; }
+.nightText { display: flex; flex-direction: column; gap: 12px; flex: 1 1 0; min-height: 0; }
+.night:not(.nightWide) { flex: 1 1 0; min-height: 0; }
 .nightHead { display: flex; justify-content: space-between; align-items: center; }
 .date { font-size: 13px; font-weight: 700; color: var(--sg-text-soft); }
-.preview { display: flex; justify-content: center; padding: 4px 0; }
-.preview > svg { width: 232px; max-width: 100%; max-height: 220px; }
+.preview { flex: 1 1 0; min-height: 0; display: flex; justify-content: center; padding: 4px 0; }
+.preview > svg { width: 100%; height: 100%; max-width: 260px; }
 .nightTitle { margin: 0; font-family: var(--sg-font-heading); font-weight: 400; font-size: 26px; line-height: 1.1; color: var(--sg-cream); }
 .stars { display: flex; gap: 6px; }
 
@@ -83,3 +84,11 @@
 .rowGo { font-weight: 800; color: var(--sg-gold); white-space: nowrap; }
 .goMars { color: var(--sg-mars); }
 .goMint { color: var(--sg-mint); }
+
+@media (max-height: 760px) {
+  .night { padding: 16px 16px 14px; gap: 10px; border-radius: 30px; }
+  .nightText { gap: 10px; }
+  .nightTitle { font-size: 22px; }
+  .weekCard { padding: 8px 12px; }
+  .tile { padding: 10px; gap: 8px; }
+}

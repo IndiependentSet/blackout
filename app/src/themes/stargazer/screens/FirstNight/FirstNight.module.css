@@ -11,3 +11,13 @@
 .text > span { font-size: 14px; line-height: 1.4; color: var(--sg-text-soft); }
 .par { color: var(--sg-gold); }
 .actions { margin-top: auto; display: flex; flex-direction: column; gap: 10px; }
+
+@media (max-height: 760px) {
+  .page { padding: 26px 20px 16px; gap: 12px; }
+  .title { font-size: 30px; }
+  .steps { gap: 8px; margin: 0; }
+  .step { grid-template-columns: 72px 1fr; padding: 8px 12px 8px 8px; border-radius: 24px; }
+  .text > b { font-size: 15px; }
+  .text > span { font-size: 13px; }
+  .actions { gap: 4px; }
+}

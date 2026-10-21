@@ -4,6 +4,7 @@ import { formatClock } from '../../../../domain/survival';
 import type { MatchPlayer, MatchView } from '../../../../domain/types';
 import { Button } from '../../kit/Button';
 import { Figure } from '../../kit/Figure';
+import { Fit } from '../../kit/Layout';
 import { Eyebrow, Page } from '../../kit/Page';
 import { cx } from '../../kit/cx';
 import { plural } from '../../copy';
@@ -51,7 +52,7 @@ export function DuelResult({ view, userId, opponentName, onOpenLobby, onOpenHub 
     <Page tone="duel">
       <Eyebrow>Star Duel · {match.ranked ? 'ranked · ' : ''}par {match.level.k}</Eyebrow>
       <h1 className={styles.resultTitle}>{TITLE[outcome]}</h1>
-      <div className={styles.resultSky}><Figure figure={match.level} mode="lit" lit={match.level.sol} /></div>
+      <Fit max={260}><Figure figure={match.level} mode="lit" lit={match.level.sol} /></Fit>
       {outcome !== 'void' && (
         <div className={styles.lines}>
           <Line name="You" player={mine} startsAt={match.starts_at} winner={outcome === 'won'} />

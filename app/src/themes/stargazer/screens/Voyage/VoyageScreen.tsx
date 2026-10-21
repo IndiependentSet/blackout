@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { CHAPTERS, chapterOf, chapterProgress, unlockedUpTo, type CampaignClears, type Chapter } from '../../../../domain/campaign';
 import { CAMPAIGN_LEVELS } from '../../../../domain/types';
 import type { Persistence } from '../../../../game/hooks/useCampaignClears';
@@ -6,6 +6,7 @@ import { usePoolPublished } from '../../../../game/hooks/usePoolPublished';
 import { Button } from '../../kit/Button';
 import { cx } from '../../kit/cx';
 import { LockIcon } from '../../kit/icons';
+import { Scroll } from '../../kit/Layout';
 import { Planet } from '../../kit/Planet';
 import { Eyebrow, Note, Page, TopBar } from '../../kit/Page';
 import { NO_SKIES, planetOf } from '../../copy';
@@ -37,7 +38,7 @@ function Stop({ n, ch, clears, unlocked, offset, onOpen }: { n: number; ch: Chap
   }
   if (n === unlocked) {
     return (
-      <div className={styles.stop} style={{ paddingLeft: offset }}>
+      <div className={styles.stop} style={{ paddingLeft: offset }} data-current>
         <div className={styles.current} aria-hidden="true">{local}</div>
         <Button size="sm" onClick={() => onOpen(n)}>Fly to {local}</Button>
       </div>
@@ -57,6 +58,12 @@ export function VoyageScreen({ signedIn, clears, persistence, onOpenLevel, onSig
   const planet = planetOf(ch.index);
   const next = CHAPTERS[ch.index + 1];
   const cleared = [...clears.keys()].length;
+  const path = useRef<HTMLDivElement>(null);
+  /* open the path on the stop to fly to next (or the top of a finished world) */
+  useEffect(() => {
+    const here = path.current?.querySelector('[data-current]');
+    if (here && 'scrollIntoView' in here) here.scrollIntoView({ block: 'center' });
+  }, [ch.index]);
 
   if (!signedIn) {
     return (
@@ -90,12 +97,12 @@ export function VoyageScreen({ signedIn, clears, persistence, onOpenLevel, onSig
       </section>
       {persistence === 'memory' && <Note>Your progress isn’t saved yet; it will be once the connection is back.</Note>}
       {pool === 'empty' && <Note>{NO_SKIES}</Note>}
-      <div className={styles.path}>
+      <Scroll label="Levels" fade><div className={styles.path} ref={path}>
         {Array.from({ length: ch.to - ch.from + 1 }, (_, i) => ch.from + i).map((n, i) => (
           <Stop key={n} n={n} ch={ch} clears={clears} unlocked={unlocked} offset={WAVE[i % WAVE.length]}
             onOpen={pool === 'empty' || persistence === 'loading' ? () => {} : onOpenLevel} />
         ))}
-      </div>
+      </div></Scroll>
       {next ? (
         <section className={styles.nextWorld}>
           <Planet art={planetOf(next.index).art} className={styles.planetNext} />

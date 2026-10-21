@@ -1,0 +1,14 @@
+import type { ReactNode } from 'react';
+import { cx } from './cx';
+import styles from './kit.module.css';
+
+/** Takes the height a phone page has left over; a drawing inside shrinks to fit it (capped at `max` px wide). */
+export const Fit = ({ children, max, className }: { children: ReactNode; max?: number; className?: string }) => (
+  <div className={cx(styles.fit, className)} style={max ? { maxWidth: max, width: '100%', alignSelf: 'center' } : undefined}>{children}</div>
+);
+
+/** A list that may outgrow the screen: it scrolls inside its own panel, so the page itself never does. `fade` softens
+    its top and bottom edges, for content that runs up against cards (the voyage path). */
+export const Scroll = ({ children, className, label, fade }: { children: ReactNode; className?: string; label?: string; fade?: boolean }) => (
+  <div className={cx(styles.scroll, fade && styles.scrollFade, className)} role={label ? 'region' : undefined} aria-label={label}>{children}</div>
+);

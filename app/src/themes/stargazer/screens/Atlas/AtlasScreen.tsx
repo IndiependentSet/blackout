@@ -1,6 +1,7 @@
 import type { SkyNames } from '../../../../game/hooks/useSkyNames';
 import { Button } from '../../kit/Button';
 import { Figure } from '../../kit/Figure';
+import { Scroll } from '../../kit/Layout';
 import { Note, Page, TopBar } from '../../kit/Page';
 import { useWide } from '../../kit/useWide';
 import { TabBar, type Tab } from '../../kit/TabBar';
@@ -37,14 +38,14 @@ export function AtlasScreen({ today, signedIn, atlas, onTab, onSignIn, onTonight
           <Button block onClick={onTonight}>Go to tonight</Button>
         </div>
       )}
-      <div className={wide ? styles.gridWide : styles.grid}>
+      <Scroll label="Your constellations"><div className={wide ? styles.gridWide : styles.grid}>
         {names.map(n => (
           <article key={n.day} className={styles.card}>
             <Figure figure={n.figure} mode="atlas" className={styles.thumb} />
             <div className={styles.cardText}><b>{n.name}</b><span>{whenNamed(n.day, today)}</span></div>
           </article>
         ))}
-      </div>
+      </div></Scroll>
       {!wide && <TabBar active="atlas" onOpen={onTab} />}
     </Page>
   );

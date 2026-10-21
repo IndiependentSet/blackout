@@ -1,5 +1,6 @@
 import type { RunSummary, SurvivalBoardRow } from '../../../../domain/survival';
 import { Button } from '../../kit/Button';
+import { Scroll } from '../../kit/Layout';
 import { Eyebrow, Note, Page } from '../../kit/Page';
 import { cx } from '../../kit/cx';
 import { plural } from '../../copy';
@@ -31,7 +32,7 @@ export function RushSummary({ summary, before, isRecord, signedIn, unsaved, boar
         <div className={styles.stat}><b>{summary.score.toLocaleString()}</b><span>points</span></div>
       </div>
       <Note>{record}</Note>
-      {board && board.length > 0 && (
+      <Scroll>{board && board.length > 0 && (
         <ol className={styles.board} aria-label="Meteor Rush leaderboard">
           {board.map((row, i) => (
             <li key={row.user_id} className={cx(styles.boardRow, row.user_id === userId && styles.mine)}>
@@ -40,7 +41,7 @@ export function RushSummary({ summary, before, isRecord, signedIn, unsaved, boar
             </li>
           ))}
         </ol>
-      )}
+      )}</Scroll>
       {!signedIn && <Note>Sign in to rank your runs.</Note>}
       {unsaved && <Note tone="error">This run wasn’t saved to the leaderboard.</Note>}
       <div className={styles.actions}>

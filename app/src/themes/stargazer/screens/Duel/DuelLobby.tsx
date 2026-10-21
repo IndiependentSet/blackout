@@ -8,6 +8,7 @@ import { useLobby } from '../../../../game/match/useLobby';
 import { useMatchmaking } from '../../../../game/match/useMatchmaking';
 import { UNPUBLISHED_COPY } from '../../../../services/repositories/levelPools';
 import { Button } from '../../kit/Button';
+import { Scroll } from '../../kit/Layout';
 import { Avatar, Eyebrow, Note, Page, TopBar } from '../../kit/Page';
 import { NO_SKIES } from '../../copy';
 import styles from './Duel.module.css';
@@ -85,6 +86,7 @@ export function DuelLobby({ userId, preselect, onOpenMatch, onBack }: Props) {
         </div>
       ))}
 
+      <Scroll label="Fellow stargazers">
       <Eyebrow>Fellow stargazers</Eyebrow>
       <div className={styles.list}>
         {sorted.map(link => {
@@ -110,6 +112,7 @@ export function DuelLobby({ userId, preselect, onOpenMatch, onBack }: Props) {
           </div>
         </>
       )}
+      </Scroll>
 
       <div className={styles.random}>
         {search.status === 'error' && <Note tone="error">{say(search.message)}</Note>}

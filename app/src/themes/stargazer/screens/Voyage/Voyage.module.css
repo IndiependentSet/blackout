@@ -18,7 +18,7 @@
 .track { flex: 1; height: 6px; border-radius: 999px; background: rgba(255, 255, 255, .1); overflow: hidden; }
 .fill { height: 100%; border-radius: 999px; background: var(--sg-mars); }
 
-.path { display: flex; flex-direction: column; gap: 10px; padding: 4px 0; }
+.path { display: flex; flex-direction: column; gap: 10px; padding: 8px 0; }
 .stop { display: flex; align-items: center; gap: 12px; }
 .done, .current, .locked {
   border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--sg-font-heading); flex: none;
@@ -38,10 +38,18 @@
 .note { font-size: 13px; font-weight: 700; color: var(--sg-text-soft); }
 
 .nextWorld {
-  position: relative; overflow: hidden; margin-top: auto; background: var(--sg-card-deep); border-radius: 32px 32px 0 0;
+  position: relative; overflow: hidden; background: var(--sg-card-deep); border-radius: 32px 32px 0 0;
   padding: 18px 18px 30px 120px; display: flex; flex-direction: column; gap: 2px;
 }
 .nextWorld [class*='eyebrow'] { display: flex; align-items: center; gap: 6px; }
 .planetNext { position: absolute; left: -10px; top: -6px; width: 110px; height: 110px; border-radius: 50%; opacity: .45; }
 .nextName { font-family: var(--sg-font-heading); font-size: 22px; color: var(--sg-text-soft); }
 
+
+@media (max-height: 760px) {
+  .chapter { min-height: 84px; padding: 12px 14px 12px 104px; }
+  .planetBig { width: 112px; height: 112px; }
+  .nextWorld { padding: 12px 18px 16px 110px; }
+  .planetNext { width: 90px; height: 90px; }
+  .world { width: 34px; height: 34px; }
+}

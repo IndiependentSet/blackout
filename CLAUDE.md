@@ -118,6 +118,13 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
       and `screens/` (Tonight, FirstNight, Sky — daily play and Night
       charted —, Atlas, Voyage, Rush, Duel, Observatory). It never imports
       `src/ui/` (that kit is CATASTROPHE INC.'s).
+      **On a phone every page fits the screen with no page scrolling** (checked
+      at 390×844 and 375×667): the `Page` column is exactly screen height, the
+      board or a drawing takes the leftover space through `kit/Layout`'s `Fit`,
+      a list that can grow without limit (voyage path, atlas, friends, boards)
+      scrolls inside its own `Scroll` panel, and `@media (max-height: 760px)`
+      tightens spacing. A page with more than a screen of sections splits into
+      sub-pages instead (the Observatory's friends and weekly board).
     - `themes/catastrophe/` — the hidden CATASTROPHE INC. look, unchanged:
       `CatastropheApp.tsx`, `game/` (`GameScreen`, `components/` — Board,
       which owns the camera, its layers, HUD, score card, side rails —,

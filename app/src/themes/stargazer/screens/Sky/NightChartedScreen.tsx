@@ -6,6 +6,7 @@ import { useClipboard } from '../../../../hooks/useClipboard';
 import { Button } from '../../kit/Button';
 import { Figure } from '../../kit/Figure';
 import { ShareIcon } from '../../kit/icons';
+import { Fit } from '../../kit/Layout';
 import { Eyebrow, Note, Page, TopBar } from '../../kit/Page';
 import { nameIdeas, nightShareText } from '../../copy';
 import styles from './NightCharted.module.css';
@@ -49,7 +50,7 @@ export function NightChartedScreen({ day, results, figure, streak, signedIn, atl
       <TopBar onBack={onBack} backLabel="Tonight" />
       <Eyebrow>Night No. {day} · {perfect ? 'Perfect night' : `${results.length} of ${results.length} charted`}</Eyebrow>
       <h1 className={styles.title}>{perfect ? 'You found a new constellation.' : 'The whole night is charted.'}</h1>
-      {figure && <div className={styles.figure}><Figure figure={figure} mode="lit" lit={figure.sol} /></div>}
+      <Fit max={290}>{figure && <Figure figure={figure} mode="lit" lit={figure.sol} />}</Fit>
 
       <div className={styles.naming}>
         <label className={styles.label} htmlFor="sky-name">Name it</label>

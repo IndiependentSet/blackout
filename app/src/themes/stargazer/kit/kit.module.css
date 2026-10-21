@@ -12,8 +12,29 @@
 .page.tone-duel { --sg-line-dark: var(--sg-duel-line); --sg-star-halo: var(--sg-duel-halo); --sg-star-dim: var(--sg-duel-star); }
 .pageWide { height: 100vh; height: 100dvh; overflow: hidden; }
 .column {
-  position: relative; max-width: 560px; min-height: 100vh; min-height: 100dvh; margin: 0 auto; box-sizing: border-box;
+  position: relative; max-width: 560px; height: 100vh; height: 100dvh; margin: 0 auto; box-sizing: border-box;
   display: flex; flex-direction: column; gap: 14px; padding: 50px 20px 18px;
+  overflow-y: auto;   /* a safety net only: every page is laid out to fit the screen */
+}
+.column > * { flex-shrink: 0; }
+
+/* the part of a page that takes whatever height is left: a drawing shrinks into it */
+.column > .fit { flex: 1 1 0; }
+.fit { min-height: 0; display: flex; align-items: center; justify-content: center; }
+.fit > svg { width: 100%; height: 100%; }
+/* a list that may be longer than the screen scrolls inside its own panel, never the page */
+.column > .scroll { flex: 1 1 0; }
+.scrollFade { -webkit-mask-image: linear-gradient(transparent, black 18px, black calc(100% - 18px), transparent); mask-image: linear-gradient(transparent, black 18px, black calc(100% - 18px), transparent); }
+.scroll { min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 8px; scrollbar-width: thin; }
+
+/* short phones: tighter spacing and smaller headings */
+@media (max-height: 760px) {
+  .column { padding: 22px 16px 12px; gap: 10px; }
+  .heading { font-size: 26px; }
+  .btn-lg { height: 48px; font-size: 16px; }
+  .btn-md { height: 42px; }
+  .tabBar { padding: 6px; }
+  .tab { padding: 8px 12px; }
 }
 .wideInner { position: relative; height: 100%; box-sizing: border-box; max-width: 1440px; margin: 0 auto; }
 
@@ -57,7 +78,9 @@
 .iconBtn:hover { background: rgba(255, 255, 255, .08); }
 .iconSvg { display: block; fill: none; stroke: currentColor; stroke-width: 2.75; stroke-linecap: round; stroke-linejoin: round; }
 
+/* a page can shrink its avatars by setting --avatar-size on an ancestor */
 .avatar {
+  width: var(--avatar-size, var(--avatar)); height: var(--avatar-size, var(--avatar)); font-size: calc(var(--avatar-size, var(--avatar)) * .43);
   border-radius: 50%; flex: none; display: flex; align-items: center; justify-content: center;
   font-family: var(--sg-font-heading); line-height: 1;
 }
@@ -101,7 +124,7 @@
 /* ---- the tab bar ---- */
 .tabBar {
   margin-top: auto; display: flex; justify-content: space-around; align-items: center; padding: 8px; border-radius: 999px;
-  background: var(--sg-bar); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .06); position: sticky; bottom: 12px;
+  background: var(--sg-bar); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .06);
 }
 .tab {
   display: flex; align-items: center; gap: 6px; padding: 10px 14px; border: 0; border-radius: 999px; cursor: pointer;
