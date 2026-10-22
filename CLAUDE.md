@@ -133,6 +133,13 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
       `input/useBoardPointer.ts`), `sprites/`, `screens/` (Hub, WorkOrder,
       HowToPlay, Campaign, Survival, Match, StaffOffice, Crew), the staff
       badge and the "Back to Stargazer" pill.
+  - `themes/transit/` — the wormhole animation between the seventh tap on the Stargazer title and CATASTROPHE INC.
+    (`WormholeTransit`, ported from the handoff in `Wormhole Easter Egg Animation/`, which stays as the design
+    reference). Every frame is a pure function of the clock's `T` (`timeline.ts`: `CUES`, `tick`, `choose`, `skip`;
+    `useTransitClock` drives it off rAF); `Cockpit` has real buttons (the console holds at `HOLD_AT` until one is
+    pressed, or slips after 2 s), a tap elsewhere skips to the hire, Escape leaves, reduced motion shows only the last
+    frame. Mounted by `app/App.tsx` over Stargazer; `?skin=catastrophe` and "Back to Stargazer" stay instant. It reads
+    both themes' tokens (`.sg` scope + `:root`) and adds only `tokens.css`; neither theme imports it.
   - `src/screens/` — the admin pages only: `Playground/`, `GenerationConfig/`,
     `LevelPools/` (below). They use the CATASTROPHE INC. board and ui kit.
   - **`src/domain/generation/`** — level generation as its own module, with
@@ -255,6 +262,12 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
     night's last sky without its answer (`domain/nights.ts` `figureOf`),
     copied in so the atlas never re-reads old weeks; cosmetic, nothing scores
     from it. Read through `repositories/skyNames.ts` and `useSkyNames`.
+  - **Profile picture** (`app/sql/2026-10-26-profile-avatar.sql`, guarded by `sql/ci/checks/profile-avatar.sql`):
+    `profiles.avatar` is null (the handle's initial), `icon:<id>` (one of `AVATAR_ICONS` in `domain/avatar.ts`, drawn
+    by Stargazer's `kit/AvatarArt.tsx` from theme tokens) or a 128px jpeg data URL (`services/image/avatarPhoto.ts`
+    crops and shrinks a picked file; the column check caps its length). Public like the handle (`PUBLIC_COLS`).
+    The signed-in player's own is in `useAuth().avatar`/`setAvatar`; Stargazer's `Avatar` takes `avatar`, and the
+    Observatory's "Your picture" sub-page (`AvatarPicker`, `useAvatarEditor`) changes it.
   - **Admins and saved generation** (`app/sql/2026-10-07-admin-generation-config.sql`,
     guarded by `app/sql/ci/checks/admin-generation-config.sql`):
     `public.admins` (rows added by hand in the SQL editor — data, not a

@@ -132,7 +132,7 @@ export interface SiteResult {
 }
 
 /** The columns of `profiles` that are safe to read for other users. */
-export interface Profile { id: string; username?: string | null; invite_code?: string | null }
+export interface Profile { id: string; username?: string | null; invite_code?: string | null; avatar?: string | null }
 
 export type BoardScope = 'week' | 'allTime';
 

@@ -141,6 +141,9 @@
 .moonRingNone { fill: none; stroke: transparent; stroke-width: 1.5; }
 .moonToday { fill: none; stroke: var(--sg-mint); stroke-width: 1.5; }
 .moonFuture { fill: none; stroke: var(--sg-next-ring); stroke-width: 1.5; }
+/* the day on the moon: cream with a card-coloured outline, so it reads on gold and on the dark shadow alike */
+.moonDay { font-family: var(--sg-font-body); font-size: 10px; font-weight: 800; fill: var(--sg-cream); stroke: var(--sg-card); stroke-width: 3px; stroke-linejoin: round; paint-order: stroke; }
+.moonDayFuture { fill: var(--sg-text-soft); }
 
 .miniStar { stroke-width: 1.8; stroke-linejoin: round; fill: transparent; stroke: transparent; }
 .star-par { fill: var(--sg-gold); }
@@ -169,3 +172,36 @@
 .planet-jupiter { background: radial-gradient(circle at 38% 32%, var(--sg-jupiter-1), var(--sg-jupiter-2) 55%, var(--sg-jupiter-3)); }
 .planet-saturn { background: radial-gradient(circle at 38% 32%, var(--sg-saturn-1), var(--sg-saturn-2) 55%, var(--sg-saturn-3)); }
 .planet-neptune { background: radial-gradient(circle at 38% 32%, var(--sg-neptune-1), var(--sg-neptune-2) 55%, var(--sg-neptune-3)); box-shadow: 0 0 40px rgba(76, 111, 209, .45); }
+
+/* ---- avatars: a player's own picture, and the drawn ones ---- */
+.avatarFrame { overflow: hidden; padding: 0; }
+.avatarPhoto, .artSvg { width: 100%; height: 100%; display: block; object-fit: cover; }
+.artBgNight1 { fill: var(--sg-night-1); }
+.artBgNight2 { fill: var(--sg-night-2); }
+.artBgNight3 { fill: var(--sg-night-3); }
+.artBgDusk { fill: var(--sg-dusk); }
+.artBgDuel { fill: var(--sg-duel-1); }
+.artGold { fill: var(--sg-gold); }
+.artGoldDim { fill: var(--sg-gold-dim); }
+.artCream { fill: var(--sg-cream); }
+.artMint { fill: var(--sg-mint); }
+.artMintSoft { fill: var(--sg-mint-soft); opacity: .85; }
+.artMars { fill: var(--sg-mars); }
+.artSoft { fill: var(--sg-text-soft); }
+.artInk { fill: var(--sg-on-gold); }
+.artMintInk { fill: var(--sg-on-mint); }
+.artMoon { fill: var(--sg-moon-1); }
+.artMoonShade { fill: var(--sg-moon-2); opacity: .55; }
+.artSaturn { fill: var(--sg-saturn-2); }
+.artNeptune { fill: var(--sg-neptune-1); }
+.artVisor { fill: var(--sg-night-0); }
+.artBeam { fill: var(--sg-gold); opacity: .3; }
+.artSmile, .artShine, .artStem, .artLegs, .artGrill, .artTrail, .artRays, .artRing { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.artSmile { stroke: var(--sg-on-gold); stroke-width: 1.8; }
+.artShine { stroke: var(--sg-text-soft); stroke-width: 2; }
+.artStem { stroke: var(--sg-mint); stroke-width: 2; }
+.artLegs { stroke: var(--sg-text-soft); stroke-width: 2.4; }
+.artGrill { stroke: var(--sg-on-gold); stroke-width: 2.4; }
+.artTrail { stroke: var(--sg-cream); stroke-width: 3; opacity: .5; }
+.artRays { stroke: var(--sg-gold-line); stroke-width: 3; }
+.artRing { stroke: var(--sg-saturn-1); stroke-width: 2.6; }

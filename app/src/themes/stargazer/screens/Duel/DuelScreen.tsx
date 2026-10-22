@@ -16,6 +16,7 @@ interface Props {
   matchId: string;
   userId: string;
   initial: string;
+  avatar?: string | null;
   onOpenLobby: () => void;
   onOpenHub: () => void;
 }
@@ -29,7 +30,7 @@ const Bar = ({ covered, total, tone }: { covered: number; total: number; tone: '
 
 /* Star Duel in play (1i): both players on the same sky, the clock between them. The board locks until the server's
    countdown is over; a full cover is sent at once, and the server decides the winner. */
-export function DuelScreen({ matchId, userId, initial, onOpenLobby, onOpenHub }: Props) {
+export function DuelScreen({ matchId, userId, initial, avatar, onOpenLobby, onOpenHub }: Props) {
   const match = useMatch(matchId, userId);
   const { view, status, sendProgress } = match;
   const level = view ? view.match.level : null;
@@ -92,7 +93,7 @@ export function DuelScreen({ matchId, userId, initial, onOpenLobby, onOpenHub }:
   const top = (
     <>
       <div className={styles.versus}>
-        <div className={styles.side}><Avatar letter={initial} size={38} /><div className={styles.sideText}><b>You</b><span className={styles.gold}>{lockedIn ? `locked · ${mine?.cats_used}` : `${session.state.placed.length} lit`}</span></div></div>
+        <div className={styles.side}><Avatar letter={initial} avatar={avatar} size={38} /><div className={styles.sideText}><b>You</b><span className={styles.gold}>{lockedIn ? `locked · ${mine?.cats_used}` : `${session.state.placed.length} lit`}</span></div></div>
         <div className={styles.clock} role="timer" aria-label={status === 'countdown' ? 'starts in' : 'time left'}>
           {status === 'countdown' ? Math.max(1, Math.ceil(match.countdown / 1000)) : formatClock(match.remaining)}
         </div>

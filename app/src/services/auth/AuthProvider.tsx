@@ -12,7 +12,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   /* tagged with the user it belongs to, so a stale handle can never show for
      someone else without any reset-in-effect */
-  const [named, setNamed] = useState<{ id: string; username: string } | null>(null);
+  const [named, setNamed] = useState<{ id: string; username: string; avatar: string | null } | null>(null);
 
   useEffect(() => {
     let live = true;
@@ -24,12 +24,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const user = session?.user ?? null;
   const userId = user?.id ?? null;
   const username = named && named.id === userId ? named.username : '';
+  const avatar = named && named.id === userId ? named.avatar : null;
   useEffect(() => {
     if (!user) return;
     let live = true;
     ensureProfile(user)
       .then(() => getProfile(user.id))
-      .then(res => { if (live && res.ok) setNamed({ id: user.id, username: (res.data && res.data.username) || '' }); });
+      .then(res => { if (live && res.ok) setNamed({ id: user.id, username: (res.data && res.data.username) || '', avatar: (res.data && res.data.avatar) || null }); });
     return () => { live = false; };
   }, [user]);
 
@@ -39,8 +40,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     email: user?.email ?? null,
     username,
     handle: displayName({ username }),
-    setHandle: (username: string) => { if (userId) setNamed({ id: userId, username }); },
-  }), [ready, user, userId, username]);
+    avatar,
+    setHandle: (username: string) => { if (userId) setNamed(n => ({ id: userId, username, avatar: n && n.id === userId ? n.avatar : null })); },
+    setAvatar: (avatar: string | null) => { if (userId) setNamed(n => ({ id: userId, username: n && n.id === userId ? n.username : '', avatar })); },
+  }), [ready, user, userId, username, avatar]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

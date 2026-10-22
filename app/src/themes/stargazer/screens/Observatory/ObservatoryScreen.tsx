@@ -18,6 +18,7 @@ import { useWide } from '../../kit/useWide';
 import { TabBar, type Tab } from '../../kit/TabBar';
 import { cx } from '../../kit/cx';
 import { monthOf, plural } from '../../copy';
+import { AvatarPicker } from './AvatarPicker';
 import { SignIn } from './SignIn';
 import { Stargazers } from './Stargazers';
 import styles from './Observatory.module.css';
@@ -35,7 +36,7 @@ interface Props {
 }
 
 /** The Observatory's own pages: the overview, and the two lists too long to share a phone screen with it. */
-type View = 'overview' | 'stargazers' | 'board';
+type View = 'overview' | 'stargazers' | 'board' | 'avatar';
 type Stats = ReturnType<typeof usePlayerStats>;
 
 function Overview({ auth, userId, streak, named, month, today, stats, crew, onOpen }: Pick<Props, 'auth' | 'streak' | 'named' | 'month' | 'today'> & { userId: string; stats: Stats; crew: Crew; onOpen: (v: View) => void }) {
@@ -47,7 +48,9 @@ function Overview({ auth, userId, streak, named, month, today, stats, crew, onOp
   return (
     <>
       <div className={styles.who}>
-        <Avatar letter={initial({ username: auth.username })} size={64} />
+        <button className={styles.avatarButton} onClick={() => onOpen('avatar')} aria-label="Change your picture">
+          <Avatar letter={initial({ username: auth.username })} avatar={auth.avatar} size={64} />
+        </button>
         <div className={styles.whoText}>
           {handle.editing ? (
             <div className={styles.edit}>
@@ -72,7 +75,7 @@ function Overview({ auth, userId, streak, named, month, today, stats, crew, onOp
       <section className={styles.moons}>
         <div className={styles.moonsHead}><b>{m.name} moons</b><span>Full moon = perfect night</span></div>
         <div className={styles.moonGrid}>
-          {m.days.map(d => <Moon key={d} night={month.find(n => n.day === d)} size={30} today={d === today} future={d > today} />)}
+          {m.days.map(d => <Moon key={d} night={month.find(n => n.day === d)} size={30} today={d === today} future={d > today} day={d - m.days[0] + 1} />)}
         </div>
       </section>
 
@@ -117,11 +120,12 @@ function SignedIn(props: Props & { userId: string; view: View; setView: (v: View
   const crew = useCrew(userId, 'week');
   const me = useResource('me:' + userId, () => getProfile(userId));
   if (view === 'stargazers') return <Stargazers userId={userId} crew={crew} code={me.data?.invite_code ?? '—'} onDuel={onDuel} />;
+  if (view === 'avatar') return <AvatarPicker userId={userId} auth={props.auth} />;
   if (view === 'board') return <WeekBoard userId={userId} stats={stats} />;
   return <Overview {...props} stats={stats} crew={crew} onOpen={setView} />;
 }
 
-const TITLES: Record<View, string> = { overview: 'Observatory', stargazers: 'Fellow stargazers', board: 'This week’s night watch' };
+const TITLES: Record<View, string> = { overview: 'Observatory', stargazers: 'Fellow stargazers', board: 'This week’s night watch', avatar: 'Your picture' };
 
 /* Observatory (1j): the player's own page. Signed out, the way to sign in; signed in, who they are, their numbers and
    this month's moons, with fellow stargazers and the week's board one tap away. Replaces the staff office. */

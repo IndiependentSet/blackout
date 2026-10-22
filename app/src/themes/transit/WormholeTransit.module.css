@@ -1,0 +1,89 @@
+/* Static styles of the wormhole transit. What changes with the time T (positions, opacity, transforms) is inline. */
+
+.root { position: fixed; inset: 0; z-index: 100; overflow: hidden; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+.fade { animation: tr-fade .3s ease-out both; }
+@keyframes tr-fade { from { opacity: 0; } to { opacity: 1; } }
+
+.layer { position: absolute; inset: 0; }
+.night { background: linear-gradient(180deg, var(--sg-night-0) 0%, var(--sg-night-1) 58%, var(--sg-dusk) 100%); }
+.star { position: absolute; border-radius: 50%; background: var(--sg-twinkle); }
+.stage { position: absolute; left: 50%; top: 50%; transform-origin: 50% 50%; }
+.column { position: absolute; width: 390px; height: 844px; }
+.fill { position: absolute; inset: 0; }
+.flash { background: var(--paper); pointer-events: none; }
+
+/* ---- the console ---- */
+.cockpit { position: absolute; inset: 0; font-family: var(--sg-font-body); color: var(--sg-text); }
+.window {
+  position: absolute; left: 20px; top: 50px; width: 350px; height: 380px; border-radius: 44px; overflow: hidden;
+  background: radial-gradient(90% 90% at 50% 45%, var(--sg-night-2) 0%, var(--sg-night-1) 50%, var(--sg-night-0) 100%);
+  box-shadow: inset 0 0 0 6px var(--sg-night-2), inset 0 0 0 7px rgba(255, 255, 255, .08), var(--sg-shadow);
+}
+.streak { position: absolute; border-radius: 2px; background: var(--sg-twinkle); transform-origin: 0 50%; }
+.neptune {
+  position: absolute; left: 210px; top: 70px; width: 84px; height: 84px; border-radius: 50%;
+  background: radial-gradient(circle at 38% 32%, var(--sg-neptune-1), var(--sg-neptune-2) 55%, var(--sg-neptune-3));
+  box-shadow: 0 0 40px rgba(76, 111, 209, .45);
+}
+.eyebrow { font-size: 12px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+.viewportLabel { position: absolute; left: 24px; top: 24px; color: var(--sg-soft); }
+.alarm { position: absolute; inset: 0; background: var(--sg-mars); }
+.panel { position: absolute; left: 20px; right: 20px; top: 448px; bottom: 18px; border-radius: 36px; background: var(--sg-card); padding: 22px; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px; }
+.title { font-family: var(--sg-font-heading); font-size: 30px; line-height: 1; color: var(--sg-cream); }
+.readouts { display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 700; color: var(--sg-soft); }
+.readouts > div { display: flex; justify-content: space-between; }
+.buttons { margin-top: auto; display: flex; flex-direction: column; gap: 12px; }
+.pill {
+  height: 56px; border: 0; border-radius: 999px; padding: 0 20px; cursor: pointer; font-family: var(--sg-font-heading); font-size: 17px;
+  color: var(--sg-on-gold); display: flex; align-items: center; justify-content: center; gap: 10px;
+}
+.pill:disabled { cursor: default; }
+.gold { background: var(--sg-gold); }
+.mars { background: var(--sg-mars); }
+.warning { font-family: var(--sg-font-body); font-weight: 800; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; padding: 4px 8px; border-radius: 999px; background: rgba(26, 22, 64, .16); }
+.finger { position: absolute; width: 44px; height: 44px; border-radius: 50%; pointer-events: none; background: rgba(255, 244, 214, .35); box-shadow: inset 0 0 0 2px var(--sg-cream); }
+
+/* ---- the tunnel ---- */
+.tunnel { position: absolute; inset: 0; font-family: var(--sg-font-body); }
+.scan { background: repeating-linear-gradient(0deg, var(--tr-scan) 0 1px, transparent 1px 4px); pointer-events: none; }
+.horizon { position: absolute; width: 140px; height: 140px; border-radius: 50%; }
+.cat { position: absolute; width: 180px; height: 180px; }
+.hudLabel { font-size: 10px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; color: var(--sg-mint); }
+.hudNum { font-weight: 800; font-size: 18px; color: var(--sg-cream); font-variant-numeric: tabular-nums; }
+.hudBlock { position: absolute; top: 74px; display: flex; flex-direction: column; gap: 4px; }
+.hudDest { position: absolute; left: 30px; right: 30px; bottom: 70px; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 8px; }
+.hudDestRow { display: flex; justify-content: space-between; }
+.hudDestName { color: var(--sg-cream); letter-spacing: .22em; }
+.bar { height: 4px; border-radius: 4px; background: rgba(143, 227, 192, .16); overflow: hidden; }
+.barFill { height: 100%; background: linear-gradient(90deg, var(--sg-mint), var(--pink)); }
+
+/* ---- Ship AI ---- */
+.ai {
+  position: absolute; left: 20px; right: 20px; top: 8px; min-height: 32px; display: flex; align-items: center; gap: 8px; padding: 6px 12px; box-sizing: border-box;
+  border-radius: 16px; font-family: var(--sg-font-body); pointer-events: none;
+}
+.aiCool { background: var(--sg-bar); box-shadow: inset 0 0 0 1px rgba(143, 227, 192, .3); }
+.aiHot { background: rgba(42, 21, 36, .78); box-shadow: inset 0 0 0 1px rgba(240, 107, 255, .35); }
+.aiTag { flex: none; font-size: 10px; font-weight: 800; letter-spacing: .18em; }
+.aiText { font-size: 12.5px; font-weight: 700; line-height: 1.35; color: var(--sg-text); }
+
+/* ---- the cat planet and the work order ---- */
+.world { background: var(--page); font-family: var(--font-body); }
+.planet {
+  position: absolute; border-radius: 50%; box-sizing: border-box; border: 4px solid var(--ink);
+  background: radial-gradient(circle at 42% 18%, var(--gold), var(--amber) 22%, var(--orchid) 48%, var(--purple) 70%);
+  box-shadow: 0 -6px 0 var(--ink), 0 0 80px rgba(240, 107, 255, .35);
+}
+.worldStar { position: absolute; border-radius: 50%; }
+.worldCat { position: absolute; width: 104px; height: 104px; transform-origin: 50% 100%; }
+.hired { position: absolute; inset: 0; padding: 64px 22px 0; box-sizing: border-box; display: flex; flex-direction: column; gap: 22px; align-items: flex-start; font-family: var(--font-body); }
+.lockup { display: flex; flex-direction: column; transform-origin: left top; }
+.lockupTag { font-family: var(--font-display); font-size: 15px; letter-spacing: .34em; color: var(--orchid); margin-bottom: 8px; line-height: .82; }
+.order { position: relative; align-self: stretch; width: 100%; }
+.orderCopy { margin: 0; font-size: 14.5px; font-weight: 700; line-height: 1.5; color: var(--text-2); text-wrap: pretty; }
+.orderBody { display: flex; flex-direction: column; gap: 14px; }
+.shift { font-family: var(--font-display); font-size: 18px; color: var(--violet); }
+.stamp {
+  position: absolute; right: 6px; top: -6px; padding: 4px 14px; border: var(--bd); border-radius: 10px; background: var(--rose); color: var(--ink);
+  font-family: var(--font-display); font-size: 22px; letter-spacing: .06em; box-shadow: var(--lift); pointer-events: none;
+}

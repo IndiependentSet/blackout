@@ -1,4 +1,5 @@
 import type { User } from '@supabase/supabase-js';
+import { parseAvatar } from '../../domain/avatar';
 import { cleanUsername, defaultUsername, USERNAME_MIN } from '../../domain/profile';
 import type { Profile } from '../../domain/types';
 import { logger } from '../logger';
@@ -9,7 +10,7 @@ import { toResult, UNIQUE_VIOLATION } from '../supabase/guard';
 /* Columns safe to read for OTHER users — email is never selected for anyone
    but self via the auth session, so column discipline here is what keeps it
    private with RLS off. */
-export const PUBLIC_COLS = 'id, username, invite_code';
+export const PUBLIC_COLS = 'id, username, invite_code, avatar';
 
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
@@ -80,6 +81,17 @@ export async function setUsername(userId: string, raw: string): Promise<Result<s
     return fail(error.code === UNIQUE_VIOLATION ? TAKEN : error.message);
   }
   return ok(clean);
+}
+
+/** Saves the picture shown beside the player's handle: an `icon:<id>` or a photo data URL, or null for the initial. */
+export async function setAvatar(userId: string, avatar: string | null): Promise<Result<string | null>> {
+  if (avatar !== null && !parseAvatar(avatar)) return fail('THAT PICTURE WON’T DO.');
+  const { error } = await supabase.from('profiles').update({ avatar }).eq('id', userId);
+  if (error) {
+    logger.error('setAvatar', error);
+    return fail(error.message);
+  }
+  return ok(avatar);
 }
 
 /** Handle prefix or exact personal invite code only — never email. */

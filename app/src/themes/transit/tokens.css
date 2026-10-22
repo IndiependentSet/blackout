@@ -1,0 +1,8 @@
+/* The few colours the transit needs that neither theme names. Everything else is Stargazer's --sg-* (the first
+   half) and CATASTROPHE INC.'s tokens (the second); this file is the only place this theme holds raw values. */
+.transit {
+  --tr-void: #05060f;
+  --tr-plum: #170F22;
+  --tr-pale: #EADDF7;
+  --tr-scan: rgba(255, 255, 255, .035);
+}

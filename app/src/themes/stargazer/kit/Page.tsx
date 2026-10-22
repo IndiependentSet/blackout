@@ -1,5 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import '../tokens.css';
+import { parseAvatar } from '../../../domain/avatar';
+import { AvatarArt } from './AvatarArt';
 import { cx } from './cx';
 import { Meteors, Starfield } from './Starfield';
 import styles from './kit.module.css';
@@ -43,10 +45,15 @@ export const Eyebrow = ({ children, tone = 'mint' }: { children: ReactNode; tone
   <div className={cx(styles.eyebrow, styles['eyebrow-' + tone])}>{children}</div>
 );
 
-/** A round initial for a player. */
-export const Avatar = ({ letter, size = 40, tone = 'gold' }: { letter: string; size?: number; tone?: 'gold' | 'mint' | 'soft' | 'mars' }) => (
-  <div className={cx(styles.avatar, styles['avatar-' + tone])} style={{ '--avatar': size + 'px' } as CSSProperties} aria-hidden="true">{letter}</div>
-);
+/** A round picture for a player: their drawn icon or photo when they chose one (`avatar`, as stored on the profile), else their initial. */
+export const Avatar = ({ letter, avatar, size = 40, tone = 'gold' }: { letter: string; avatar?: string | null; size?: number; tone?: 'gold' | 'mint' | 'soft' | 'mars' }) => {
+  const art = parseAvatar(avatar);
+  return (
+    <div className={cx(styles.avatar, styles['avatar-' + tone], art && styles.avatarFrame)} style={{ '--avatar': size + 'px' } as CSSProperties} aria-hidden="true">
+      {art?.kind === 'icon' ? <AvatarArt id={art.id} /> : art?.kind === 'photo' ? <img className={styles.avatarPhoto} src={art.src} alt="" /> : letter}
+    </div>
+  );
+};
 
 /** A one-line notice in a soft panel (loading, an error, an empty list). */
 export const Note = ({ children, tone }: { children: ReactNode; tone?: 'error' }) => (

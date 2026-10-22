@@ -29,7 +29,7 @@ vi.mock('../Crew/CrewScreen', () => ({ CrewScreen: () => <div>crew roster</div> 
 const { StaffOfficeScreen } = await import('./StaffOfficeScreen');
 
 const auth = (over: Partial<AuthState> = {}): AuthState => ({
-  ready: true, userId: null, email: null, username: '', handle: '', setHandle: vi.fn(), ...over,
+  ready: true, userId: null, email: null, username: '', handle: '', avatar: null, setHandle: vi.fn(), setAvatar: vi.fn(), ...over,
 });
 const renderWith = (a: AuthState) => render(
   <AuthContext.Provider value={a}><StaffOfficeScreen onClose={() => {}} weeklyPerfect={3} /></AuthContext.Provider>);

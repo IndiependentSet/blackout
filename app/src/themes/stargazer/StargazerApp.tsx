@@ -117,7 +117,7 @@ export function StargazerApp({ app, onSecret }: Props) {
     case 'duelPlay':
       if (!userId || !matchId) break;
       return (
-        <DuelScreen key={matchId} matchId={matchId} userId={userId} initial={initial({ username: auth.username })}
+        <DuelScreen key={matchId} matchId={matchId} userId={userId} initial={initial({ username: auth.username })} avatar={auth.avatar}
           onOpenLobby={() => setRoute('duel')} onOpenHub={() => setRoute('tonight')} />
       );
   }
@@ -130,7 +130,7 @@ export function StargazerApp({ app, onSecret }: Props) {
   return (
     <TonightScreen day={day} tonight={tonight} skies={skyEntries(results, tonight.done ? -1 : tonight.next)}
       preview={previewLevel(session.levels, tonight)} streak={streak.current} week={nights}
-      initial={initial({ username: auth.username }) || '?'}
+      initial={initial({ username: auth.username }) || '?'} avatar={auth.avatar}
       voyage={{
         planet: planet.name, art: planet.art,
         stat: userId ? `${planet.name} ${progress.cleared}/${progress.total}` : 'Sign in to fly',
