@@ -54,16 +54,16 @@ export const SkyBoard = memo(function SkyBoard({ level, placed, sweep, ring, foc
       {sky.stars.map(n => n.lit ? (
         <g key={n.i} className={styles.litStar}>
           <circle cx={n.x} cy={n.y} r={40 * s} fill={`url(#${glowId})`} />
-          <path d={STAR_PATH} transform={`translate(${n.x} ${n.y}) scale(${s})`} className={styles.starShape} />
+          <path d={STAR_PATH} transform={`translate(${n.x} ${n.y}) scale(${s * n.size})`} className={styles.starShape} />
         </g>
       ) : (
         <g key={n.i}>
-          <circle cx={n.x} cy={n.y} r={13 * s} className={styles.halo} />
-          <circle cx={n.x} cy={n.y} r={6 * s} className={styles.dim} />
+          <circle cx={n.x} cy={n.y} r={13 * s * n.size} className={styles.halo} />
+          <circle cx={n.x} cy={n.y} r={6 * s * n.size} className={styles.dim} />
         </g>
       ))}
       {sky.stars.map(n => (
-        <circle key={'t' + n.i} className={styles.hit} cx={n.x} cy={n.y} r={45}
+        <circle key={'t' + n.i} className={styles.hit} cx={n.x} cy={n.y} r={sky.hit}
           role="button" tabIndex={-1} aria-pressed={n.lit} aria-label={'Star ' + (n.i + 1)} onClick={() => onTapStar(n.i)} />
       ))}
     </svg>

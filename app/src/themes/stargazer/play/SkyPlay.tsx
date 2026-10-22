@@ -14,6 +14,7 @@ import { BackIcon, ResetIcon } from '../kit/icons';
 import { Page, type Tone } from '../kit/Page';
 import { useWide } from '../kit/useWide';
 import { SkyBoard } from './SkyBoard';
+import { skyLayout } from './warp';
 import { LitCount, ParPill, SkyDots, SkyList, Telescope } from './StargazerParts';
 import { SCOPE_TIER, activeScope, darkLabel, scopeForKey, skyMessage, type Scope, type SkyEntry } from './sky';
 import styles from './Stargazer.module.css';
@@ -105,7 +106,8 @@ export function SkyPlay({ session, userId, locked = false, tone = 'night', title
         e.preventDefault(); return dispatch({ type: 'tap', node: state.focus, lv: level });
       case 'move': {
         e.preventDefault();
-        const node = nearestInDirection(level.nodes, state.focus, a.dir);
+        /* by where the stars are drawn, not their lattice cells: a tilted sky turns its rows */
+        const node = nearestInDirection(skyLayout(level).at, state.focus, a.dir);
         if (node >= 0) dispatch({ type: 'focus', node });
         return;
       }
