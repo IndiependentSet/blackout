@@ -1,0 +1,82 @@
+/* Stargazer's design tokens (Stargazer.dc.html, Organic design system): the only place this theme's raw colours,
+   font stacks and shadows live. Scoped to `.sg`, the class every Stargazer page carries, so they never touch the
+   CATASTROPHE INC. tokens in styles/tokens.css. */
+@import url('https://fonts.googleapis.com/css2?family=Caprasimo&family=Figtree:wght@400;600;700;800&display=swap');
+
+.sg {
+  --sg-font-heading: "Caprasimo", system-ui, sans-serif;
+  --sg-font-body: "Figtree", system-ui, sans-serif;
+
+  /* the night */
+  --sg-night-0: #0a0e27;
+  --sg-night-1: #141a40;
+  --sg-night-2: #1e2558;
+  --sg-night-3: #151a44;
+  --sg-dusk: #2a2452;
+  --sg-glow-sky: #2b2f6e;
+  --sg-card: #161c46;
+  --sg-card-hover: #1e2558;
+  --sg-card-deep: #121738;
+  --sg-well: #0d1130;
+  --sg-bar: rgba(10, 14, 39, .7);
+  --sg-twinkle: #fff6e0;
+
+  /* text */
+  --sg-text: #f3ecdf;
+  --sg-text-soft: #b9bfe6;
+  --sg-text-faint: #7d86c4;
+  --sg-on-gold: #1a1640;
+
+  /* star gold: lit stars and lines, the primary action */
+  --sg-gold: #ffd98a;
+  --sg-gold-hover: #ffe7b3;
+  --sg-gold-line: #ffe6a8;
+  --sg-gold-dim: #b98f4a;
+  --sg-cream: #fff4d6;
+  --sg-glow-core: #ffe2a0;
+  --sg-glow-edge: #ffb867;
+
+  /* unlit sky */
+  --sg-line-dark: #5a64a8;
+  --sg-star-halo: #aab4ff;
+  --sg-star-dim: #c9cff5;
+  --sg-next: #3a4280;
+  --sg-next-ring: #4a5390;
+
+  /* aurora mint: the telescope, and the duel */
+  --sg-mint: #8fe3c0;
+  --sg-mint-hover: #b3f0d6;
+  --sg-mint-soft: #c4e9da;
+  --sg-on-mint: #0f2a26;
+  --sg-duel-0: #122a3a;
+  --sg-duel-1: #173c3a;
+  --sg-duel-line: #4f7a86;
+  --sg-duel-halo: #b3f0d6;
+  --sg-duel-star: #c9e8dd;
+
+  /* Mars terracotta: time pressure and the voyage */
+  --sg-mars: #f2a774;
+  --sg-mars-1: #f4ad80;
+  --sg-mars-2: #c67139;
+  --sg-mars-3: #6e3216;
+  --sg-rush-0: #1d1640;
+  --sg-rush-1: #4a2438;
+  --sg-rush-line: #6a5a9a;
+
+  /* planets: placeholder art for the voyage's chapters */
+  --sg-moon-1: #e9e4d6;   --sg-moon-2: #9a958a;   --sg-moon-3: #3d3a35;
+  --sg-mercury-1: #d8c3a5; --sg-mercury-2: #8f7a62; --sg-mercury-3: #3b2f22;
+  --sg-venus-1: #f6dea0;  --sg-venus-2: #d6a54e;  --sg-venus-3: #6b4a16;
+  --sg-jupiter-1: #e9d2a8; --sg-jupiter-2: #b58a5c; --sg-jupiter-3: #4b3520;
+  --sg-saturn-1: #f1e3b5; --sg-saturn-2: #c9a95e; --sg-saturn-3: #5e4a1c;
+  --sg-neptune-1: #9fc6ff; --sg-neptune-2: #4c6fd1; --sg-neptune-3: #1a2766;
+
+  --sg-shadow: 0 30px 80px rgba(0, 0, 0, .5);
+}
+
+/* While Stargazer is showing, the document behind it is the night too, and does not rubber-band: a bounce or a
+   browser bar sliding away shows sky, never the CATASTROPHE INC. purple from styles/global.css. */
+html:has(.sg), html:has(.sg) body {
+  background: #0a0e27;
+  overscroll-behavior: none;
+}

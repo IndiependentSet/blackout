@@ -1,0 +1,7 @@
+.pill {
+  position: fixed; left: 14px; bottom: 14px; z-index: 50;
+  padding: 8px 14px; border: 2px solid var(--ink); border-radius: 999px; cursor: pointer;
+  font-family: var(--font-body); font-weight: 800; font-size: 13px;
+  background: var(--gold); color: var(--ink);
+}
+.pill:hover { background: var(--amber); }

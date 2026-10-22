@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Level } from '../../domain/types';
-import { Board } from '../../game/components/Board';
+import { Board } from '../../themes/catastrophe/game/components/Board';
 
 /** The level on the real board, to feel how it plays. The cats placed are
     owned by the screen, so they carry over to and from the schematic. */

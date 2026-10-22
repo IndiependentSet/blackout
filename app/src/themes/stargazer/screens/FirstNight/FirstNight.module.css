@@ -1,0 +1,23 @@
+.page { padding: 64px 26px 30px; gap: 18px; }
+.title { margin: 0; font-family: var(--sg-font-heading); font-weight: 400; font-size: 40px; line-height: 1.04; color: var(--sg-cream); }
+.steps { margin: 6px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.step {
+  display: grid; grid-template-columns: 96px 1fr; gap: 14px; align-items: center;
+  background: rgba(255, 255, 255, .05); border-radius: 28px; padding: 10px 16px 10px 10px;
+}
+.thumb { background: var(--sg-well); border-radius: 22px; padding: 6px; }
+.text { display: flex; flex-direction: column; gap: 2px; }
+.text > b { font-size: 16px; color: var(--sg-text); }
+.text > span { font-size: 14px; line-height: 1.4; color: var(--sg-text-soft); }
+.par { color: var(--sg-gold); }
+.actions { margin-top: auto; display: flex; flex-direction: column; gap: 10px; }
+
+@media (max-height: 760px) {
+  .page { padding: 26px 20px 16px; gap: 12px; }
+  .title { font-size: 30px; }
+  .steps { gap: 8px; margin: 0; }
+  .step { grid-template-columns: 72px 1fr; padding: 8px 12px 8px 8px; border-radius: 24px; }
+  .text > b { font-size: 15px; }
+  .text > span { font-size: 13px; }
+  .actions { gap: 4px; }
+}

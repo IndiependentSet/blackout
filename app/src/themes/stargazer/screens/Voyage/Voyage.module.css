@@ -1,0 +1,55 @@
+.page { padding-bottom: 0; }
+.worlds { display: flex; gap: 8px; justify-content: space-between; padding: 0 4px; }
+.world {
+  width: 40px; height: 40px; padding: 4px; border: 0; border-radius: 50%; cursor: pointer; background: transparent;
+  box-shadow: inset 0 0 0 2px transparent;
+}
+.world:disabled { cursor: default; opacity: .35; }
+.worldOn { box-shadow: inset 0 0 0 2px var(--sg-gold); }
+.worldDot { width: 100%; height: 100%; border-radius: 50%; }
+
+.chapter {
+  position: relative; overflow: hidden; background: var(--sg-card); border-radius: 32px; min-height: 104px; box-sizing: border-box;
+  padding: 18px 18px 18px 120px; display: flex; flex-direction: column; justify-content: center; gap: 4px;
+}
+.planetBig { position: absolute; left: -26px; top: -18px; width: 130px; height: 130px; border-radius: 50%; }
+.chapterName { margin: 0; font-family: var(--sg-font-heading); font-weight: 400; font-size: 26px; line-height: 1; color: var(--sg-cream); }
+.progress { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 800; }
+.track { flex: 1; height: 6px; border-radius: 999px; background: rgba(255, 255, 255, .1); overflow: hidden; }
+.fill { height: 100%; border-radius: 999px; background: var(--sg-mars); }
+
+.path { display: flex; flex-direction: column; gap: 10px; padding: 8px 0; }
+.stop { display: flex; align-items: center; gap: 12px; }
+.done, .current, .locked {
+  border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--sg-font-heading); flex: none;
+}
+.done {
+  width: 52px; height: 52px; border: 0; cursor: pointer; font-size: 20px;
+  background: var(--sg-gold); color: var(--sg-on-gold); box-shadow: 0 0 18px rgba(255, 217, 138, .35);
+}
+.current {
+  width: 66px; height: 66px; font-size: 24px; background: var(--sg-cream); color: var(--sg-on-gold);
+  box-shadow: 0 0 0 6px rgba(255, 217, 138, .25), 0 0 30px rgba(255, 217, 138, .6);
+}
+.locked {
+  width: 52px; height: 52px; box-sizing: border-box; font-size: 18px;
+  background: rgba(255, 255, 255, .05); border: 2px dashed var(--sg-next-ring); color: var(--sg-text-faint);
+}
+.note { font-size: 13px; font-weight: 700; color: var(--sg-text-soft); }
+
+.nextWorld {
+  position: relative; overflow: hidden; background: var(--sg-card-deep); border-radius: 32px 32px 0 0;
+  padding: 18px 18px 30px 120px; display: flex; flex-direction: column; gap: 2px;
+}
+.nextWorld [class*='eyebrow'] { display: flex; align-items: center; gap: 6px; }
+.planetNext { position: absolute; left: -10px; top: -6px; width: 110px; height: 110px; border-radius: 50%; opacity: .45; }
+.nextName { font-family: var(--sg-font-heading); font-size: 22px; color: var(--sg-text-soft); }
+
+
+@media (max-height: 760px) {
+  .chapter { min-height: 84px; padding: 12px 14px 12px 104px; }
+  .planetBig { width: 112px; height: 112px; }
+  .nextWorld { padding: 12px 18px 16px 110px; }
+  .planetNext { width: 90px; height: 90px; }
+  .world { width: 34px; height: 34px; }
+}

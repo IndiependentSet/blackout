@@ -1,0 +1,24 @@
+.page { padding: 50px 26px 28px; }
+.title { margin: 0; font-family: var(--sg-font-heading); font-weight: 400; font-size: 38px; line-height: 1.04; color: var(--sg-cream); }
+.naming { display: flex; flex-direction: column; gap: 8px; }
+.label { font-size: 13px; font-weight: 800; color: var(--sg-text-soft); }
+.input {
+  height: 54px; box-sizing: border-box; border-radius: 999px; padding: 0 20px; outline: none;
+  background: rgba(255, 255, 255, .07); border: 2px solid color-mix(in srgb, var(--sg-gold) 50%, transparent);
+  color: var(--sg-cream); font: 400 22px var(--sg-font-heading); caret-color: var(--sg-gold);
+}
+.input:focus { border-color: var(--sg-gold); }
+.ideas { display: flex; gap: 6px; flex-wrap: wrap; }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 4px; }
+.stat { background: rgba(255, 255, 255, .05); border-radius: 20px; padding: 10px 12px; display: flex; flex-direction: column; }
+.stat b { font-family: var(--sg-font-heading); font-weight: 400; font-size: 22px; color: var(--sg-gold); }
+.stat span { font-size: 12px; font-weight: 700; color: var(--sg-text-soft); }
+.actions { display: flex; flex-direction: column; gap: 6px; }
+
+@media (max-height: 760px) {
+  .page { padding: 18px 20px 12px; }
+  .title { font-size: 28px; }
+  .input { height: 46px; font-size: 19px; }
+  .stat { padding: 8px 10px; }
+  .stat b { font-size: 19px; }
+}
