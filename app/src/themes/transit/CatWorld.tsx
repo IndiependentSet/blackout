@@ -1,10 +1,11 @@
 import { Button, Logo, Panel } from '../../ui';
-import { STARS, sprite, twinkle } from './art';
+import { STARS, columnAt, sprite, twinkle, type Frame } from './art';
 import { MOTION, tween } from './motion';
 import { CUES, type Branch } from './timeline';
 import styles from './WormholeTransit.module.css';
 
-const R = 520;
+/** The planet's radius at its smallest, in a phone column; a wider stage gets a wider, flatter planet. */
+const R_MIN = 520;
 const CATS = [
   { key: 'chaos', x: 70, d: 0 }, { key: 'ninja', x: 160, d: 0.18 }, { key: 'whiskers', x: 245, d: 0.36 }, { key: 'diva', x: 330, d: 0.54 },
 ];
@@ -23,13 +24,15 @@ export function CatBackdrop({ T }: { T: number }) {
   );
 }
 
-/** The planet rises, four cats drop onto its horizon and pounce, and the new hire is handed their work order. */
-export function CatWorld({ T, branch, onDone }: { T: number; branch: Branch; onDone: () => void }) {
+/** The planet rises across the whole stage and four cats drop onto its horizon and pounce. */
+export function CatWorld({ T, branch, frame }: { T: number; branch: Branch; frame: Frame }) {
   const cp = CUES.CatPlanet;
   const op = worldOpacity(T);
   if (op <= 0) return null;
-  const top = tween(T, 1000, 640, cp + 0.1, cp + 1.0, MOTION.enter);
-  const pcx = 195, pcy = top + R;
+  const { ox, oy } = columnAt(frame);
+  const R = Math.max(R_MIN, frame.w * 0.6);
+  const top = oy + tween(T, 1000, 640, cp + 0.1, cp + 1.0, MOTION.enter);
+  const pcx = frame.w / 2, pcy = top + R;
   const flip = Math.floor(T / 0.35) % 2;
   return (
     <div className={styles.fill} style={{ opacity: op }}>
@@ -37,21 +40,22 @@ export function CatWorld({ T, branch, onDone }: { T: number; branch: Branch; onD
       {CATS.map((c, i) => {
         const dropAt = cp + 0.9 + c.d;
         if (T < dropAt) return null;
-        const dy = Math.sqrt(R * R - (c.x - pcx) ** 2);
+        const x = ox + c.x;
+        const dy = Math.sqrt(R * R - (x - pcx) ** 2);
         const foot = pcy - dy + 14;
         const drop = tween(T, 0, 1, dropAt, dropAt + 0.45, MOTION.pop);
-        const tilt = Math.atan2(c.x - pcx, dy) * 180 / Math.PI;
+        const tilt = Math.atan2(x - pcx, dy) * 180 / Math.PI;
         const pounce = T > dropAt + 0.45 ? Math.sin((T + c.d) * 9) : 0;
         return <img key={c.key} className={styles.worldCat} alt="" src={sprite(c.key, (flip + i) % 2 ? 'wakeB' : 'wakeA')}
-          style={{ left: c.x - 52, top: foot - 104, opacity: Math.min(1, drop * 2),
+          style={{ left: x - 52, top: foot - 104, opacity: Math.min(1, drop * 2),
             transform: `rotate(${tilt + pounce * 2.5}deg) translateY(${(1 - drop) * -40 - Math.abs(pounce) * 3}px) scale(${0.6 + drop * 0.4})` }} />;
       })}
-      <Hired T={T} branch={branch} onDone={onDone} />
     </div>
   );
 }
 
-function Hired({ T, branch, onDone }: { T: number; branch: Branch; onDone: () => void }) {
+/** The new hire is handed their work order, in the column. */
+export function Hired({ T, branch, onDone }: { T: number; branch: Branch; onDone: () => void }) {
   const hd = CUES.Hired;
   if (T < hd) return null;
   const logo = tween(T, 0, 1, hd, hd + 0.45, MOTION.pop);

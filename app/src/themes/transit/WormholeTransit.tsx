@@ -3,8 +3,9 @@ import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { WIDE } from '../stargazer/kit/useWide';
 import '../stargazer/tokens.css';
 import './tokens.css';
+import { columnAt } from './art';
 import { Backdrop } from './Backdrop';
-import { CatBackdrop, CatWorld } from './CatWorld';
+import { CatBackdrop, CatWorld, Hired } from './CatWorld';
 import { Cockpit } from './Cockpit';
 import { ShipAI } from './ShipAI';
 import { Tunnel, TunnelBackdrop } from './Tunnel';
@@ -22,7 +23,7 @@ interface Props {
 
 /* The easter egg between the seventh tap on the Stargazer title and the CATASTROPHE INC. look: the player boards
    the Stargazer-7, presses (or has pressed for them) the wrong button, falls through a wormhole and is hired by
-   the cats. A full-screen overlay; every frame is a pure function of the clock's T (see timeline.ts). */
+   the cats. A full-screen overlay: the scenery fills the stage, the console and the hire stay in the centred column; every frame is a pure function of the clock's T (see timeline.ts). */
 export function WormholeTransit({ onDone, startAt = START_AT }: Props) {
   const reduced = useMediaQuery('(prefers-reduced-motion: reduce)');
   const wide = useMediaQuery(WIDE);
@@ -42,7 +43,8 @@ export function WormholeTransit({ onDone, startAt = START_AT }: Props) {
     if (!(e.target as Element).closest('[data-noskip]')) jump();
   };
   const flash = Math.max(0, 1 - Math.abs(T - (CUES.CatPlanet - 0.05)) / 0.3);
-  const stageStyle: CSSProperties = { transform: `translate(-50%, -50%) scale(${stage.scale})` };
+  const stageStyle: CSSProperties = { width: stage.w, height: stage.h, transform: `translate(-50%, -50%) scale(${stage.scale})` };
+  const { ox, oy } = columnAt(stage);
 
   return (
     <div className={`sg transit ${styles.root} ${reduced ? styles.fade : ''}`} role="dialog" aria-modal="true" aria-label="Wormhole transit" onPointerDown={onPointerDown}>
@@ -50,10 +52,13 @@ export function WormholeTransit({ onDone, startAt = START_AT }: Props) {
       {!reduced && <TunnelBackdrop T={T} scale={stage.scale} vw={stage.vw} vh={stage.vh} />}
       <CatBackdrop T={T} />
       <div className={styles.stage} style={stageStyle}>
-        {!reduced && <Cockpit T={T} branch={shown} decided={branch !== null} onChoose={press} />}
-        {!reduced && <Tunnel T={T} />}
-        <CatWorld T={T} branch={shown} onDone={onDone} />
-        {!reduced && <ShipAI T={T} branch={shown} />}
+        {!reduced && <Tunnel T={T} frame={stage} />}
+        <CatWorld T={T} branch={shown} frame={stage} />
+        <div className={styles.column} style={{ left: ox, top: oy }}>
+          {!reduced && <Cockpit T={T} branch={shown} decided={branch !== null} onChoose={press} />}
+          <Hired T={T} branch={shown} onDone={onDone} />
+          {!reduced && <ShipAI T={T} branch={shown} />}
+        </div>
       </div>
       <div className={`${styles.layer} ${styles.flash}`} style={{ opacity: clamp(flash, 0, 1) }} />
     </div>

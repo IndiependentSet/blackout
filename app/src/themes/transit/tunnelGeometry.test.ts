@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { NR, SIDES, tubeGeometry } from './tunnelGeometry';
+import { NR, REACH, SIDES, reachFor, tubeGeometry } from './tunnelGeometry';
 
 describe('tubeGeometry', () => {
   const rings = tubeGeometry(7, 0.3, 195, 400);
@@ -14,6 +14,13 @@ describe('tubeGeometry', () => {
       expect(rings[i].p).toBeGreaterThanOrEqual(rings[i - 1].p);
       expect(rings[i].r).toBeGreaterThanOrEqual(rings[i - 1].r);
     }
+  });
+
+  it('reaches past the corners of a wide stage, and no less than the column', () => {
+    expect(reachFor(390, 844)).toBeGreaterThanOrEqual(REACH);
+    expect(reachFor(390, 844)).toBeLessThan(REACH * 1.01);
+    const r = reachFor(1470, 920);
+    expect(r * Math.cos(Math.PI / SIDES)).toBeGreaterThan(Math.hypot(1470, 920) / 2);
   });
 
   it('is a pure function of time', () => {

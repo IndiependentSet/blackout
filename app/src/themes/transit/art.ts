@@ -5,6 +5,10 @@ import { BREEDS } from '../../assets/cats';
 export const W = 390;
 export const H = 844;
 
+/** The stage in film units (the whole screen), and where the W×H column sits centred in it. */
+export interface Frame { w: number; h: number }
+export const columnAt = (f: Frame) => ({ ox: (f.w - W) / 2, oy: (f.h - H) / 2 });
+
 function rng(seed: number): () => number {
   let s = seed;
   return () => (s = (s * 16807) % 2147483647) / 2147483647;
