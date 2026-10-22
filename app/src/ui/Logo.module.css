@@ -15,3 +15,8 @@
 .sm { --stroke: 6px; --drop: 5px; line-height: .84; padding-top: 2px; }
 .sm .word { font-size: 40px; letter-spacing: .01em; }
 .sm .inc { font-size: 34px; }
+
+/* the fixed size the wormhole transit's lockup is composed at */
+.md { --stroke: 5.85px; --drop: 7px; }
+.md .word { font-size: 51px; }
+.md .inc { font-size: 35px; }

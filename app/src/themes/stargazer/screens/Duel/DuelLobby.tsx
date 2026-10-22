@@ -93,7 +93,7 @@ export function DuelLobby({ userId, preselect, onOpenMatch, onBack }: Props) {
           const busy = lobby.engaged.has(link.person.id);
           return (
             <div key={link.person.id} className={styles.row}>
-              <Avatar letter={initial(link.person)} size={40} tone="soft" />
+              <Avatar letter={initial(link.person)} avatar={link.person.avatar} size={40} tone="soft" />
               <div className={styles.rowText}><b>{displayName(link.person)}</b><span>{busy ? 'Already in a duel with you' : 'Ready for a duel'}</span></div>
               <Button kind="soft" size="sm" disabled={lobby.busy || busy} onClick={() => challenge(link.person.id)}>Challenge</Button>
             </div>

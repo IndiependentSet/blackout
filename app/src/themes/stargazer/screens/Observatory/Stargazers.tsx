@@ -27,7 +27,7 @@ export function Stargazers({ userId, crew, code, onDuel }: { userId: string; cre
           const rel = relationTo(f, p.id);
           return (
             <div key={p.id} className={styles.person}>
-              <Avatar letter={initial(p)} size={40} tone="soft" />
+              <Avatar letter={initial(p)} avatar={p.avatar} size={40} tone="soft" />
               <div className={styles.personText}><b>{displayName(p)}</b><span>{p.invite_code ?? ''}</span></div>
               <Button kind="soft" size="sm" disabled={rel !== 'none'} onClick={() => crew.add(p.id)}>{SEARCH_ACTION[rel]}</Button>
             </div>
@@ -36,7 +36,7 @@ export function Stargazers({ userId, crew, code, onDuel }: { userId: string; cre
         {f && f.incoming.length > 0 && <Eyebrow>Asking to stargaze with you</Eyebrow>}
         {f && f.incoming.map(link => (
           <div key={link.row.id} className={styles.person}>
-            <Avatar letter={initial(link.person)} size={40} tone="mint" />
+            <Avatar letter={initial(link.person)} avatar={link.person.avatar} size={40} tone="mint" />
             <div className={styles.personText}><b>{displayName(link.person)}</b><span>wants to stargaze with you</span></div>
             <Button kind="mint" size="sm" onClick={() => crew.respond(link.row.id, true)}>Accept</Button>
             <Button kind="ghost" size="sm" onClick={() => crew.respond(link.row.id, false)}>No</Button>
@@ -45,7 +45,7 @@ export function Stargazers({ userId, crew, code, onDuel }: { userId: string; cre
         {f && f.friends.length > 0 && <Eyebrow tone="soft">Stargazing with you</Eyebrow>}
         {f && f.friends.map(link => (
           <div key={link.row.id} className={styles.person}>
-            <Avatar letter={initial(link.person)} size={40} tone="soft" />
+            <Avatar letter={initial(link.person)} avatar={link.person.avatar} size={40} tone="soft" />
             <div className={styles.personText}><b>{displayName(link.person)}</b><span>{link.person.invite_code ?? ''}</span></div>
             <Button kind="soft" size="sm" onClick={() => onDuel(link.person.id)}>Duel</Button>
           </div>

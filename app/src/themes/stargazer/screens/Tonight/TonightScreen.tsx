@@ -12,7 +12,7 @@ import { cx } from '../../kit/cx';
 import type { SkyEntry } from '../../play/sky';
 import { nightDate, plural, weekOf } from '../../copy';
 import type { Level } from '../../../../domain/types';
-import { useSecretTaps } from './useSecretTaps';
+import { SecretTitle } from './SecretTitle';
 import type { TonightState } from './tonight';
 import styles from './Tonight.module.css';
 
@@ -33,6 +33,7 @@ interface Props {
   streak: number;
   week: Night[];
   initial: string;
+  avatar?: string | null;
   voyage: ModeCard & { planet: string; art: string };
   rush: ModeCard;
   duel: ModeCard & { waiting: boolean };
@@ -83,8 +84,7 @@ function NightCard({ day, tonight, skies, preview, onContinue, wide }: Pick<Prop
    voyage, Meteor Rush and Star Duel. Tapping the title seven times opens the old CATASTROPHE INC. look. */
 export function TonightScreen(p: Props) {
   const wide = useWide();
-  const tap = useSecretTaps(p.onSecret);
-  const title = <button className={wide ? styles.brandWide : styles.brand} onClick={tap}>Stargazer</button>;
+  const title = <SecretTitle onSecret={p.onSecret} wide={wide} />;
   const streak = <div className={styles.streak}><MoonIcon size={16} />{plural(p.streak, 'night')}</div>;
 
   if (wide) {
@@ -100,7 +100,7 @@ export function TonightScreen(p: Props) {
               <button className={styles.navItem} onClick={p.rush.onOpen}>Rush</button>
               <button className={styles.navItem} onClick={p.duel.onOpen}>Duel</button>
             </nav>
-            <div className={styles.deskRight}>{streak}<button className={styles.me} aria-label="Me" onClick={() => p.onTab('me')}><Avatar letter={p.initial} /></button></div>
+            <div className={styles.deskRight}>{streak}<button className={styles.me} aria-label="Me" onClick={() => p.onTab('me')}><Avatar letter={p.initial} avatar={p.avatar} /></button></div>
           </header>
           <div className={styles.deskBody}>
             <NightCard {...p} wide />

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -135,15 +135,37 @@ describe('Stargazer, the default look, signed out', () => {
     expect(screen.getByText(/Sign in to keep your atlas/)).toBeInTheDocument();
   });
 
-  it('opens the cats after seven quick taps on the title, and comes back', async () => {
+  it('flies through the wormhole after seven quick taps on the title, lands on the cats, and comes back', async () => {
     sessionStorage.setItem('cc-howto-seen', '1');
     render(<App />);
     const title = screen.getByRole('button', { name: 'Stargazer' });
     for (let i = 0; i < 7; i++) await userEvent.click(title);
+    const film = await screen.findByRole('dialog', { name: 'Wormhole transit' });
+    expect(window.location.search).toBe('');             // not there yet
+
+    /* a tap anywhere but on the console skips to the last frame (once the console is up, about a second after boarding) */
+    await waitFor(() => {
+      fireEvent.pointerDown(film);
+      expect(screen.getByRole('button', { name: 'CLOCK IN' })).toBeInTheDocument();
+    }, { timeout: 4000 });
+    expect(screen.getByText(/Wrong button, right planet/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'CLOCK IN' }));
+
     expect(await screen.findByText(/DAILY SHIFT #/)).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Wormhole transit' })).toBeNull();
     expect(window.location.search).toBe('?skin=catastrophe');
     await userEvent.click(screen.getByRole('button', { name: /Back to Stargazer/ }));
     expect(screen.getByRole('button', { name: 'Stargazer' })).toBeInTheDocument();
     expect(window.location.search).toBe('');
+  });
+
+  it('leaves the transit at once on Escape', async () => {
+    sessionStorage.setItem('cc-howto-seen', '1');
+    render(<App />);
+    const title = screen.getByRole('button', { name: 'Stargazer' });
+    for (let i = 0; i < 7; i++) await userEvent.click(title);
+    await screen.findByRole('dialog', { name: 'Wormhole transit' });
+    await userEvent.keyboard('{Escape}');
+    expect(await screen.findByText(/DAILY SHIFT #/)).toBeInTheDocument();
   });
 });

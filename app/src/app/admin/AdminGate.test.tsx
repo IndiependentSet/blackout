@@ -8,7 +8,7 @@ vi.mock('../../services/repositories/admin', () => ({ isAdmin: (...a: unknown[])
 const { AdminGate } = await import('./AdminGate');
 
 const auth = (over: Partial<AuthState> = {}): AuthState => ({
-  ready: true, userId: null, email: null, username: '', handle: '', setHandle: vi.fn(), ...over,
+  ready: true, userId: null, email: null, username: '', handle: '', avatar: null, setHandle: vi.fn(), setAvatar: vi.fn(), ...over,
 });
 const renderWith = (a: AuthState) => render(
   <AuthContext.Provider value={a}><AdminGate><div>secret tools</div></AdminGate></AuthContext.Provider>);
