@@ -77,3 +77,30 @@ describe('poolEditorReducer', () => {
     expect(run(voyage, { type: 'tab', tab: 500 }).tab).toBe(99);
   });
 });
+
+describe('hand-drawn tiers', () => {
+  const start = initialPoolEditor('survival');
+  const path3 = { nodes: [{ c: 0, r: 0 }, { c: 1, r: 0 }, { c: 2, r: 0 }], edges: [[0, 1], [1, 2]] as [number, number][] };
+
+  it('switches a tier to drawings, one level per drawing, and back to its settings', () => {
+    let s = run(start, { type: 'tab', tab: 2 }, { type: 'tierSource', source: 'draw' });
+    expect(s.curve.tiers[2]).toMatchObject({ count: 1, manual: [{ nodes: [], edges: [] }] });
+    s = run(s, { type: 'setDrawing', index: 0, figure: path3 }, { type: 'addDrawing' }, { type: 'count', value: 9 });
+    expect(s.curve.tiers[2].count).toBe(2);
+    expect(s.drawing).toBe(1);
+    expect(s.curve.tiers[2].manual?.[0]).toBe(path3);
+    s = run(s, { type: 'removeDrawing', index: 1 });
+    expect(s.curve.tiers[2]).toMatchObject({ count: 1, manual: [path3] });
+    s = run(s, { type: 'tierSource', source: 'generate' });
+    expect(s.curve.tiers[2]).toEqual({ ...start.curve.tiers[2], count: 1 });
+    expect(s.curve.tiers[2].manual).toBeUndefined();
+  });
+  it('starts the drawings from the levels it was built with, when given', () => {
+    const s = run(start, { type: 'tab', tab: 1 }, { type: 'tierSource', source: 'draw', figures: [path3, path3] });
+    expect(s.curve.tiers[1]).toMatchObject({ count: 2, manual: [path3, path3] });
+  });
+  it('keeps the last drawing', () => {
+    const s = run(start, { type: 'tierSource', source: 'draw' });
+    expect(run(s, { type: 'removeDrawing', index: 0 })).toBe(s);
+  });
+});

@@ -38,9 +38,9 @@ export function TierStrip({ state, recipes, onTab }: { state: PoolEditor; recipe
             const { first: a, last: b } = tierLevels(state, i);
             return (
               <button key={i} type="button" tabIndex={i === (typeof tab === 'number' ? tab : 0) ? 0 : -1}
-                className={cx(styles.bar, i === tab && styles.barOn, state.scope === 'all' && typeof tab === 'number' && styles.barAll)} style={{ flexGrow: t.count }}
-                aria-pressed={i === tab} aria-label={`Tier ${i + 1}, ${levelsLabel(a, b)}, ${t.size} stars, ${t.diff} of 3`}
-                title={`Tier ${i + 1} · ${levelsLabel(a, b)} · ${t.size} stars · ${'★'.repeat(t.diff)}`} onClick={() => onTab(i)}>
+                className={cx(styles.bar, i === tab && styles.barOn, state.scope === 'all' && typeof tab === 'number' && styles.barAll, t.manual && styles.barManual)} style={{ flexGrow: t.count }}
+                aria-pressed={i === tab} aria-label={t.manual ? `Tier ${i + 1}, ${levelsLabel(a, b)}, hand-drawn` : `Tier ${i + 1}, ${levelsLabel(a, b)}, ${t.size} stars, ${t.diff} of 3`}
+                title={t.manual ? `Tier ${i + 1} · ${levelsLabel(a, b)} · hand-drawn` : `Tier ${i + 1} · ${levelsLabel(a, b)} · ${t.size} stars · ${'★'.repeat(t.diff)}`} onClick={() => onTab(i)}>
                 <i className={styles['diff' + t.diff]} style={{ height: `${heights[i] * 100}%` }} />
               </button>
             );
@@ -54,7 +54,7 @@ export function TierStrip({ state, recipes, onTab }: { state: PoolEditor; recipe
         </div>
         <div className={styles.axis}>
           <span>{state.mode === 'campaign' ? 'level' : 'slot'} {first}</span>
-          <span className={styles.legend}><i className={styles.diff1} />★ <i className={styles.diff2} />★★ <i className={styles.diff3} />★★★</span>
+          <span className={styles.legend}><i className={styles.diff1} />★ <i className={styles.diff2} />★★ <i className={styles.diff3} />★★★ <i className={styles.legendManual} />hand-drawn</span>
           <span>{end}</span>
         </div>
         <div className={styles.actions}>

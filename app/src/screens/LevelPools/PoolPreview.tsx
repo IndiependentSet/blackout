@@ -50,8 +50,8 @@ export function PoolPreview({ build, current, onGenerate, onStop }: Props) {
               <b>#{r.slot}</b>
               <span>tier {r.tier + 1} · {r.level.nodes.length} nodes</span>
               <span>par {r.level.k} · {'★'.repeat(r.level.stars)}</span>
-              <span className={cx((r.salt === null || !r.unique || repeats !== null) && styles.slow)}>
-                {!r.unique ? 'NOT UNIQUE' : repeats !== null ? `SAME SKY AS #${repeats}` : r.salt === null ? 'fallback' : 'retry ' + r.salt} · {r.ms} ms
+              <span className={cx(((r.salt === null && !r.manual) || !r.unique || repeats !== null) && styles.slow)}>
+                {!r.unique ? 'NOT UNIQUE' : repeats !== null ? `SAME SKY AS #${repeats}` : r.manual ? 'hand-drawn' : r.salt === null ? 'fallback' : 'retry ' + r.salt} · {r.ms} ms
               </span>
             </button>
             );
