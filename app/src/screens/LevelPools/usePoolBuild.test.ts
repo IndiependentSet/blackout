@@ -4,7 +4,7 @@ import { compareHardness, generate, poolSlots, type LevelCurve } from '../../dom
 import type { Level } from '../../domain/types';
 import { fail, ok } from '../../services/result';
 import type { SlotResult } from '../../services/generation/poolClient';
-import { publishBlockers, usePoolBuild } from './usePoolBuild';
+import { publishBlockers, repeatOf, usePoolBuild } from './usePoolBuild';
 
 const curve: LevelCurve = { version: 1, seed: 1, retries: 2, fallback: { diff: 1, options: {} },
   tiers: [{ count: 3, size: 4, diff: 1, options: {} }] };
@@ -68,7 +68,12 @@ describe('usePoolBuild', () => {
   it('will not publish a pool that holds a sky twice', async () => {
     const { result } = renderHook(() => usePoolBuild('survival', curve, fake(true, true)));
     await act(async () => { await result.current.start(); });
-    expect(publishBlockers(result.current.build, result.current.current)).toEqual([expect.stringMatching(/3 skies repeat/)]);
+    expect(publishBlockers(result.current.build, result.current.current)).toEqual([expect.stringMatching(/^Tier 1 asks for more skies/)]);
+  });
+
+  it('names the earlier slot a level repeats', () => {
+    const rs = [{ slot: 0, key: 'a' }, { slot: 1, key: 'b' }, { slot: 2, key: 'a' }];
+    expect(rs.map((_, i) => repeatOf(rs, i))).toEqual([null, null, 0]);
   });
 
   it('stop() ends a run that is still going', async () => {

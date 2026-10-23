@@ -129,9 +129,9 @@ export function curveRuleErrors(mode: PoolMode, curve: LevelCurve): string[] {
 /* a run plays one level of each tier, then walks the last one without repeats (pool_pick): its size is how deep a
    run goes before a sky comes round again */
 const SURVIVAL_LAST_TIER = 40;
-/* the five-junction opener (par 2 at most, a junction of degree 3) only comes in about three different skies, so
-   asking for more would put the same one in the pool twice */
-const SURVIVAL_OPENERS = 3;
+/* the five-junction opener (par 2 at most, a junction of degree 3) only ever comes out as two different skies, so
+   asking for more puts the same one in the pool twice (curve.test.ts builds the tier to keep this honest) */
+const SURVIVAL_OPENERS = 2;
 
 const tierFrom = (i: number, count: number): CurveTier => ({ count, ...DEFAULT_SCHEDULE.sites[i] });
 const FALLBACK = DEFAULT_SCHEDULE.fallback;
