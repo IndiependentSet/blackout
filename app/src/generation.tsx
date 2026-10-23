@@ -1,4 +1,4 @@
-/* Admin entry: the generation config page, at /generation.html. */
+/* Admin entry: Tonight (the daily week's generation config), at /generation.html. */
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles/global.css';
@@ -7,6 +7,6 @@ import { GenerationConfigScreen } from './screens/GenerationConfig/GenerationCon
 
 createRoot(document.getElementById('root') as HTMLElement).render(
   <StrictMode>
-    <AdminPage current="generation"><GenerationConfigScreen /></AdminPage>
+    <AdminPage current="tonight"><GenerationConfigScreen /></AdminPage>
   </StrictMode>,
 );

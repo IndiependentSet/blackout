@@ -3,9 +3,11 @@ import { dayNumber } from '../../domain/calendar';
 import { GAME_MODE_LABEL, GAME_MODES, type GameMode } from '../../domain/gameModes';
 import { earliestEffectiveDay, resolveSchedule } from '../../domain/generationConfig';
 import { useResource } from '../../hooks/useResource';
+import { useUnsavedGuard } from '../../hooks/useUnsavedGuard';
 import { listConfigs } from '../../services/repositories/generationConfigs';
 import { cx } from '../../themes/stargazer/kit/cx';
 import { Info } from '../Playground/Info';
+import { useRecipes } from '../Recipes/useRecipes';
 import { editorReducer, initialEditor } from './editor';
 import { SavePanel } from './SavePanel';
 import { SchedulePanel } from './SchedulePanel';
@@ -26,6 +28,8 @@ export function GenerationConfigScreen() {
   const [state, dispatch] = useReducer(editorReducer, undefined, () => initialEditor());
   const [previewDay, setPreviewDay] = useState(() => earliestEffectiveDay(today));
   const preview = useSchedulePreview(state.schedule, previewDay);
+  const recipes = useRecipes();
+  useUnsavedGuard(state.dirty);
 
   /* the first time the list arrives, start from the newest config (what the
      days ahead will play) rather than the default, unless editing has begun */
@@ -42,17 +46,20 @@ export function GenerationConfigScreen() {
   return (
     <div className={pg.page}>
       <header className={pg.header}>
-        <h1>Generation config</h1>
-        <span className={pg.toolbar}><select value={mode} aria-label="game mode" onChange={e => setMode(e.target.value as GameMode)}>
+        <div className={styles.title}>
+          <span className={styles.eyebrow}>Generation · the daily week</span>
+          <h1>Tonight</h1>
+        </div>
+        {GAME_MODES.length > 1 && <span className={pg.toolbar}><select value={mode} aria-label="game mode" onChange={e => setMode(e.target.value as GameMode)}>
           {GAME_MODES.map(m => <option key={m} value={m}>{GAME_MODE_LABEL[m]}</option>)}
-        </select></span>
+        </select></span>}
         <span className={styles.basis}>
           Today is day {today}. Editing {state.basis}{state.dirty && <span className={styles.dirty}> · edited</span>}
         </span>
         <span className={cx(pg.status, preview.running && pg.busy)}>{preview.running ? 'generating…' : preview.error ? 'error' : 'ready'}</span>
       </header>
       <div className={pg.layout}>
-        <SchedulePanel state={state} dispatch={dispatch} />
+        <SchedulePanel state={state} dispatch={dispatch} recipes={recipes} />
         <main className={pg.main}>
           <div className={pg.toolbar}>
             <label className={pg.toggle}>Preview day&nbsp;

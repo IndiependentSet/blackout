@@ -147,10 +147,25 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
     pressed, or slips after 2 s), a tap elsewhere skips to the hire, Escape leaves, reduced motion shows only the last
     frame. Mounted by `app/App.tsx` over Stargazer; `?skin=catastrophe` and "Back to Stargazer" stay instant. It reads
     both themes' tokens (`.sg` scope + `:root`) and adds only `tokens.css`; neither theme imports it.
-  - `src/screens/` — the admin pages only: `Playground/`, `GenerationConfig/`,
-    `LevelPools/` (below). They wear Stargazer's look: `app/admin/AdminPage`
-    puts them on Stargazer's night (`.sg` tokens, starfield, the page list as a
-    pill tab bar), they build from `themes/stargazer/kit` (its `Button` has an
+  - `src/screens/` — the admin pages only: `Playground/`, `GenerationConfig/`
+    (Tonight), `LevelPools/` (Voyage, Meteor Rush, Star Duel), `Recipes/`
+    (below). The nav (`domain/adminPages.ts`, `app/admin/AdminNav`) has two
+    groups: *Where levels go* — Tonight (`/generation.html`) and a page per pool
+    mode (`/pools.html?mode=campaign|survival|match`, `poolModeFromSearch`) — and
+    *How they're made* — Recipes and Playground. Every page that edits a rule
+    (a sky, a tier, the fallback, the playground's settings) lays out the same
+    way: the open rule on the left (its `RecipeBar`, then the full `ParamsPanel`,
+    so every generator option is in reach everywhere), the preview in the
+    middle, save/publish on the right; a dirty draft asks before the page is left
+    (`hooks/useUnsavedGuard`). On Tonight and the pool pages a `ScopeSwitch` at
+    the top of the panel says what an edit reaches — the open sky/tier, or all
+    of them (`screens/Playground/scope.ts`: "all" copies only the settings the
+    edit changed, so each rule keeps its own size, stars, budget and hardness).
+    The panel also lists settings that cancel each other out
+    (`Playground/warnings.ts`: a density above what max degree or edge reach
+    allows, a max degree the reach caps, a min degree nothing can meet). They wear Stargazer's look: `app/admin/AdminPage`
+    puts them on Stargazer's night (`.sg` tokens, starfield, the nav groups as
+    pill tab bars), they build from `themes/stargazer/kit` (its `Button` has an
     `xs` size for their dense panels, `Note`) and Stargazer's tokens only, the
     playground's play-test view is Stargazer's `SkyBoard`, and their copy uses
     Stargazer's words (skies, lit stars, Tonight/Voyage/Meteor Rush/Star Duel).
@@ -203,9 +218,29 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
     read side by side.
     Settings live only in the URL hash; its control ranges and site presets
     come from `OPTION_LIMITS` and `DEFAULT_SCHEDULE`.
-  - **Generation config** (admin only): `/generation.html`, entry
+  - **Recipes** (admin only): `/recipes.html`, entry `src/recipes.tsx`,
+    `screens/Recipes/`. A recipe (`domain/generation/recipe.ts`) is the *shape*
+    of a sky — `SHAPE_KEYS`: strategy, degree, geometry, the gadget mix or the
+    free-graph knobs — saved under a name; size, stars, hardness filters,
+    constraints and the search budget are not in it, because a curve ramps them
+    level by level. Applying one **copies** its shape in (`withShape`; on a run
+    of skies or tiers through the `shape` editor actions, on one rule through the
+    `shape` params action) and nothing links back, so a saved schedule or a
+    published pool never changes when a recipe does. Which recipe a rule
+    "uses" is worked out by comparison (`recipeFor`), so an edited rule reads as
+    custom — no field was added to schedules or curves. Stored in
+    `generation_recipes` (`app/sql/2026-10-27-generation-recipes.sql`, guarded by
+    `sql/ci/checks/generation-recipes.sql`): readable by signed-in players,
+    written only by the admin-checked `save_generation_recipe` /
+    `delete_generation_recipe`; the game never reads it. Read through
+    `repositories/recipes.ts` (a stored shape that no longer parses is dropped
+    and logged) and `screens/Recipes/useRecipes`. The page edits a shape with
+    `ParamsPanel use="recipe"` (shape sections only; seed, size and difficulty
+    just pick the preview) beside a play-testable sky.
+  - **Generation config** (admin only, the nav's *Tonight*): `/generation.html`, entry
     `src/generation.tsx`, `screens/GenerationConfig/`. Edits a whole
-    `GenerationSchedule` for a game mode — retries, one tab per site (the
+    `GenerationSchedule` for a game mode — retries, one tab per site (its
+    `RecipeBar`, which can apply a recipe to a run of skies, then the
     playground's `ParamsPanel` through `siteToParams`/`paramsToSite`, plus the
     site's constraints) and the fallback — previews the week it makes on any
     day in a worker (per-site time, which retry or the fallback settled it,
@@ -216,7 +251,12 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
     while someone plays. An admin edits a `LevelCurve` (`domain/generation/curve.ts`:
     seed, retries, a list of tiers — count, size, stars, options, constraints —
     and a fallback; `DEFAULT_CURVES` per mode, `parseCurve`, `curveRuleErrors`)
-    on `/pools.html` (`screens/LevelPools/`), generates the pool slot by slot in
+    on `/pools.html?mode=…` (`screens/LevelPools/`: one page per mode; the left
+    column is the open tier — or the fallback — with its count, `RecipeBar` and
+    the full `ParamsPanel` + constraints, so every generator option is editable per
+    tier; the middle starts with `TierStrip`, a bar per tier, as wide as its
+    levels and as tall as its size, coloured by stars, with the recipe bands
+    under it, arrow keys walk it), generates the pool slot by slot in
     a worker (`services/generation/poolClient.ts`, each level re-checked with
     `solve` for a unique cover), play-tests it and publishes it with
     `publish_level_pool`. `app/sql/2026-10-20-level-pools.sql` (guarded by
@@ -298,7 +338,7 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
   - `src/app/` — `App.tsx` (the providers, the shared `useAppState()`, and
     which theme draws it) and `useTheme.ts` (Stargazer unless the URL says
     `?skin=catastrophe`; kept in the URL, not storage); `admin/` is the
-    frame both admin pages render in.
+    frame every admin page renders in.
   - `src/ui/` (Button, Panel/TabHeader, Tag, Logo, Screen, StaffBadge, Stat,
     Avatar, Field, ListRow/RankRow, ScopeTabs, Message, GradeBadge — the
     CATASTROPHE INC. kit) and

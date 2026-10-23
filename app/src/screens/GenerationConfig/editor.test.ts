@@ -43,7 +43,7 @@ describe('generation config editor', () => {
     expect(s.schedule.retries).toBe(3);
     s = editorReducer(s, { type: 'tab', tab: 2 });
     s = editorReducer(s, { type: 'load', schedule: DEFAULT_SCHEDULE, basis: 'day 9' });
-    expect(s).toEqual({ schedule: DEFAULT_SCHEDULE, tab: 2, basis: 'day 9', dirty: false });
+    expect(s).toEqual({ schedule: DEFAULT_SCHEDULE, tab: 2, scope: 'one', basis: 'day 9', dirty: false });
     s = editorReducer(editorReducer(s, { type: 'retries', value: 4 }), { type: 'saved', basis: 'day 10' });
     expect(s.dirty).toBe(false);
     expect(s.basis).toBe('day 10');
