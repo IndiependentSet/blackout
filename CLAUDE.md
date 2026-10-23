@@ -142,6 +142,47 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
       `input/useBoardPointer.ts`), `sprites/`, `screens/` (Hub, WorkOrder,
       HowToPlay, Campaign, Survival, Match, StaffOffice, Crew), the staff
       badge and the "Back to Stargazer" pill.
+  - **Voyage flight** (`themes/stargazer/screens/Voyage/`): charting the last level of a world (not Neptune's) plays a ~9 s
+    full-screen flight to the next world instead of dropping back to the voyage. Design reference:
+    `handoff/VoyageTransit.jsx` + `handoff/PROMPT-voyage.md` (ported, not redesigned). `VoyagePlay`'s `onWorldDone` →
+    `StargazerApp` sets `route 'voyage'`, `openChapter` (seeds `VoyageScreen`'s `initialChapter`, keyed so it resets) and
+    `transit`; `VoyageTransit` (`{from, to, onDone, startAt = 1.2, clears?}`) overlays the real screen, which already shows the
+    world just charted. Every frame is a pure function of T: `timeline.ts` (`CUES`, `TOTAL`, `skip`: a tap between Liftoff and
+    Approach jumps to Arrival), `frame.ts` (`frameAt`), `motion.ts` (easings, `animate`, `alpha`/`mix` over theme CSS variables
+    — no hex), `Hero`, `Motif` (per-world surroundings), `Route`, seeded particles in `flightParticles.ts`. The screen under and
+    inside the flight is drawn from the same parts (`VoyageView`: `Stop`, `WorldsRow`, `ChapterCard`, `NextWorld`;
+    `FlightScreen` assembles them), so the two match. Purely visual: it never touches clears or persistence. Reduced motion shows
+    the arrival frame for 300 ms fade + a short hold; Escape leaves.
+  - `themes/transit/` — the wormhole animation between the seventh tap on the Stargazer title and CATASTROPHE INC.
+    (`WormholeTransit`, ported from the handoff in `Wormhole Easter Egg Animation/`, which stays as the design
+    reference). Every frame is a pure function of the clock's `T` (`timeline.ts`: `CUES`, `tick`, `choose`, `skip`;
+    `useTransitClock` drives it off rAF); `Cockpit` has real buttons (the console holds at `HOLD_AT` until one is
+    pressed, or slips after 2 s), a tap elsewhere skips to the hire, Escape leaves, reduced motion shows only the last
+    frame. Mounted by `app/App.tsx` over Stargazer; `?skin=catastrophe` and "Back to Stargazer" stay instant. It reads
+    both themes' tokens (`.sg` scope + `:root`) and adds only `tokens.css`; neither theme imports it.
+  - `src/screens/` — the admin pages only: `Playground/`, `GenerationConfig/`
+    (Tonight), `LevelPools/` (Voyage, Meteor Rush, Star Duel), `Recipes/`
+    (below). The nav (`domain/adminPages.ts`, `app/admin/AdminNav`) has two
+    groups: *Where levels go* — Tonight (`/generation.html`) and a page per pool
+    mode (`/pools.html?mode=campaign|survival|match`, `poolModeFromSearch`) — and
+    *How they're made* — Recipes and Playground. Every page that edits a rule
+    (a sky, a tier, the fallback, the playground's settings) lays out the same
+    way: the open rule on the left (its `RecipeBar`, then the full `ParamsPanel`,
+    so every generator option is in reach everywhere), the preview in the
+    middle, save/publish on the right; a dirty draft asks before the page is left
+    (`hooks/useUnsavedGuard`). On Tonight and the pool pages a `ScopeSwitch` at
+    the top of the panel says what an edit reaches — the open sky/tier, or all
+    of them (`screens/Playground/scope.ts`: "all" copies only the settings the
+    edit changed, so each rule keeps its own size, stars, budget and hardness).
+    The panel also lists settings that cancel each other out
+    (`Playground/warnings.ts`: a density above what max degree or edge reach
+    allows, a max degree the reach caps, a min degree nothing can meet). They wear Stargazer's look: `app/admin/AdminPage`
+    puts them on Stargazer's night (`.sg` tokens, starfield, the nav groups as
+    pill tab bars), they build from `themes/stargazer/kit` (its `Button` has an
+    `xs` size for their dense panels, `Note`) and Stargazer's tokens only, the
+    playground's play-test view is Stargazer's `SkyBoard`, and their copy uses
+    Stargazer's words (skies, lit stars, Tonight/Voyage/Meteor Rush/Star Duel).
+    Lint forbids them `ui/` and `themes/catastrophe/`.
   - **`src/domain/generation/`** — level generation as its own module, with
     **one public API, `index.ts`**: nothing outside the folder imports its
     files (lint-enforced by `no-restricted-imports`). Inside: `options.ts`

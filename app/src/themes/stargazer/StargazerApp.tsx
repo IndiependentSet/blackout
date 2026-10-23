@@ -27,6 +27,7 @@ import { TonightScreen } from './screens/Tonight/TonightScreen';
 import { previewLevel, tonightState } from './screens/Tonight/tonight';
 import { VoyagePlay } from './screens/Voyage/VoyagePlay';
 import { VoyageScreen } from './screens/Voyage/VoyageScreen';
+import { VoyageTransit } from './screens/Voyage/VoyageTransit';
 
 type Route = 'tonight' | 'sky' | 'charted' | 'atlas' | 'me' | 'voyage' | 'voyagePlay' | 'rush' | 'duel' | 'duelPlay' | 'board' | 'stats';
 
@@ -46,6 +47,9 @@ export function StargazerApp({ app, onSecret }: Props) {
   const { userId } = auth;
   const [route, setRoute] = useState<Route>('tonight');
   const [playing, setPlaying] = useState<{ chapter: Chapter; levelNo: number } | null>(null);
+  /** the flight between worlds, over the Voyage screen; `openChapter` keeps that screen on the world just charted */
+  const [transit, setTransit] = useState<{ from: number; to: number } | null>(null);
+  const [openChapter, setOpenChapter] = useState<number | null>(null);
   const [matchId, setMatchId] = useState<string | null>(null);
   const [duelWith, setDuelWith] = useState<string | null>(null);
   /** a board page open from `from`: which boards it offers, and the page its Back returns to */
@@ -53,6 +57,9 @@ export function StargazerApp({ app, onSecret }: Props) {
   const openBoard = (kinds: BoardKind[], from: Route) => { setBoardAt({ kinds, from }); setRoute('board'); };
   const challenger = useChallenge();
   const ladder = boardAt.kinds.includes('duel');
+  /* the last level of a world charted: the voyage screen on that world (its last stop done) with the flight to the next on top */
+  const startTransit = (chapter: Chapter) => { setRoute('voyage'); setOpenChapter(chapter.index); setTransit({ from: chapter.index, to: chapter.index + 1 }); };
+  const endTransit = () => { setTransit(null); setOpenChapter(null); };
   const home = route === 'tonight' || route === 'me' || route === 'charted';
   const streak = useStreak(userId, home);
   const challenges = useIncomingChallenges(userId, route === 'tonight');
@@ -102,22 +109,26 @@ export function StargazerApp({ app, onSecret }: Props) {
 
     case 'voyage':
       return (
-        <VoyageScreen signedIn={!!userId} clears={campaign.clears} persistence={campaign.persistence} onSignIn={signIn}
-          place={voyagePlace} onBoard={() => openBoard(['voyage'], 'voyage')}
-          onBack={() => setRoute('tonight')}
-          onOpenLevel={levelNo => {
-            const chapter = chapterOf(levelNo);
-            if (!chapter || campaign.persistence === 'loading' || levelNo > unlockedUpTo(campaign.clears)) return;
-            setPlaying({ chapter, levelNo });
-            setRoute('voyagePlay');
-          }} />
+        <>
+          <VoyageScreen key={openChapter ?? 'reach'} initialChapter={openChapter ?? undefined}
+            signedIn={!!userId} clears={campaign.clears} persistence={campaign.persistence} onSignIn={signIn}
+            place={voyagePlace} onBoard={() => openBoard(['voyage'], 'voyage')}
+            onBack={() => setRoute('tonight')}
+            onOpenLevel={levelNo => {
+              const chapter = chapterOf(levelNo);
+              if (!chapter || campaign.persistence === 'loading' || levelNo > unlockedUpTo(campaign.clears)) return;
+              setPlaying({ chapter, levelNo });
+              setRoute('voyagePlay');
+            }} />
+          {transit && <VoyageTransit from={transit.from} to={transit.to} clears={campaign.clears} onDone={endTransit} />}
+        </>
       );
 
     case 'voyagePlay':
       if (!playing) break;
       return (
         <VoyagePlay key={playing.chapter.index + ':' + playing.levelNo} chapter={playing.chapter} startLevelNo={playing.levelNo}
-          clears={campaign.clears} record={campaign.record} saveClear={campaign.save} userId={userId} onBack={() => setRoute('voyage')} />
+          clears={campaign.clears} record={campaign.record} saveClear={campaign.save} userId={userId} onBack={() => setRoute('voyage')} onWorldDone={startTransit} />
       );
 
     case 'stats':
