@@ -43,9 +43,12 @@ const errors = curveRuleErrors('match', curve);
 if (errors.length) throw new Error(errors.join('; '));
 
 const entries = [];
+const keys = new Set<string>();   // no sky twice in a pool
 for (const slot of poolSlots('match', curve)) {
   const t0 = Date.now();
-  const { level, salt } = generateSlot(curve, slot);
+  const { level, salt, key, duplicate } = generateSlot(curve, slot, keys);
+  if (duplicate) console.warn(`slot ${slot.slot}: repeats a sky already in the pool (nothing new found)`);
+  keys.add(key);
   const r = solve(level);
   if (r.count !== 1 || r.k !== level.k) throw new Error(`slot ${slot.slot}: not a unique cover`);
   const want = curve.tiers[slot.tier];

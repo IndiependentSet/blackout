@@ -15,7 +15,8 @@ export { parseCurve, parseOptions, parseSchedule, type ParseResult } from './par
 
 // level pools: a curve of tiers, made ahead of time
 export {
-  DEFAULT_CURVES, campaignRamp, curveRuleErrors, generateSlot, orderByHardness, poolSlots, type CurveTier, type LevelCurve, type PoolSlot,
+  DEFAULT_CURVES, campaignRamp, curveRuleErrors, generateSlot, orderByHardness, poolKey, poolSlots, type CurveTier, type LevelCurve, type PoolSlot,
+  type SlotOutcome,
 } from './curve';
 
 // recipes: a sky's shape, saved under a name and copied into skies and tiers

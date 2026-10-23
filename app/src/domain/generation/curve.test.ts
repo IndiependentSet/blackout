@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { POOL_MODES } from '../gameModes';
 import { CAMPAIGN_LEVELS } from '../types';
-import { DEFAULT_CURVES, campaignRamp, curveRuleErrors, generateSlot, orderByHardness, poolSlots, type LevelCurve } from './curve';
+import { DEFAULT_CURVES, campaignRamp, curveRuleErrors, generateSlot, orderByHardness, poolKey, poolSlots, type LevelCurve } from './curve';
 import { MAX_LEVEL_NODES } from './options';
 import { generate } from './generate';
 import { compareHardness } from './hardness';
@@ -127,6 +127,32 @@ describe('generateSlot', () => {
   it('never hands out more than the game\'s cap, even from the fallback', () => {
     const lv = generateSlot({ ...tiny, retries: 1, tiers: [{ count: 1, size: MAX_LEVEL_NODES, diff: 1, options: { clock: false, attempts: 3 } }] }, { slot: 1, tier: 0 }).level;
     expect(lv.nodes.length).toBeLessThanOrEqual(MAX_LEVEL_NODES);
+  });
+  it('passes over a sky the pool already holds', () => {
+    const first = generateSlot(tiny, { slot: 1, tier: 0 });
+    expect(first).toMatchObject({ key: poolKey(first.level), duplicate: false });
+    const next = generateSlot(tiny, { slot: 1, tier: 0 }, new Set([first.key]));
+    expect(next.duplicate).toBe(false);
+    expect(next.key).not.toBe(first.key);
+    const r = solve(next.level);
+    expect(r.count).toBe(1);
+  });
+  it('flags a repeat when nothing new can be found, rather than failing', () => {
+    const one: LevelCurve = { ...tiny, retries: 1 };
+    const a = generateSlot(one, { slot: 1, tier: 0 });
+    const fb = generateSlot({ ...one, retries: 0 }, { slot: 1, tier: 0 });
+    const out = generateSlot(one, { slot: 1, tier: 0 }, new Set([a.key, fb.key]));
+    expect(out.duplicate).toBe(true);
+  });
+  it('builds a pool with no sky in it twice', () => {
+    const curve: LevelCurve = { ...tiny, retries: 8, tiers: [{ count: 8, size: 10, diff: 1, options: { clock: false } }] };
+    const keys = new Set<string>();
+    for (const s of poolSlots('survival', curve)) {
+      const o = generateSlot(curve, s, keys);
+      expect(o.duplicate).toBe(false);
+      keys.add(o.key);
+    }
+    expect(keys.size).toBe(8);
   });
   it('rejects a tier the curve does not have', () => {
     expect(() => generateSlot(tiny, { slot: 1, tier: 9 })).toThrow(RangeError);
