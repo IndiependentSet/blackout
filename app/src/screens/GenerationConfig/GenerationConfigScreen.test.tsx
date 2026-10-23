@@ -18,6 +18,11 @@ const listRecipes = vi.fn();
 vi.mock('../../services/repositories/recipes', () => ({
   listRecipes: (...a: unknown[]) => listRecipes(...a), saveRecipe: vi.fn(), deleteRecipe: vi.fn(),
 }));
+const listPinnedSkies = vi.fn();
+const pinSky = vi.fn();
+vi.mock('../../services/repositories/dailyManualLevels', () => ({
+  listPinnedSkies: (...a: unknown[]) => listPinnedSkies(...a), pinSky: (...a: unknown[]) => pinSky(...a), unpinSky: vi.fn(),
+}));
 /* no workers in jsdom: the preview never answers, which these tests don't need */
 vi.mock('../../services/generation/scheduleClient', () => ({ previewDayAsync: () => new Promise(() => {}) }));
 
@@ -31,6 +36,7 @@ const tweaked = { ...DEFAULT_SCHEDULE, retries: 3 };
 beforeEach(() => {
   listConfigs.mockReset(); saveConfig.mockReset(); deleteConfig.mockReset();
   listRecipes.mockReset(); listRecipes.mockResolvedValue(ok([]));
+  listPinnedSkies.mockReset(); listPinnedSkies.mockResolvedValue(ok([])); pinSky.mockReset();
   vi.spyOn(window, 'confirm').mockReturnValue(true);
 });
 afterEach(() => { vi.restoreAllMocks(); });
@@ -107,5 +113,19 @@ describe('generation config page', () => {
     await userEvent.type(maxOptima, '2');
     expect(await screen.findByText(/the game needs a unique optimal cover/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+  });
+
+  it('lists the hand-drawn skies pinned to upcoming nights and opens one', async () => {
+    listConfigs.mockResolvedValue(ok([]));
+    const fig = { nodes: [{ c: 0, r: 0 }, { c: 1, r: 0 }, { c: 2, r: 0 }], edges: [[0, 1], [1, 2]] };
+    listPinnedSkies.mockResolvedValue(ok([{ day: today + 2, idx: 3, figure: fig, note: '' }]));
+    pinSky.mockResolvedValue(ok(null));
+    render(<GenerationConfigScreen />);
+    await userEvent.click(screen.getByRole('button', { name: 'Hand-drawn days' }));
+    expect(screen.getByRole('button', { name: 'Pin to this night' })).toBeDisabled();
+    await userEvent.click(await screen.findByRole('button', { name: new RegExp(`Day ${today + 2}`) }));
+    expect(screen.getByText('One answer ✓')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Replace the pinned sky' }));
+    expect(pinSky).toHaveBeenCalledWith(today + 2, 3, fig);
   });
 });

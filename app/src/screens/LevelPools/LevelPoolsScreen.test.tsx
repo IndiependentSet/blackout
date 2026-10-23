@@ -45,7 +45,7 @@ describe('pool page', () => {
     expect(screen.queryByLabelText('Strategy', { selector: 'select' })).toBeNull();
     await userEvent.click(screen.getByRole('button', { name: '+ Add a sky' }));
     expect(within(screen.getByRole('group', { name: 'drawings' })).getAllByRole('button')).toHaveLength(2);
-    const tiers = (await draft()).tiers as { count: number; manual?: unknown[] }[];
+    const tiers = (await draft()).tiers as unknown as { count: number; manual?: unknown[] }[];
     expect(tiers[0]).toMatchObject({ count: 2, manual: [{ nodes: [], edges: [] }, { nodes: [], edges: [] }] });
     await userEvent.click(screen.getByRole('button', { name: 'Generate' }));
     expect(strategySelect()).toBeInTheDocument();
