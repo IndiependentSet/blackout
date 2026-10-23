@@ -5,6 +5,7 @@
 .header { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; padding: 18px 16px 8px; }
 .header h1 { margin: 0; font-family: var(--sg-font-heading); font-weight: 400; color: var(--sg-cream); font-size: 30px; line-height: 1; }
 .hint { color: var(--sg-text-faint); font-size: 12px; }
+.modes { display: inline-flex; gap: 6px; }
 .hint kbd { border: 1px solid var(--sg-hairline); background: var(--sg-wash); border-radius: 6px; padding: 0 5px; font-family: inherit; color: var(--sg-text-soft); }
 .status { margin-left: auto; font-size: 12px; font-weight: 800; color: var(--sg-mint); }
 .busy { color: var(--sg-mars); }

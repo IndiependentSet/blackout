@@ -15,6 +15,11 @@ import { useGenerator } from './useGenerator';
 import { usePlacement } from './usePlacement';
 import { VarietyPanel } from './VarietyPanel';
 import { RecipeBar } from '../Recipes/RecipeBar';
+import { FigureStatus } from '../SkyEditor/FigureStatus';
+import { useFigureCheck } from '../SkyEditor/useFigureCheck';
+import { figureOf } from '../../domain/nights';
+import { DrawStage } from './DrawStage';
+import { readDrawing, withDrawing, type Source } from './drawHash';
 import { useRecipes } from '../Recipes/useRecipes';
 import styles from './Playground.module.css';
 
@@ -25,6 +30,11 @@ const randomSeed = () => Math.floor(Math.random() * 1e6);
 /** Admin-only: bend the level generator's rules and see what comes out. */
 export function PlaygroundScreen() {
   const [params, dispatch] = useReducer(paramsReducer, undefined, () => decodeParams(window.location.hash));
+  /* generate a sky from the settings, or draw one by hand */
+  const [drawing, setDrawing] = useState(() => readDrawing(window.location.hash));
+  const source = drawing.source;
+  const setSource = (s: Source) => setDrawing(d => ({ ...d, source: s }));
+  const check = useFigureCheck(drawing.figure);
   const [view, setView] = useState<View>('schematic');
   const [showSol, setShowSol] = useState(false);
   const [showAlt, setShowAlt] = useState(true);
@@ -36,9 +46,12 @@ export function PlaygroundScreen() {
   const reroll = () => dispatch({ type: 'set', patch: { seed: randomSeed() } });
 
   /* the hash is the permalink: settings survive a reload and can be pasted */
-  useEffect(() => { window.history.replaceState(null, '', '#' + encodeParams(params)); }, [params]);
+  useEffect(() => {
+    window.history.replaceState(null, '', '#' + withDrawing(encodeParams(params), drawing.source, drawing.figure));
+  }, [params, drawing]);
   useWindowKey(e => {
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return;
+    if (source === 'draw') return;   // the editor has its own keys
     if (e.key === 'r') reroll();
     if (e.key === 's') setShowSol(s => !s);
   });
@@ -55,10 +68,30 @@ export function PlaygroundScreen() {
     <div className={styles.page}>
       <header className={styles.header}>
         <h1>Generator playground</h1>
-        <span className={styles.hint}><kbd>r</kbd> new seed · <kbd>s</kbd> solution</span>
+        <span className={styles.modes} role="group" aria-label="where the sky comes from">
+          <Button size="xs" kind={source === 'generate' ? 'primary' : 'soft'} aria-pressed={source === 'generate'} onClick={() => setSource('generate')}>Generate</Button>
+          <Button size="xs" kind={source === 'draw' ? 'primary' : 'soft'} aria-pressed={source === 'draw'} onClick={() => setSource('draw')}>Draw by hand</Button>
+        </span>
+        {source === 'generate'
+          ? <span className={styles.hint}><kbd>r</kbd> new seed · <kbd>s</kbd> solution</span>
+          : <span className={styles.hint}><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> tools · <kbd>z</kbd> undo · <kbd>Esc</kbd> stop a line</span>}
         <span className={cx(styles.status, running && styles.busy)}>{running ? 'generating…' : error ? 'error' : 'ready'}</span>
       </header>
-      <div className={styles.layout}>
+      {source === 'draw' ? (
+        <div className={styles.layout}>
+          <div className={styles.side}>
+            <div className={styles.panel}>
+              <h3>Hand-drawn sky</h3>
+              <p className={styles.muted}>Stars sit on grid cells; any line goes. A sky the game can play needs exactly one best answer.</p>
+              <FigureStatus check={check} />
+            </div>
+          </div>
+          <main className={styles.main}>
+            <DrawStage figure={drawing.figure} onChange={figure => setDrawing({ source: 'draw', figure })} check={check}
+              startFrom={level ? figureOf(level) : null} />
+          </main>
+        </div>
+      ) : <div className={styles.layout}>
         <div className={styles.side}>
           <RecipeBar options={toGenOptions(params)} recipes={recipes} range={null} onApply={shape => dispatch({ type: 'shape', shape })} />
           <ParamsPanel p={params} dispatch={dispatch} onReroll={reroll} />
@@ -96,7 +129,7 @@ export function PlaygroundScreen() {
             onLoadParams={patch => dispatch({ type: 'set', patch })} />
         </main>
         {outcome && <StatsPanel outcome={outcome} wallMs={wallMs} />}
-      </div>
+      </div>}
     </div>
   );
 }
