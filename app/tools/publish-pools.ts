@@ -41,8 +41,11 @@ for (const mode of modes) {
   const slots = poolSlots(mode, curve);
   const entries = [];
   const t0 = Date.now();
+  const keys = new Set<string>();   // no sky twice in a pool
   for (const slot of slots) {
-    const { level } = generateSlot(curve, slot);
+    const { level, key, duplicate } = generateSlot(curve, slot, keys);
+    if (duplicate) console.warn(`${mode} slot ${slot.slot}: repeats a sky already in the pool (nothing new found)`);
+    keys.add(key);
     const r = solve(level);
     if (r.count !== 1 || r.k !== level.k) throw new Error(`${mode} slot ${slot.slot}: not a unique cover`);
     const { _score, ...clean } = level;   // the generator's private ranking, not part of the level

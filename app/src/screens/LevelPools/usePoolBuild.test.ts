@@ -8,8 +8,8 @@ import { publishBlockers, usePoolBuild } from './usePoolBuild';
 
 const curve: LevelCurve = { version: 1, seed: 1, retries: 2, fallback: { diff: 1, options: {} },
   tiers: [{ count: 3, size: 4, diff: 1, options: {} }] };
-const fake = (unique = true) => vi.fn(async (_c: LevelCurve, slot: { slot: number; tier: number }) =>
-  ok({ ...slot, level: {} as Level, salt: 0, unique, ms: 1 } satisfies SlotResult));
+const fake = (unique = true, duplicate = false) => vi.fn(async (_c: LevelCurve, slot: { slot: number; tier: number }) =>
+  ok({ ...slot, level: {} as Level, salt: 0, key: 'k' + slot.slot, duplicate, unique, ms: 1 } satisfies SlotResult));
 
 describe('usePoolBuild', () => {
   it('builds every slot, in order, and finishes', async () => {
@@ -26,7 +26,7 @@ describe('usePoolBuild', () => {
     const sizes = [12, 6, 9];
     const gen = vi.fn(async (_c: LevelCurve, slot: { slot: number; tier: number }) => {
       const { level } = generate({ seed: slot.slot, size: sizes[slot.slot - 1], diff: 1, options: { clock: false } });
-      return ok({ ...slot, level: level as Level, salt: 0, unique: true, ms: 1 } satisfies SlotResult);
+      return ok({ ...slot, level: level as Level, salt: 0, key: 'k' + slot.slot, duplicate: false, unique: true, ms: 1 } satisfies SlotResult);
     });
     const { result } = renderHook(() => usePoolBuild('campaign', curve, gen));
     await act(async () => { await result.current.start(); });
@@ -58,10 +58,23 @@ describe('usePoolBuild', () => {
     expect(publishBlockers(result.current.build, result.current.current)[0]).toMatch(/3 levels/);
   });
 
+  it('tells every slot which skies the pool already holds', async () => {
+    const gen = fake();
+    const { result } = renderHook(() => usePoolBuild('survival', curve, gen));
+    await act(async () => { await result.current.start(); });
+    expect(gen.mock.calls.map(c => (c as unknown[])[2])).toMatchObject([{ avoid: [] }, { avoid: ['k0'] }, { avoid: ['k0', 'k1'] }]);
+  });
+
+  it('will not publish a pool that holds a sky twice', async () => {
+    const { result } = renderHook(() => usePoolBuild('survival', curve, fake(true, true)));
+    await act(async () => { await result.current.start(); });
+    expect(publishBlockers(result.current.build, result.current.current)).toEqual([expect.stringMatching(/3 skies repeat/)]);
+  });
+
   it('stop() ends a run that is still going', async () => {
     let release: () => void = () => {};
     const gen = vi.fn((_c: LevelCurve, slot: { slot: number; tier: number }, o?: { signal?: AbortSignal }) =>
-      new Promise<ReturnType<typeof ok<SlotResult>>>(res => { release = () => res(ok({ ...slot, level: {} as Level, salt: 0, unique: true, ms: 1 })); void o; }));
+      new Promise<ReturnType<typeof ok<SlotResult>>>(res => { release = () => res(ok({ ...slot, level: {} as Level, salt: 0, key: 'k', duplicate: false, unique: true, ms: 1 })); void o; }));
     const { result } = renderHook(() => usePoolBuild('survival', curve, gen as never));
     let p: Promise<void> = Promise.resolve();
     act(() => { p = result.current.start(); });

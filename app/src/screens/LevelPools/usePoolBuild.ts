@@ -34,7 +34,8 @@ export function usePoolBuild(mode: PoolMode, curve: LevelCurve, generate: Genera
     const results: SlotResult[] = [];
     setBuild({ key, status: 'running', results: [], total: slots.length, error: null });
     for (const slot of slots) {
-      const r = await generate(curve, slot, { signal: c.signal });
+      /* every slot is told what the pool already holds, so no sky is in it twice */
+      const r = await generate(curve, slot, { signal: c.signal, avoid: results.map(x => x.key) });
       if (c.signal.aborted) return;
       if (!r.ok) { setBuild(b => b && { ...b, status: 'error', error: r.error }); return; }
       results.push(r.data);
@@ -58,5 +59,9 @@ export function publishBlockers(build: Build | null, current: boolean): string[]
   if (!current) return ['The curve changed after this build: generate again.'];
   if (build.status !== 'done') return ['The build is not finished.'];
   const bad = build.results.filter(r => !r.unique).length;
-  return bad ? [`${bad} level${bad === 1 ? '' : 's'} do not have a unique best cover: change the curve or its seed.`] : [];
+  const repeats = build.results.filter(r => r.duplicate).length;
+  return [
+    ...(bad ? [`${bad} level${bad === 1 ? '' : 's'} do not have a unique best cover: change the curve or its seed.`] : []),
+    ...(repeats ? [`${repeats} sk${repeats === 1 ? 'y repeats' : 'ies repeat'} one already in the pool: give the tier fewer levels, more retries or more room.`] : []),
+  ];
 }
