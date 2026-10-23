@@ -189,8 +189,13 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
     level, its other optimal covers (the first `KEPT_OPTIMA`) and a `GenReport` out), `schedule.ts` (the game's
     week as data: `DEFAULT_SCHEDULE`, one `SiteRule` per site, retries and a
     fallback; `levelForSite`/`levelsForDay` run it) and `parse.ts`
-    (`parseSchedule`/`parseOptions`: untrusted JSON → a schedule or a list of
-    errors). Every request and schedule is plain JSON, so it can be stored,
+    (`parseSchedule`/`parseOptions`/`parseFigure`: untrusted JSON → a schedule or a list of
+    errors) and `manual.ts` — **hand-drawn skies**, the generator's other way in: a `SkyFigure` (stars on integer
+    lattice cells, lines between them) becomes a level through `checkFigure` (`solve` + `difficulty`: par, answer,
+    how many answers, stars; blocking `figureErrors` — 2..40 stars, no shared cells, at least one line — and
+    `figureWarnings` for what a generated sky would not have: crossings, long lines, lines over a star, busy stars,
+    loose stars, separate pieces); `playable` means exactly one answer, which every place that uses a drawing
+    requires. No seed and no RNG, so drawings can never move a generated level. Every request and schedule is plain JSON, so it can be stored,
     edited or posted to a worker. Every new option defaults to what the game
     already did (gadgets, any cycle, unique, no hardness filters), so
     `DEFAULT_GEN` makes the same RNG draws as before. The seed mixing in `levelForSite` is the
@@ -217,7 +222,13 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
     **Compare runs** table (in memory only) so strategies and settings can be
     read side by side.
     Settings live only in the URL hash; its control ranges and site presets
-    come from `OPTION_LIMITS` and `DEFAULT_SCHEDULE`.
+    come from `OPTION_LIMITS` and `DEFAULT_SCHEDULE`. A **Generate | Draw by hand** switch swaps the settings
+    for the sky editor (`DrawStage`; the drawing rides in the hash as `sky=`, `drawHash.ts`), play-testable as
+    the game's sky, and can start from the last generated sky.
+  - **Sky editor** (`screens/SkyEditor/`): the one hand-drawing UI every admin page uses. `skyEditor.ts` is the
+    pure part (tools draw/move/erase, the line being drawn, undo, `hitTest`, `gridBounds`); `SkyEditor` is
+    controlled (`figure` in, `onChange` out; remount with `key` for a fresh undo history), `FigureStatus` shows
+    par/stars/answers and the errors and warnings, `useFigureCheck` memoizes `checkFigure`.
   - **Recipes** (admin only): `/recipes.html`, entry `src/recipes.tsx`,
     `screens/Recipes/`. A recipe (`domain/generation/recipe.ts`) is the *shape*
     of a sky — `SHAPE_KEYS`: strategy, degree, geometry, the gadget mix or the
@@ -250,7 +261,11 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
   - **Level pools** (admin only): campaign, survival and 1vs1 don't generate
     while someone plays. An admin edits a `LevelCurve` (`domain/generation/curve.ts`:
     seed, retries, a list of tiers — count, size, stars, options, constraints —
-    and a fallback; `DEFAULT_CURVES` per mode, `parseCurve`, `curveRuleErrors`)
+    and a fallback; `DEFAULT_CURVES` per mode, `parseCurve`, `curveRuleErrors`; a tier may instead be
+    **hand-drawn**: `manual` holds one `SkyFigure` per level, `count` follows it, `generateSlot` plays the
+    drawing at the slot's `index` in its tier, `curveRuleErrors` needs each one playable, and `orderByHardness`
+    leaves hand-drawn slots where the admin put them; the tier panel's Generate | Draw by hand switch starts the
+    drawings from the tier's last build)
     on `/pools.html?mode=…` (`screens/LevelPools/`: one page per mode; the left
     column is the open tier — or the fallback — with its count, `RecipeBar` and
     the full `ParamsPanel` + constraints, so every generator option is editable per
@@ -299,7 +314,14 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
     `.github/workflows/publish-daily.yml` runs `app/tools/publish-daily.ts` at 00:00 GMT (and 00:15 as a safety net, and
     on demand with a day): it resolves the schedule in force for that day, generates the seven levels with at least 20
     retries each, re-checks the unique cover with `solve` and inserts them (a day that already has rows is left
-    alone). Needs the `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` secrets on the `production` environment. The
+    alone). Needs the `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` secrets on the `production` environment.
+    **A hand-drawn sky can be pinned to one site of one future night** (`app/sql/2026-10-31-daily-manual-levels.sql`,
+    check `sql/ci/checks/daily-manual-levels.sql`): `daily_manual_levels (day, idx, level, figure)`, unreadable by
+    players (future puzzles must not leak), written by the admin-checked `save_`/`delete_daily_manual_level` (tomorrow
+    on, never a published day), listed by `list_daily_manual_levels`; the job reads it as `service_role`, works the
+    level out again from the drawing alone and plays it in place of that site. The Tonight page's *Hand-drawn days*
+    view edits them (`ManualDays`, `usePinnedSkies`, `repositories/dailyManualLevels.ts`). The on-device fallback
+    week below can't read them, which is fine: its clears are not recorded. The
     client reads the week through `repositories/dailyLevels.ts` and `useDailyLevels`; only when it isn't there does
     `useGameSession` build it on the device from `useDailySchedule` — and those clears are **not recorded**
     (`onSchedule` false), because the device's week may differ from the one published afterwards.
