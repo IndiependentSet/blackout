@@ -3,6 +3,7 @@ import { describeShape, recipeFor, recipeNameError, shapeOf, type GenOptions, ty
 import type { Resource } from '../../hooks/useResource';
 import { saveRecipe } from '../../services/repositories/recipes';
 import { Button } from '../../themes/stargazer/kit/Button';
+import { Num } from '../Playground/controls';
 import { Info } from '../Playground/Info';
 import pg from '../Playground/Playground.module.css';
 import styles from './Recipes.module.css';
@@ -68,11 +69,9 @@ export function RecipeBar({ options, recipes, range, onApply }: Props) {
         {range && (
           <div className={styles.applyRow}>
             <span>to {unit}</span>
-            <input className={pg.num} type="number" aria-label={`first of the ${unit}`} min={1} max={range.count} value={from}
-              onChange={e => setFrom(Math.min(range.count, Math.max(1, Math.round(Number(e.target.value)) || 1)))} />
+            <Num label={`first of the ${unit}`} min={1} max={range.count} v={from} on={n => setFrom(Math.round(n))} />
             <span>–</span>
-            <input className={pg.num} type="number" aria-label={`last of the ${unit}`} min={1} max={range.count} value={to}
-              onChange={e => setTo(Math.min(range.count, Math.max(1, Math.round(Number(e.target.value)) || 1)))} />
+            <Num label={`last of the ${unit}`} min={1} max={range.count} v={to} on={n => setTo(Math.round(n))} />
             <Info k="applyRange" />
           </div>
         )}

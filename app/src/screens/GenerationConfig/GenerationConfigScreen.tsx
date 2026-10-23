@@ -6,6 +6,7 @@ import { useResource } from '../../hooks/useResource';
 import { useUnsavedGuard } from '../../hooks/useUnsavedGuard';
 import { listConfigs } from '../../services/repositories/generationConfigs';
 import { cx } from '../../themes/stargazer/kit/cx';
+import { Num } from '../Playground/controls';
 import { Info } from '../Playground/Info';
 import { useRecipes } from '../Recipes/useRecipes';
 import { editorReducer, initialEditor } from './editor';
@@ -63,8 +64,7 @@ export function GenerationConfigScreen() {
         <main className={pg.main}>
           <div className={pg.toolbar}>
             <label className={pg.toggle}>Preview day&nbsp;
-              <input className={pg.num} type="number" min={1} value={previewDay}
-                onChange={e => { const n = Math.round(Number(e.target.value)); if (n >= 1) setPreviewDay(n); }} />
+              <Num v={previewDay} min={1} on={n => setPreviewDay(Math.round(n))} />
             </label>
             <Info k="previewDay" />
             <span className={styles.basis}>{dayLabel(previewDay)}</span>
