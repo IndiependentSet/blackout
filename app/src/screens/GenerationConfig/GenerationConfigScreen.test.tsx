@@ -14,6 +14,10 @@ vi.mock('../../services/repositories/generationConfigs', () => ({
   saveConfig: (...a: unknown[]) => saveConfig(...a),
   deleteConfig: (...a: unknown[]) => deleteConfig(...a),
 }));
+const listRecipes = vi.fn();
+vi.mock('../../services/repositories/recipes', () => ({
+  listRecipes: (...a: unknown[]) => listRecipes(...a), saveRecipe: vi.fn(), deleteRecipe: vi.fn(),
+}));
 /* no workers in jsdom: the preview never answers, which these tests don't need */
 vi.mock('../../services/generation/scheduleClient', () => ({ previewDayAsync: () => new Promise(() => {}) }));
 
@@ -26,6 +30,7 @@ const tweaked = { ...DEFAULT_SCHEDULE, retries: 3 };
 
 beforeEach(() => {
   listConfigs.mockReset(); saveConfig.mockReset(); deleteConfig.mockReset();
+  listRecipes.mockReset(); listRecipes.mockResolvedValue(ok([]));
   vi.spyOn(window, 'confirm').mockReturnValue(true);
 });
 afterEach(() => { vi.restoreAllMocks(); });
@@ -68,6 +73,29 @@ describe('generation config page', () => {
     render(<GenerationConfigScreen />);
     await userEvent.click(await screen.findByRole('button', { name: 'Cancel it' }));
     await waitFor(() => expect(deleteConfig).toHaveBeenCalledWith(4));
+  });
+
+  it('applies a recipe to a run of skies, keeping each sky its own size', async () => {
+    listConfigs.mockResolvedValue(ok([]));
+    listRecipes.mockResolvedValue(ok([{ name: 'Open field', shape: { strategy: 'free', density: 1.6 }, note: '' }]));
+    saveConfig.mockResolvedValue(ok(8));
+    render(<GenerationConfigScreen />);
+    await screen.findByText(/Nothing saved yet/);
+    await userEvent.click(screen.getByRole('tab', { name: 'Sky 5' }));
+    expect(screen.getByText('Custom shape')).toBeInTheDocument();
+    await userEvent.selectOptions(await screen.findByRole('combobox', { name: 'recipe to apply' }), 'Open field');
+    const last = screen.getByRole('spinbutton', { name: 'last of the skies' });
+    await userEvent.clear(last);
+    await userEvent.type(last, '7');
+    await userEvent.click(screen.getByRole('button', { name: 'Apply' }));
+    expect(screen.getAllByText('Open field').length).toBeGreaterThan(0);
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(saveConfig).toHaveBeenCalled());
+    const saved = saveConfig.mock.calls[0][2] as typeof DEFAULT_SCHEDULE;
+    saved.sites.forEach((site, i) => {
+      expect(site.options.strategy === 'free', `sky ${i + 1}`).toBe(i >= 4);
+      expect(site.size).toBe(DEFAULT_SCHEDULE.sites[i].size);
+    });
   });
 
   it('won\'t save a schedule that lets a level have more than one answer', async () => {

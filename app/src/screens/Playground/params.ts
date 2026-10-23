@@ -1,8 +1,8 @@
 /* What the playground can turn, how it maps onto the generator's options, and
    how it round-trips through the URL hash (the only place it is kept). Pure. */
 import {
-  DEFAULT_GEN, DEFAULT_SCHEDULE, GADGET_NAMES, STRATEGIES, menuFor, resolveOptions,
-  type GadgetName, type GenerateRequest, type GenerationSchedule, type GenOptions, type LevelConstraints, type SiteRule, type Strategy,
+  DEFAULT_GEN, DEFAULT_SCHEDULE, GADGET_NAMES, STRATEGIES, menuFor, resolveOptions, withShape,
+  type GadgetName, type GenerateRequest, type GenerationSchedule, type GenOptions, type LevelConstraints, type Shape, type SiteRule, type Strategy,
 } from '../../domain/generation';
 import type { Stars } from '../../domain/types';
 
@@ -92,6 +92,8 @@ export type ParamsAction =
   | { type: 'set'; patch: Partial<PlaygroundParams> }
   | { type: 'weight'; gadget: GadgetName; value: number }
   | { type: 'site'; idx: number }
+  /** a recipe's shape: every shape setting replaced, the rest (size, difficulty, hardness, search) kept */
+  | { type: 'shape'; shape: Shape }
   | { type: 'reset' };
 
 export function paramsReducer(p: PlaygroundParams, a: ParamsAction): PlaygroundParams {
@@ -104,6 +106,8 @@ export function paramsReducer(p: PlaygroundParams, a: ParamsAction): PlaygroundP
       const site = DEFAULT_SCHEDULE.sites[a.idx];
       return site ? { ...siteToParams(site, p.seed), clock: DEFAULT_PARAMS.clock } : p;
     }
+    case 'shape':
+      return siteToParams({ size: p.size, diff: toStars(p.diff), options: withShape(toGenOptions(p), a.shape) }, p.seed);
     case 'reset': return { ...DEFAULT_PARAMS, seed: p.seed };
   }
 }

@@ -13,7 +13,7 @@
 .gateCopy { color: var(--sg-text-soft); font-size: 15px; max-width: 420px; line-height: 1.45; margin-bottom: 6px; }
 .gateError { color: var(--sg-mars); font-weight: 700; }
 
-.nav { display: flex; align-items: center; gap: 8px 16px; flex-wrap: wrap; padding: 14px 16px 0; font-size: 14px; }
+.nav { display: flex; align-items: flex-end; gap: 8px 16px; flex-wrap: wrap; padding: 14px 16px 0; font-size: 14px; }
 .brand {
   display: inline-flex; align-items: center; gap: 8px; text-decoration: none;
   font-family: var(--sg-font-heading); font-size: 22px; line-height: 1; color: var(--sg-cream);
@@ -23,6 +23,8 @@
   font-family: var(--sg-font-body); font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase;
   color: var(--sg-mint); padding: 3px 8px; border-radius: 999px; background: color-mix(in srgb, var(--sg-mint) 14%, transparent);
 }
+.group { display: flex; flex-direction: column; gap: 4px; }
+.groupLabel { padding-left: 14px; font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--sg-mint); }
 .tabs {
   display: flex; flex-wrap: wrap; gap: 2px; padding: 4px; border-radius: 999px;
   background: var(--sg-bar); box-shadow: inset 0 0 0 1px var(--sg-hairline);
@@ -39,7 +41,8 @@
 /* phone: the pages stay one row of pills that scrolls sideways, under the wordmark */
 @media (max-width: 760px) {
   .nav { padding-top: 12px; }
-  .tabs { order: 3; flex-wrap: nowrap; overflow-x: auto; max-width: 100%; scrollbar-width: none; }
+  .group { order: 3; max-width: 100%; }
+  .tabs { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; scrollbar-width: none; }
   .tab { white-space: nowrap; }
   .back { margin-left: auto; }
   .who { display: none; }

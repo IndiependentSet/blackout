@@ -10,10 +10,11 @@ import styles from './Playground.module.css';
 const REACH = [{ v: 1, label: '1 · orthogonal' }, { v: 1.5, label: '1.5 · + diagonals' },
   { v: 2.3, label: '2.3 · + knight moves' }, { v: 3.2, label: '3.2 · long' }];
 
-/** What the panel edits: the playground's free settings, or one rule of a
-    generation schedule, where the day picks the seed (and the fallback runs at
-    each site's own size). */
-export type PanelUse = 'playground' | 'site' | 'fallback';
+/** What the panel edits: the playground's free settings; one rule of a
+    generation schedule or pool curve, where the day or the slot picks the seed
+    (and the fallback runs at each rule's own size); or a recipe, which is only a
+    shape (its seed, size and difficulty just pick the preview). */
+export type PanelUse = 'playground' | 'site' | 'fallback' | 'recipe';
 
 /** Every knob the generator exposes, grouped the way they interact. */
 export function ParamsPanel({ p, dispatch, onReroll, use = 'playground', children }: {
@@ -23,6 +24,7 @@ export function ParamsPanel({ p, dispatch, onReroll, use = 'playground', childre
 }) {
   const set = (patch: Partial<PlaygroundParams>) => dispatch({ type: 'set', patch });
   const free = use === 'playground';
+  const recipe = use === 'recipe';
 
   return (
     <div className={styles.panel}>
@@ -39,7 +41,8 @@ export function ParamsPanel({ p, dispatch, onReroll, use = 'playground', childre
 
       <section>
         <h3>Graph</h3>
-        {free && <Row label="Seed" help="seed">
+        {recipe && <p className={styles.muted}>Seed, nodes and difficulty only pick the preview: a recipe is the shape below.</p>}
+        {(free || recipe) && <Row label="Seed" help="seed">
           <Num v={p.seed} min={0} on={seed => set({ seed })} />
           {onReroll && <Button size="xs" onClick={onReroll} title="random seed (r)">🎲</Button>}
         </Row>}
@@ -52,9 +55,9 @@ export function ParamsPanel({ p, dispatch, onReroll, use = 'playground', childre
         <Row label="Difficulty" help="diff" value={'★'.repeat(p.diff)}>
           <Range v={p.diff} {...L.diff} on={diff => set({ diff })} />
         </Row>
-        <Row label="Stars must match" help="matchStars">
+        {!recipe && <Row label="Stars must match" help="matchStars">
           <Check v={p.matchStars} on={matchStars => set({ matchStars })} />
-        </Row>
+        </Row>}
       </section>
       {children}
 
@@ -87,9 +90,9 @@ export function ParamsPanel({ p, dispatch, onReroll, use = 'playground', childre
       </section>
 
       {p.strategy === 'free' ? <FreeSection p={p} set={set} /> : <GadgetSection p={p} set={set} dispatch={dispatch} />}
-      <HardnessSection p={p} set={set} />
+      {!recipe && <HardnessSection p={p} set={set} />}
 
-      <section>
+      {!recipe && <section>
         <h3>Search</h3>
         <Row label="Attempts" help="attempts"><Num v={p.attempts} {...L.attempts} on={attempts => set({ attempts })} /></Row>
         <Row label="Repairs / attempt" help="repairs"><Num v={p.repairs} {...L.repairs} on={repairs => set({ repairs })} /></Row>
@@ -101,7 +104,7 @@ export function ParamsPanel({ p, dispatch, onReroll, use = 'playground', childre
           {p.clock ? <Num v={p.budgetMs} {...L.budgetMs} on={budgetMs => set({ budgetMs })} />
             : <span className={styles.muted}>off</span>}
         </Row>
-      </section>
+      </section>}
     </div>
   );
 }

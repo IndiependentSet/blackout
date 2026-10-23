@@ -18,6 +18,12 @@ export {
   DEFAULT_CURVES, campaignRamp, curveRuleErrors, generateSlot, orderByHardness, poolSlots, type CurveTier, type LevelCurve, type PoolSlot,
 } from './curve';
 
+// recipes: a sky's shape, saved under a name and copied into skies and tiers
+export {
+  RECIPE_NAME_MAX, SHAPE_KEYS, describeShape, parseShape, recipeFor, recipeNameError, sameShape, shapeOf, withShape,
+  type Recipe, type Shape, type ShapeKey,
+} from './recipe';
+
 // on demand
 export { generate, type GenerateRequest, type GenerateResult } from './generate';
 export { KEPT_OPTIMA, difficulty, solve, type SolveResult } from './solver';

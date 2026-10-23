@@ -1,0 +1,33 @@
+/* The recipe bar and the recipes page. Panels, rows and the stage come from Playground.module.css; colours from the
+   Stargazer tokens (themes/stargazer/tokens.css). */
+.current { display: grid; gap: 2px; padding: 10px 12px; margin-bottom: 8px; border-radius: 16px; background: var(--sg-well); }
+.current b { color: var(--sg-gold); font-size: 14px; }
+.current span { color: var(--sg-text-soft); font-size: 12px; overflow-wrap: anywhere; }
+.applyRow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 6px 0; color: var(--sg-text-soft); }
+.applyRow select { flex: 1; min-width: 0; }
+.applyRow input[type='number'] { width: 56px; }
+.links { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 8px; }
+.name {
+  flex: 1; min-width: 0; background: var(--sg-well); color: var(--sg-text); border: 1px solid var(--sg-hairline); border-radius: 10px;
+  font: inherit; padding: 6px 10px;
+}
+.ok { color: var(--sg-mint); font-weight: 800; font-size: 12px; margin: 6px 0; }
+
+/* the recipes page */
+.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.item {
+  display: grid; gap: 2px; width: 100%; text-align: left; padding: 10px 12px; border-radius: 16px; cursor: pointer;
+  background: var(--sg-wash); color: var(--sg-text); border: 2px solid transparent; font: inherit; font-size: 12px;
+}
+.item b { color: var(--sg-gold); font-size: 14px; }
+.item span { color: var(--sg-text-soft); overflow-wrap: anywhere; }
+.itemOpen { border-color: var(--sg-gold); }
+.side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.left { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.left > div { max-height: none; }
+.field { display: grid; gap: 4px; margin: 8px 0; color: var(--sg-text-soft); font-size: 12px; }
+.field input { background: var(--sg-well); color: var(--sg-text); border: 1px solid var(--sg-hairline); border-radius: 10px; font: inherit; font-size: 14px; padding: 6px 10px; }
+.actions { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.dirty { color: var(--sg-mars); font-weight: 800; }
+.title { display: grid; gap: 4px; }
+.eyebrow { font-size: 12px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--sg-mint); }

@@ -46,7 +46,7 @@ export function PoolPreview({ build, current, onGenerate, onStop }: Props) {
             <button key={r.slot} type="button" className={cx(styles.cell, i === open && styles.cellOpen, !r.unique && styles.bad)}
               onClick={() => setOpen(i)}>
               <b>#{r.slot}</b>
-              <span>tier {r.tier} · {r.level.nodes.length} nodes</span>
+              <span>tier {r.tier + 1} · {r.level.nodes.length} nodes</span>
               <span>par {r.level.k} · {'★'.repeat(r.level.stars)}</span>
               <span className={cx((r.salt === null || !r.unique) && styles.slow)}>
                 {r.unique ? (r.salt === null ? 'fallback' : 'retry ' + r.salt) : 'NOT UNIQUE'} · {r.ms} ms

@@ -5,7 +5,7 @@ import { useWindowKey } from '../../hooks/useWindowKey';
 import { ParamsPanel } from './ParamsPanel';
 import { Info } from './Info';
 import { OptimaStepper } from './OptimaStepper';
-import { decodeParams, encodeParams, paramsReducer } from './params';
+import { decodeParams, encodeParams, paramsReducer, toGenOptions } from './params';
 import { playStatus } from './play';
 import { PlayBar } from './PlayBar';
 import { PlayPreview } from './PlayPreview';
@@ -14,6 +14,8 @@ import { StatsPanel } from './StatsPanel';
 import { useGenerator } from './useGenerator';
 import { usePlacement } from './usePlacement';
 import { VarietyPanel } from './VarietyPanel';
+import { RecipeBar } from '../Recipes/RecipeBar';
+import { useRecipes } from '../Recipes/useRecipes';
 import styles from './Playground.module.css';
 
 type View = 'schematic' | 'sky';
@@ -30,6 +32,7 @@ export function PlaygroundScreen() {
   const [altPick, setAltPick] = useState({ key: '', idx: 0 });
   const [labels, setLabels] = useState<LabelMode>('degree');
   const { running, outcome, error, wallMs, outcomeKey } = useGenerator(params);
+  const recipes = useRecipes();
   const reroll = () => dispatch({ type: 'set', patch: { seed: randomSeed() } });
 
   /* the hash is the permalink: settings survive a reload and can be pasted */
@@ -56,7 +59,10 @@ export function PlaygroundScreen() {
         <span className={cx(styles.status, running && styles.busy)}>{running ? 'generating…' : error ? 'error' : 'ready'}</span>
       </header>
       <div className={styles.layout}>
-        <ParamsPanel p={params} dispatch={dispatch} onReroll={reroll} />
+        <div className={styles.side}>
+          <RecipeBar options={toGenOptions(params)} recipes={recipes} range={null} onApply={shape => dispatch({ type: 'shape', shape })} />
+          <ParamsPanel p={params} dispatch={dispatch} onReroll={reroll} />
+        </div>
         <main className={styles.main}>
           <div className={styles.toolbar}>
             <Button size="xs" kind={view === 'schematic' ? 'primary' : 'soft'} onClick={() => setView('schematic')}>Schematic</Button>

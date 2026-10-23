@@ -147,8 +147,9 @@ describe('Staff Office, signed in', () => {
     isAdmin.mockResolvedValueOnce(ok(true));
     renderWith(auth({ userId: 'boss', email: 'b@example.com', username: 'boss', handle: '@boss' }));
     expect(await screen.findByText('ADMIN TOOLS')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Level pools/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Generation config/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Voyage/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Tonight/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Recipes/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Playground/ })).toBeInTheDocument();
   });
 });

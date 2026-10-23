@@ -53,6 +53,7 @@
 .off > span { color: var(--sg-text-faint); }
 .muted { color: var(--sg-text-faint); font-size: 12px; }
 
+.side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .main { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
 .toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px; }
 .toolbar select { background: var(--sg-well); color: var(--sg-text); border: 1px solid var(--sg-hairline); border-radius: 999px; font: inherit; padding: 4px 10px; }

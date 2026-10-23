@@ -23,7 +23,7 @@ type StatKey = 'stat.par' | 'stat.optima' | 'stat.stars' | 'stat.greedy' | 'stat
   | 'stat.bipartite' | 'stat.triangles' | 'stat.components' | 'stat.attempts' | 'stat.repairs' | 'stat.visits'
   | 'stat.time' | 'stat.rejected';
 /** the generation config page's own settings and readouts */
-type ScheduleKey = 'retries' | 'fallback' | 'minNodes' | 'maxNodes' | 'minK' | 'maxK' | 'hasDegree' | 'effectiveDay' | 'previewDay' | 'week' | 'history';
+type ScheduleKey = 'recipe' | 'applyRange' | 'tier' | 'tierStrip' | 'tierCount' | 'retries' | 'fallback' | 'minNodes' | 'maxNodes' | 'minK' | 'maxK' | 'hasDegree' | 'effectiveDay' | 'previewDay' | 'week' | 'history';
 export type HelpKey = ParamKey | 'weights' | GadgetKey | ViewKey | VarietyKey | StatKey | ScheduleKey;
 
 export const HELP: Record<HelpKey, HelpEntry> = {
@@ -32,7 +32,7 @@ export const HELP: Record<HelpKey, HelpEntry> = {
     title: 'Seed',
     what: 'The starting number for the generator\'s pseudo-random sequence. Every random choice (which gadget, where it attaches, which edge to close) is drawn from it.',
     effect: 'Same seed + same settings = same graph, as long as the time budget is off. Change only the seed to see a different graph grown under identical rules.',
-    game: 'Each day\'s seed comes from the date, which is how every player gets the same seven sites.',
+    game: 'Each day\'s seed comes from the date, which is how every player gets the same seven skies. A pool mixes its curve\'s seed into every level\'s: change it for a fresh set of the same shape.',
   },
   size: {
     title: 'Nodes',
@@ -399,6 +399,29 @@ export const HELP: Record<HelpKey, HelpEntry> = {
     title: 'The week',
     what: 'Each sky\'s level on the preview day: junctions, par, stars, the retry that produced it, and the time it took here.',
     effect: 'Players generate these on the main thread one after another, so a slow sky is a frozen screen on a phone. "fallback" means no retry met the sky\'s rules.',
+  },
+  recipe: {
+    title: 'Recipe',
+    what: 'The shape of a sky, saved under a name: the strategy, degree, geometry, and the gadget mix or the free-graph knobs. Size, difficulty, hardness filters and the search budget are not part of it; they stay with the sky or the tier.',
+    effect: 'Applying a recipe copies its shape in; nothing links back, so a saved schedule or a published pool never changes when a recipe does. The name shown is the recipe this shape matches: change any shape setting and it reads "custom".',
+  },
+  applyRange: {
+    title: 'Apply to',
+    what: 'Which skies or tiers get the recipe\'s shape. Each keeps its own size, difficulty, hardness and constraints, so a ramp stays a ramp.',
+  },
+  tier: {
+    title: 'Tier',
+    what: 'One rule of the curve: how many levels it makes, their size and difficulty, every generator setting, and the constraints a level must meet.',
+    effect: 'Voyage reads tiers in order as levels 1 to 100 (one tier per level by default); Meteor Rush plays tier n at step n of a run; a Star Duel picks a tier.',
+  },
+  tierStrip: {
+    title: 'The curve',
+    what: 'Every tier left to right, as wide as the levels it makes and as tall as its size; the colour is its difficulty. The band underneath names the recipe each stretch matches.',
+    effect: 'Click a tier, or use the arrow keys, to open it in the settings panel.',
+  },
+  tierCount: {
+    title: 'Levels',
+    what: 'How many levels this tier makes. A Voyage has exactly 100 levels in all.',
   },
   history: {
     title: 'Saved configs',

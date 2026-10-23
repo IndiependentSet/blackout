@@ -5,17 +5,41 @@
 .side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .basis { color: var(--sg-text-faint); font-size: 12px; }
 .dirty { color: var(--sg-mars); font-weight: 800; }
-.meta { display: flex; gap: 14px; margin: 8px 0; font-size: 12px; color: var(--sg-text-soft); }
-.meta label { display: flex; align-items: center; gap: 6px; }
+/* the header: the mode's name under what is live */
+.title { display: grid; gap: 4px; }
+.eyebrow { font-size: 12px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--sg-mint); }
 
-.tiers { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 12px; }
-.tiers th { text-align: left; color: var(--sg-text-soft); font-weight: 700; padding: 2px 4px; }
-.tiers td { padding: 2px 4px; }
-/* the number boxes share the panel's width, so the tier table never runs out of its card */
-.tiers { table-layout: fixed; }
-.tiers th:first-child { width: 32px; }
-.tiers th:last-child { width: 40px; }
-.tiers input { width: 100%; min-width: 0; box-sizing: border-box; }
+/* the curve strip: a bar per tier, the recipe bands under it */
+.bars { display: flex; align-items: flex-end; gap: 2px; height: 120px; padding: 4px 0; }
+.bar {
+  flex: 1 1 0; min-width: 0; height: 100%; padding: 0; border: 0; border-radius: 4px; cursor: pointer;
+  display: flex; align-items: flex-end; background: transparent;
+}
+.bar i { display: block; width: 100%; border-radius: 4px; opacity: .55; transition: opacity .1s; }
+.bar:hover i, .bar:focus-visible i { opacity: .85; }
+.bar:focus-visible { outline: 2px solid var(--sg-cream); outline-offset: 2px; }
+.barOn i { opacity: 1; box-shadow: 0 0 0 2px var(--sg-cream); }
+/* a phone fits a hundred tiers by closing the gaps */
+@media (max-width: 760px) { .bars, .bands { gap: 1px; } .bar, .bar i { border-radius: 2px; } }
+.diff1 { background: var(--sg-mint); }
+.diff2 { background: var(--sg-gold); }
+.diff3 { background: var(--sg-mars); }
+.bands { display: flex; gap: 2px; margin-top: 6px; }
+.band {
+  flex: 1 1 0; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  padding: 3px 8px; border-radius: 999px; font-size: 11px; font-weight: 800;
+  background: color-mix(in srgb, var(--sg-star-halo) 22%, transparent); color: var(--sg-text);
+}
+.bandCustom { background: var(--sg-wash); color: var(--sg-text-faint); font-weight: 700; }
+.axis { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 6px; font-size: 12px; color: var(--sg-text-faint); }
+.legend { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; }
+.chip {
+  height: 28px; padding: 0 12px; border-radius: 999px; border: 0; cursor: pointer; font: 700 12.5px var(--sg-font-body);
+  background: var(--sg-wash); color: var(--sg-text-soft);
+}
+.chip:hover { color: var(--sg-text); }
+.chipOn, .chipOn:hover { background: color-mix(in srgb, var(--sg-gold) 14%, transparent); color: var(--sg-gold); }
 
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 6px; max-height: 220px; overflow: auto; }
 .cell {
