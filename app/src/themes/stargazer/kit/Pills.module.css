@@ -1,0 +1,7 @@
+.pills { display: flex; gap: 6px; padding: 4px; border-radius: 999px; background: rgba(255, 255, 255, .05); align-self: flex-start; max-width: 100%; }
+.pill {
+  border: 0; border-radius: 999px; padding: 7px 14px; cursor: pointer; background: transparent;
+  color: var(--sg-text-soft); font: 700 13px var(--sg-font-body); white-space: nowrap;
+}
+.pill:hover { color: var(--sg-text); }
+.on, .on:hover { background: color-mix(in srgb, var(--sg-gold) 16%, transparent); color: var(--sg-gold); font-weight: 800; }

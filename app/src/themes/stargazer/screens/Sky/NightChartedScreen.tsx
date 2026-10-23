@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { figureOf } from '../../../../domain/nights';
 import type { Level, SiteResult } from '../../../../domain/types';
+import type { Place } from '../../../../game/hooks/useBoard';
 import type { SkyNames } from '../../../../game/hooks/useSkyNames';
 import { useClipboard } from '../../../../hooks/useClipboard';
 import { Button } from '../../kit/Button';
@@ -8,6 +9,7 @@ import { Figure } from '../../kit/Figure';
 import { ShareIcon } from '../../kit/icons';
 import { Fit } from '../../kit/Layout';
 import { Eyebrow, Note, Page, TopBar } from '../../kit/Page';
+import { PlaceLink } from '../../kit/PlaceLink';
 import { nameIdeas, nightShareText } from '../../copy';
 import styles from './NightCharted.module.css';
 
@@ -21,13 +23,16 @@ interface Props {
   atlas: SkyNames;
   onSaved: () => void;
   onSignIn: () => void;
+  /** where the player stands on tonight's board; null when not on it */
+  place?: Place | null;
+  onBoard?: () => void;
   onBack: () => void;
 }
 
 const MAX_NAME = 40;
 
 /* Night charted (1d): all seven skies are charted, so the night's figure is the player's to name and keep. */
-export function NightChartedScreen({ day, results, figure, streak, signedIn, atlas, onSaved, onSignIn, onBack }: Props) {
+export function NightChartedScreen({ day, results, figure, streak, signedIn, atlas, place, onBoard, onSaved, onSignIn, onBack }: Props) {
   const ideas = nameIdeas(day);
   const named = atlas.names.find(n => n.day === day);
   const [name, setName] = useState(named?.name ?? ideas[0]);
@@ -65,6 +70,7 @@ export function NightChartedScreen({ day, results, figure, streak, signedIn, atl
         <div className={styles.stat}><b>{lit}</b><span>stars lit</span></div>
         <div className={styles.stat}><b>{streak}</b><span>night streak</span></div>
       </div>
+      {place && onBoard && <PlaceLink place={place} label="tonight" onOpen={onBoard} />}
       {error && <Note tone="error">{error}</Note>}
       {named && !error && <Note>In your atlas as “{named.name}”. Save again to rename it.</Note>}
 

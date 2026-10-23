@@ -1,0 +1,3 @@
+.spark { display: block; width: 100%; height: 48px; overflow: visible; }
+.line { fill: none; stroke: var(--sg-mint); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; opacity: .85; }
+.dot { fill: var(--sg-mint); vector-effect: non-scaling-stroke; }

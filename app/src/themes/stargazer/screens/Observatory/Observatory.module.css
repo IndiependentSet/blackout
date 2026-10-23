@@ -42,11 +42,6 @@
 }
 .input:focus { border-color: color-mix(in srgb, var(--sg-gold) 70%, transparent); }
 
-.board { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
-.boardRow { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 20px; background: rgba(255, 255, 255, .05); font-size: 14px; color: var(--sg-text-soft); }
-.place { width: 20px; font-weight: 800; color: var(--sg-text-faint); }
-.boardName { flex: 1; font-weight: 700; color: var(--sg-text); }
-.mine { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--sg-gold) 45%, transparent); }
 .adminList { display: flex; flex-wrap: wrap; gap: 8px; }
 
 .links { display: flex; flex-direction: column; gap: 8px; }

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { coveredEdges } from '../../../../domain/cover';
 import { SURVIVAL_LIMIT_MS, betterRun, formatClock, mergeBest, type RunSummary } from '../../../../domain/survival';
 import { usePoolPublished } from '../../../../game/hooks/usePoolPublished';
-import { useServerBest, useSurvivalBoard } from '../../../../game/hooks/useSurvivalRanking';
+import { useServerBest } from '../../../../game/hooks/useSurvivalRanking';
 import { useSurvivalSession } from '../../../../game/useSurvivalSession';
 import { Button } from '../../kit/Button';
 import { CloseIcon } from '../../kit/icons';
@@ -24,6 +24,7 @@ interface Props {
   best: RunSummary | null;
   onFinish: (run: RunSummary) => void;
   onBack: () => void;
+  onSignIn: () => void;
 }
 
 function RushTop({ remainingMs, summary, best, onQuit }: { remainingMs: number; summary: RunSummary; best: RunSummary | null; onQuit: () => void }) {
@@ -56,12 +57,11 @@ function RushTop({ remainingMs, summary, best, onQuit }: { remainingMs: number; 
   );
 }
 
-function RushRun({ userId, best, onFinish, onBack, onAgain }: Props & { onAgain: () => void }) {
+function RushRun({ userId, best, onFinish, onBack, onSignIn, onAgain }: Props & { onAgain: () => void }) {
   const session = useSurvivalSession(undefined, undefined, userId);
   const { over, summary, remainingMs, recording, recorded, level, state } = session;
   const [sessionBefore] = useState(best);
   const before = mergeBest(sessionBefore, useServerBest(userId));
-  const board = useSurvivalBoard(over && recorded);
 
   const reported = useRef(false);
   const finish = useCallback(() => {
@@ -75,7 +75,7 @@ function RushRun({ userId, best, onFinish, onBack, onAgain }: Props & { onAgain:
   if (over) {
     return (
       <RushSummary summary={summary} before={before} isRecord={summary.sites > 0 && betterRun(before, summary) === summary}
-        signedIn={!!userId} unsaved={recording === 'unsaved'} board={board.rows} userId={userId} onAgain={onAgain} onBack={leave} />
+        signedIn={!!userId} unsaved={recording === 'unsaved'} recorded={recorded} userId={userId} onSignIn={onSignIn} onAgain={onAgain} onBack={leave} />
     );
   }
 
@@ -103,6 +103,6 @@ export function RushScreen(props: Props) {
       </Page>
     );
   }
-  if (!started) return <RushLobby userId={props.userId} best={props.best} onStart={() => setStarted(true)} onBack={props.onBack} />;
+  if (!started) return <RushLobby userId={props.userId} best={props.best} onStart={() => setStarted(true)} onBack={props.onBack} onSignIn={props.onSignIn} />;
   return <RushRun key={run} {...props} onAgain={() => setRun(n => n + 1)} />;
 }

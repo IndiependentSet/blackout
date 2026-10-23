@@ -51,3 +51,5 @@
   .invite { padding: 12px; gap: 10px; }
   .resultTitle { font-size: 30px; }
 }
+
+.ladderLine { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; font-weight: 600; color: var(--sg-text-soft); }

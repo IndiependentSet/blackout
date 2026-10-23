@@ -16,3 +16,12 @@ export function dayNumber(now: number = Date.now()): number {
 export function daySeed(day: number): number {
   return day + 11;
 }
+
+/** The duel season a puzzle day falls in: the calendar month (UTC) its start falls in. `season_start` in
+    app/sql/2026-11-01-duel-ladder.sql is the same month; `daysLeft` counts the day itself. */
+export function seasonOf(day: number): { month: number; year: number; daysLeft: number } {
+  const start = new Date(dayStartUtc(day));
+  const year = start.getUTCFullYear(), month = start.getUTCMonth();
+  const next = Date.UTC(year, month + 1, 1);
+  return { month, year, daysLeft: Math.max(1, Math.round((next - dayStartUtc(day)) / MS_PER_DAY)) };
+}

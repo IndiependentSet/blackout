@@ -1,7 +1,9 @@
 import { matchOutcome } from '../../../../domain/match';
 import { ratingChange, signed } from '../../../../domain/rating';
+import { placeText } from '../../../../domain/ranking';
 import { formatClock } from '../../../../domain/survival';
 import type { MatchPlayer, MatchView } from '../../../../domain/types';
+import { useMyPlace } from '../../../../game/hooks/useBoard';
 import { Button } from '../../kit/Button';
 import { Figure } from '../../kit/Figure';
 import { Fit } from '../../kit/Layout';
@@ -48,6 +50,7 @@ export function DuelResult({ view, userId, opponentName, onOpenLobby, onOpenHub 
   const mine = players.find(p => p.user_id === userId);
   const theirs = players.find(p => p.user_id !== userId);
   const rating = ratingChange(mine);
+  const place = useMyPlace('duel', userId, { enabled: match.ranked, refresh: match.id });
   return (
     <Page tone="duel">
       <Eyebrow>Star Duel · {match.ranked ? 'ranked · ' : ''}par {match.level.k}</Eyebrow>
@@ -60,6 +63,7 @@ export function DuelResult({ view, userId, opponentName, onOpenLobby, onOpenHub 
         </div>
       )}
       {rating && <div className={styles.line} aria-label="rating change"><span>Rating</span><span>{rating.before} → {rating.after} ({signed(rating.delta)})</span></div>}
+      {rating && place && <div className={styles.line} aria-label="ladder place"><span>Ladder</span><span>{placeText(place.entry, place.total)}</span></div>}
       <p className={styles.lead}>{NOTE[outcome]}</p>
       <div className={styles.resultActions}>
         <Button block kind="mint" onClick={onOpenLobby}>Back to the lobby</Button>
