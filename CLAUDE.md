@@ -258,14 +258,21 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
     levels and as tall as its size, coloured by stars, with the recipe bands
     under it, arrow keys walk it), generates the pool slot by slot in
     a worker (`services/generation/poolClient.ts`, each level re-checked with
-    `solve` for a unique cover), play-tests it and publishes it with
+    `solve` for a unique cover; **no sky twice in a pool**: each slot is passed the
+    `poolKey`s — `graphIdentity`'s `shapeKey` — of the slots before it and
+    `generateSlot` passes over a retry that repeats one, flagging `duplicate` only
+    when nothing new turns up, which `publishBlockers` refuses and the publish tools
+    warn about), play-tests it and publishes it with
     `publish_level_pool`. `app/sql/2026-10-20-level-pools.sql` (guarded by
     `sql/ci/checks/level-pools.sql`): `level_pools` (one row per published
     version, highest is live) and `pool_levels`; RLS on, readable by all,
     writable only by that function. The **server picks the level**:
     `campaign_level(n)` (a player who cleared `n` keeps the version they cleared
     it on, `campaign_clears.pool_version`), `survival_level(seed, step)` (tier =
-    step, hash pick; a run stores its seed and pool, and `submit_survival_site`
+    step, capped at the last; the run walks each tier **without replacement** in an
+    order shuffled by its seed — `app/sql/2026-10-30-survival-no-repeat.sql`, check
+    `sql/ci/checks/survival-no-repeat.sql` — so the last tier's size is how deep a run
+    goes before a sky comes back; a run stores its seed and pool, and `submit_survival_site`
     re-derives the level), `create_match(opponent, tier)` (random from the match
     pool, stored in `matches.level`). The client reads them through
     `services/levels/poolLevelSource.ts` (`levelSource`); `mockLevelSource` stays

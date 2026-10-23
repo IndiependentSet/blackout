@@ -83,8 +83,11 @@ async function publishPools(modes: readonly PoolMode[]) {
     const slots = poolSlots(mode, curve);
     const entries = [];
     const t0 = Date.now();
+    const keys = new Set<string>();   // no sky twice in a pool
     for (const [i, slot] of slots.entries()) {
-      const { level } = generateSlot(curve, slot);
+      const { level, key, duplicate } = generateSlot(curve, slot, keys);
+      if (duplicate) console.warn(`\n${mode} slot ${slot.slot}: repeats a sky already in the pool (nothing new found)`);
+      keys.add(key);
       const r = solve(level);
       if (r.count !== 1 || r.k !== level.k) throw new Error(`${mode} slot ${slot.slot}: not a unique cover`);
       entries.push({ slot: slot.slot, tier: slot.tier, level });

@@ -12,6 +12,7 @@ const spawnWorker = (): PoolWorker =>
   new Worker(new URL('./pool.worker.ts', import.meta.url), { type: 'module' });
 
 export function generateSlotAsync(curve: LevelCurve, slot: PoolSlot,
-  { signal, spawn = spawnWorker }: { signal?: AbortSignal; spawn?: () => PoolWorker } = {}): Promise<Result<SlotResult>> {
-  return workerCall({ curve, slot }, { signal, spawn });
+  { signal, avoid, spawn = spawnWorker }: { signal?: AbortSignal; avoid?: string[]; spawn?: () => PoolWorker } = {},
+): Promise<Result<SlotResult>> {
+  return workerCall({ curve, slot, avoid }, { signal, spawn });
 }

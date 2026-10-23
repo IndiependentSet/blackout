@@ -5,6 +5,7 @@
    run you are, a 1vs1 tier is a difficulty). Plain JSON, like a schedule, so
    it is stored beside the pool it made. Pure. */
 import type { PoolMode } from '../gameModes';
+import { shapeKey } from '../graphIdentity';
 import { rngFromSeed } from '../rng';
 import { CAMPAIGN_LEVELS, type GenOptions, type Level, type Stars } from '../types';
 import { constraintFilter, gameConstraints, type LevelConstraints } from './constraints';
@@ -50,25 +51,47 @@ export function poolSlots(mode: PoolMode, curve: LevelCurve): PoolSlot[] {
   return out;
 }
 
-/** The level for a slot, and which retry (or the fallback) produced it. Same curve and slot, same level
-    (with the clock off): a pool is made once and frozen, so the clock budget does no harm here. */
-export function generateSlot(curve: LevelCurve, { slot, tier }: PoolSlot): SiteOutcome {
+/** What two levels of a pool are compared by: the abstract graph (graphIdentity's shapeKey), so the same sky
+    drawn somewhere else on the lattice still counts as the same. */
+export const poolKey = (level: Level): string => shapeKey(level).key;
+
+/** A slot's level, with its pool key, and whether it repeats a level already in the pool (only when nothing
+    else could be found: every retry and the fallback came out as graphs the pool already has). */
+export interface SlotOutcome extends SiteOutcome { key: string; duplicate: boolean }
+
+const NONE: ReadonlySet<string> = new Set();
+
+/** The level for a slot, and which retry (or the fallback) produced it. Same curve, slot and `avoid`, same level
+    (with the clock off): a pool is made once and frozen, so the clock budget does no harm here.
+    `avoid` holds the keys (poolKey) of the levels already in the pool: a retry that comes out as one of them is
+    passed over like a near miss, so a pool never holds the same sky twice. Built slot by slot, in order. */
+export function generateSlot(curve: LevelCurve, { slot, tier }: PoolSlot, avoid: ReadonlySet<string> = NONE): SlotOutcome {
   const rule = curve.tiers[tier];
   if (!rule) throw new RangeError(`no tier ${tier} in the curve`);
   const accept = constraintFilter(gameConstraints(rule.constraints));
-  /* a retry only counts when it met every rule; the first near miss is kept in case no retry does */
-  let miss: SiteOutcome | null = null;
+  /* a retry only counts when it met every rule and is new to the pool; the first near miss is kept in case no
+     retry is, and the first repeat in case nothing else turns up at all */
+  let miss: SlotOutcome | null = null;
+  let repeat: SlotOutcome | null = null;
   for (let salt = 0; salt < curve.retries; salt++) {
     const rng = rngFromSeed(curve.seed * 7919 + slot * 104729 + salt * 31);
     const { level, report } = generateWith(rng, rule.size, rule.diff, rule.options, accept);
-    if (level && !report.fallback) return { level, salt };
-    if (level && !miss) miss = { level, salt };
+    if (!level) continue;
+    const key = poolKey(level);
+    if (avoid.has(key)) { repeat ??= { level, salt, key, duplicate: true }; continue; }
+    if (!report.fallback) return { level, salt, key, duplicate: false };
+    miss ??= { level, salt, key, duplicate: false };
   }
   if (miss) return miss;
   const { level } = generateWith(rngFromSeed(curve.seed + slot), rule.size, curve.fallback.diff, curve.fallback.options,
     constraintFilter(gameConstraints()));
-  if (!level) throw new Error(`slot ${slot} produced no level, even with the fallback rules`);
-  return { level, salt: null };
+  if (level) {
+    const key = poolKey(level);
+    if (!avoid.has(key)) return { level, salt: null, key, duplicate: false };
+    repeat ??= { level, salt: null, key, duplicate: true };
+  }
+  if (repeat) return repeat;
+  throw new Error(`slot ${slot} produced no level, even with the fallback rules`);
 }
 
 /** A campaign's levels laid out easiest first. The ramp aims each slot a little above the one before, but every
@@ -102,6 +125,13 @@ export function curveRuleErrors(mode: PoolMode, curve: LevelCurve): string[] {
   }
   return errors;
 }
+
+/* a run plays one level of each tier, then walks the last one without repeats (pool_pick): its size is how deep a
+   run goes before a sky comes round again */
+const SURVIVAL_LAST_TIER = 40;
+/* the five-junction opener (par 2 at most, a junction of degree 3) only comes in about three different skies, so
+   asking for more would put the same one in the pool twice */
+const SURVIVAL_OPENERS = 3;
 
 const tierFrom = (i: number, count: number): CurveTier => ({ count, ...DEFAULT_SCHEDULE.sites[i] });
 const FALLBACK = DEFAULT_SCHEDULE.fallback;
@@ -140,7 +170,7 @@ export const DEFAULT_CURVES: Record<PoolMode, LevelCurve> = {
   campaign: { version: 1, seed: 1, retries: 14, fallback: FALLBACK, tiers: campaignRamp() },
   /* a run starts small and deepens: step n plays tier n, the last tier once they run out */
   survival: { version: 1, seed: 1, retries: DEFAULT_SCHEDULE.retries, fallback: FALLBACK,
-    tiers: [0, 1, 2, 3, 4].map(i => tierFrom(i, 6)) },
+    tiers: [0, 1, 2, 3, 4].map(i => tierFrom(i, i === 0 ? SURVIVAL_OPENERS : i === 4 ? SURVIVAL_LAST_TIER : 6)) },
   /* a challenge picks a tier: a middling puzzle, or a hard one. A job publishes a fresh pool every night, with the
      day as the seed (tools/publish-match-pool.ts), so the maps do not repeat for long */
   match: { version: 1, seed: 1, retries: DEFAULT_SCHEDULE.retries, fallback: FALLBACK,

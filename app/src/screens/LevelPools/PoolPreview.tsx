@@ -43,13 +43,13 @@ export function PoolPreview({ build, current, onGenerate, onStop }: Props) {
       {build && (
         <div className={cx(styles.grid, !current && pg.stale)} aria-label="the pool">
           {build.results.map((r, i) => (
-            <button key={r.slot} type="button" className={cx(styles.cell, i === open && styles.cellOpen, !r.unique && styles.bad)}
+            <button key={r.slot} type="button" className={cx(styles.cell, i === open && styles.cellOpen, (!r.unique || r.duplicate) && styles.bad)}
               onClick={() => setOpen(i)}>
               <b>#{r.slot}</b>
               <span>tier {r.tier + 1} · {r.level.nodes.length} nodes</span>
               <span>par {r.level.k} · {'★'.repeat(r.level.stars)}</span>
-              <span className={cx((r.salt === null || !r.unique) && styles.slow)}>
-                {r.unique ? (r.salt === null ? 'fallback' : 'retry ' + r.salt) : 'NOT UNIQUE'} · {r.ms} ms
+              <span className={cx((r.salt === null || !r.unique || r.duplicate) && styles.slow)}>
+                {!r.unique ? 'NOT UNIQUE' : r.duplicate ? 'REPEAT' : r.salt === null ? 'fallback' : 'retry ' + r.salt} · {r.ms} ms
               </span>
             </button>
           ))}
