@@ -18,14 +18,16 @@ export interface SlotResult {
   key: string;
   /** the same sky as a level built before it: nothing new could be found for this slot */
   duplicate: boolean;
+  /** drawn by hand (a hand-drawn tier), not generated */
+  manual?: boolean;
   /** generation wall time on this machine */
   ms: number;
 }
 
 export function generateSlotTimed({ curve, slot, avoid = [] }: SlotRequest, now: () => number = () => performance.now()): SlotResult {
   const t0 = now();
-  const { level, salt, key, duplicate } = generateSlot(curve, slot, new Set(avoid));
+  const { level, salt, key, duplicate, manual } = generateSlot(curve, slot, new Set(avoid));
   /* checked again here, not trusted from the generator: this is the only place a non-unique level can be stopped */
   const r = solve(level);
-  return { ...slot, level, salt, key, duplicate, unique: r.count === 1 && r.k === level.k, ms: Math.round(now() - t0) };
+  return { ...slot, level, salt, key, duplicate, ...(manual ? { manual } : {}), unique: r.count === 1 && r.k === level.k, ms: Math.round(now() - t0) };
 }
