@@ -96,3 +96,19 @@
 /* the Sky view: the game's own board, given a height to fit into */
 .sky { height: min(68vh, 640px); min-height: 280px; padding: 12px 0; box-sizing: border-box; }
 @media (max-width: 760px) { .sky { height: 60vh; } }
+
+/* what an edit reaches (one sky or tier, or all), and the settings that cancel out */
+.scope { display: grid; gap: 6px; margin: 12px 0 4px; padding-bottom: 12px; border-bottom: 1px solid var(--sg-hairline); }
+.scopeLabel { font-size: 12px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--sg-mint); }
+.scopeChoice { display: flex; padding: 3px; border-radius: 999px; background: var(--sg-well); box-shadow: inset 0 0 0 1px var(--sg-hairline); }
+.scopeOption {
+  flex: 1; min-width: 0; height: 30px; padding: 0 10px; border: 0; border-radius: 999px; cursor: pointer;
+  background: transparent; color: var(--sg-text-soft); font: 700 12.5px var(--sg-font-body); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.scopeOption:hover { color: var(--sg-text); }
+.scopeOn, .scopeOn:hover { background: color-mix(in srgb, var(--sg-gold) 16%, transparent); color: var(--sg-gold); font-weight: 800; }
+.scopeNote { margin: 0; font-size: 12px; line-height: 1.45; color: var(--sg-gold); }
+.warnBox {
+  margin: 12px 0 4px; padding: 10px 12px 10px 28px; border-radius: 14px; display: grid; gap: 6px;
+  background: color-mix(in srgb, var(--sg-mars) 14%, transparent); color: var(--sg-mars-1); font-size: 12px; line-height: 1.45;
+}

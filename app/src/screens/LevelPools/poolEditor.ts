@@ -5,9 +5,9 @@ import type { PoolMode } from '../../domain/gameModes';
 import {
   DEFAULT_CURVES, withShape, type CurveTier, type LevelConstraints, type LevelCurve, type Shape,
 } from '../../domain/generation';
-import { mergeConstraints } from '../GenerationConfig/editor';
+import { applyConstraints, applyParams, type EditScope } from '../Playground/scope';
 import {
-  fallbackToParams, paramsReducer, paramsToFallback, paramsToSite, siteToParams, type ParamsAction, type PlaygroundParams,
+  fallbackToParams, paramsReducer, paramsToFallback, siteToParams, type ParamsAction, type PlaygroundParams,
 } from '../Playground/params';
 
 /** a tier index, or the fallback rule */
@@ -17,6 +17,8 @@ export interface PoolEditor {
   mode: PoolMode;
   curve: LevelCurve;
   tab: PoolTab;
+  /** whether a settings-panel edit reaches the open tier only, or every tier */
+  scope: EditScope;
   /** what the draft started from, for the header */
   basis: string;
   dirty: boolean;
@@ -25,6 +27,7 @@ export interface PoolEditor {
 export type PoolEditorAction =
   | { type: 'load'; curve: LevelCurve; basis: string }
   | { type: 'tab'; tab: PoolTab }
+  | { type: 'scope'; scope: EditScope }
   | { type: 'params'; action: ParamsAction }
   | { type: 'constraints'; patch: Partial<Record<keyof LevelConstraints, number | null>> }
   | { type: 'count'; value: number }
@@ -39,7 +42,7 @@ export const MAX_TIER_COUNT = 400;
 const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, Math.round(n)));
 
 export const initialPoolEditor = (mode: PoolMode = 'campaign'): PoolEditor =>
-  ({ mode, curve: DEFAULT_CURVES[mode], tab: 0, basis: 'the default', dirty: false });
+  ({ mode, curve: DEFAULT_CURVES[mode], tab: 0, scope: 'one', basis: 'the default', dirty: false });
 
 /** The params the panel shows for the open rule. The fallback runs at each tier's own size; it previews at the first. */
 export function poolParams(s: PoolEditor): PlaygroundParams {
@@ -68,12 +71,15 @@ export function poolEditorReducer(s: PoolEditor, a: PoolEditorAction): PoolEdito
   switch (a.type) {
     case 'load': return { ...s, curve: a.curve, basis: a.basis, dirty: false, tab: typeof s.tab === 'number' ? Math.min(s.tab, a.curve.tiers.length - 1) : s.tab };
     case 'tab': return { ...s, tab: a.tab === 'fallback' ? a.tab : clamp(a.tab, 0, s.curve.tiers.length - 1) };
+    case 'scope': return { ...s, scope: a.scope };
     case 'params': {
-      const next = paramsReducer(poolParams(s), a.action);
-      if (s.tab === 'fallback') return edit({ ...s.curve, fallback: paramsToFallback(next) });
-      return withTier(t => ({ count: t.count, ...paramsToSite(next, t.constraints) }));
+      if (s.tab === 'fallback') return edit({ ...s.curve, fallback: paramsToFallback(paramsReducer(poolParams(s), a.action)) });
+      if (!s.curve.tiers[s.tab]) return s;
+      return edit({ ...s.curve, tiers: applyParams(s.curve.tiers, s.tab, a.action, s.scope) });
     }
-    case 'constraints': return withTier(t => mergeConstraints(t, a.patch));
+    case 'constraints':
+      if (s.tab === 'fallback' || !s.curve.tiers[s.tab]) return s;
+      return edit({ ...s.curve, tiers: applyConstraints(s.curve.tiers, s.tab, a.patch, s.scope) });
     case 'count': return withTier(t => ({ ...t, count: clamp(a.value, 1, MAX_TIER_COUNT) }));
     case 'shape': {
       const last = s.curve.tiers.length - 1;

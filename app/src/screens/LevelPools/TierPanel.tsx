@@ -6,6 +6,7 @@ import { ConstraintsSection } from '../GenerationConfig/ConstraintsSection';
 import { Num, Row } from '../Playground/controls';
 import { Info } from '../Playground/Info';
 import { ParamsPanel } from '../Playground/ParamsPanel';
+import { ScopeSwitch } from '../Playground/ScopeSwitch';
 import { toGenOptions } from '../Playground/params';
 import { RecipeBar } from '../Recipes/RecipeBar';
 import { MAX_TIER_COUNT, openTier, poolParams, tierLevels, type PoolEditor, type PoolEditorAction } from './poolEditor';
@@ -14,6 +15,9 @@ import styles from './LevelPools.module.css';
 
 /** The open rule of the curve, with every generator setting: a tier (its levels, the recipe it matches, the full
     settings panel and its constraints) or the fallback. */
+const levelsText = (mode: PoolEditor['mode'], l: { first: number; last: number }) =>
+  `${mode === 'campaign' ? 'level' : 'slot'}${l.last > l.first ? 's' : ''} ${l.first}${l.last > l.first ? `–${l.last}` : ''}`;
+
 export function TierPanel({ state, dispatch, recipes }: { state: PoolEditor; dispatch: Dispatch<PoolEditorAction>; recipes: Resource<Recipe[]> }) {
   const tier = openTier(state);
   const i = typeof state.tab === 'number' ? state.tab : -1;
@@ -46,7 +50,9 @@ export function TierPanel({ state, dispatch, recipes }: { state: PoolEditor; dis
       <RecipeBar key={String(state.tab)} options={toGenOptions(params)} recipes={recipes}
         range={tier ? { unit: 'tier', index: i, count } : null}
         onApply={(shape, range) => dispatch(range ? { type: 'shape', shape, from: range.from, to: range.to } : { type: 'params', action: { type: 'shape', shape } })} />
-      <ParamsPanel p={params} dispatch={action => dispatch({ type: 'params', action })} use={tier ? 'site' : 'fallback'}>
+      <ParamsPanel p={params} dispatch={action => dispatch({ type: 'params', action })} use={tier ? 'site' : 'fallback'}
+        banner={tier && levels && count > 1 && <ScopeSwitch scope={state.scope} onScope={scope => dispatch({ type: 'scope', scope })}
+          one={`Tier ${i + 1} · ${levelsText(state.mode, levels)}`} all={`All ${count} tiers`} />}>
         {tier && <ConstraintsSection c={tier.constraints ?? {}} onChange={patch => dispatch({ type: 'constraints', patch })} />}
       </ParamsPanel>
     </div>

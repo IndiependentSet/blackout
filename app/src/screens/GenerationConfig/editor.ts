@@ -1,8 +1,9 @@
 /* The generation config page's draft: a whole schedule being edited one rule
    at a time (a site, or the fallback) through the playground's params. Pure. */
-import { DEFAULT_SCHEDULE, withShape, type GenerationSchedule, type LevelConstraints, type Shape, type SiteRule } from '../../domain/generation';
+import { DEFAULT_SCHEDULE, withShape, type GenerationSchedule, type LevelConstraints, type Shape } from '../../domain/generation';
+import { applyConstraints, applyParams, type EditScope } from '../Playground/scope';
 import {
-  fallbackToParams, paramsReducer, paramsToFallback, paramsToSite, siteToParams, type ParamsAction, type PlaygroundParams,
+  fallbackToParams, paramsReducer, paramsToFallback, siteToParams, type ParamsAction, type PlaygroundParams,
 } from '../Playground/params';
 
 /** a site index, or the fallback rule */
@@ -11,6 +12,8 @@ export type Tab = number | 'fallback';
 export interface EditorState {
   schedule: GenerationSchedule;
   tab: Tab;
+  /** whether a settings-panel edit reaches the open sky only, or every sky */
+  scope: EditScope;
   /** where the draft came from, e.g. "the default" or "day 182's config" */
   basis: string;
   /** edited since it was loaded or saved */
@@ -24,11 +27,12 @@ export type EditorAction =
   /** a recipe's shape onto skies from..to (inclusive, clamped) */
   | { type: 'shape'; shape: Shape; from: number; to: number }
   | { type: 'tab'; tab: Tab }
+  | { type: 'scope'; scope: EditScope }
   | { type: 'load'; schedule: GenerationSchedule; basis: string }
   | { type: 'saved'; basis: string };
 
 export const initialEditor = (schedule: GenerationSchedule = DEFAULT_SCHEDULE, basis = 'the default'): EditorState =>
-  ({ schedule, tab: 0, basis, dirty: false });
+  ({ schedule, tab: 0, scope: 'one', basis, dirty: false });
 
 /** The params the panel shows for the open tab. */
 export function tabParams(s: EditorState): PlaygroundParams {
@@ -40,30 +44,17 @@ export function tabParams(s: EditorState): PlaygroundParams {
 export const tabConstraints = (s: EditorState): LevelConstraints =>
   (s.tab === 'fallback' ? {} : s.schedule.sites[s.tab].constraints ?? {});
 
-/** A rule's constraints with a patch applied: a number sets one, null turns it off; none left drops the field. */
-export function mergeConstraints<R extends Pick<SiteRule, 'constraints'>>(rule: R, patch: Partial<Record<keyof LevelConstraints, number | null>>): R {
-  const merged: Record<string, number | null | undefined> = { ...rule.constraints, ...patch };
-  const constraints = Object.fromEntries(Object.entries(merged).filter(([, v]) => typeof v === 'number')) as LevelConstraints;
-  const { constraints: _old, ...rest } = rule;
-  return (Object.keys(constraints).length ? { ...rest, constraints } : rest) as R;
-}
-
 const edited = (s: EditorState, schedule: GenerationSchedule): EditorState => ({ ...s, schedule, dirty: true });
-
-function withSite(s: EditorState, idx: number, update: (site: GenerationSchedule['sites'][number]) => GenerationSchedule['sites'][number]) {
-  return edited(s, { ...s.schedule, sites: s.schedule.sites.map((site, i) => (i === idx ? update(site) : site)) });
-}
 
 export function editorReducer(s: EditorState, a: EditorAction): EditorState {
   switch (a.type) {
     case 'params': {
-      const next = paramsReducer(tabParams(s), a.action);
-      if (s.tab === 'fallback') return edited(s, { ...s.schedule, fallback: paramsToFallback(next) });
-      return withSite(s, s.tab, site => paramsToSite(next, site.constraints));
+      if (s.tab === 'fallback') return edited(s, { ...s.schedule, fallback: paramsToFallback(paramsReducer(tabParams(s), a.action)) });
+      return edited(s, { ...s.schedule, sites: applyParams(s.schedule.sites, s.tab, a.action, s.scope) });
     }
     case 'constraints': {
       if (s.tab === 'fallback') return s;
-      return withSite(s, s.tab, site => mergeConstraints(site, a.patch));
+      return edited(s, { ...s.schedule, sites: applyConstraints(s.schedule.sites, s.tab, a.patch, s.scope) });
     }
     case 'retries': return edited(s, { ...s.schedule, retries: a.value });
     case 'shape': {
@@ -72,7 +63,8 @@ export function editorReducer(s: EditorState, a: EditorAction): EditorState {
       return edited(s, { ...s.schedule, sites: s.schedule.sites.map((site, i) => (i >= lo && i <= hi ? { ...site, options: withShape(site.options, a.shape) } : site)) });
     }
     case 'tab': return { ...s, tab: a.tab };
-    case 'load': return { ...initialEditor(a.schedule, a.basis), tab: s.tab };
+    case 'scope': return { ...s, scope: a.scope };
+    case 'load': return { ...initialEditor(a.schedule, a.basis), tab: s.tab, scope: s.scope };
     case 'saved': return { ...s, basis: a.basis, dirty: false };
   }
 }

@@ -5,6 +5,7 @@ import { Check, Num, Range, Row, Select } from './controls';
 import { Info } from './Info';
 import type { ParamsAction, PlaygroundParams } from './params';
 import { FreeSection, GadgetSection, HardnessSection } from './sections';
+import { paramWarnings } from './warnings';
 import styles from './Playground.module.css';
 
 const REACH = [{ v: 1, label: '1 · orthogonal' }, { v: 1.5, label: '1.5 · + diagonals' },
@@ -17,17 +18,24 @@ const REACH = [{ v: 1, label: '1 · orthogonal' }, { v: 1.5, label: '1.5 · + di
 export type PanelUse = 'playground' | 'site' | 'fallback' | 'recipe';
 
 /** Every knob the generator exposes, grouped the way they interact. */
-export function ParamsPanel({ p, dispatch, onReroll, use = 'playground', children }: {
+export function ParamsPanel({ p, dispatch, onReroll, use = 'playground', banner, children }: {
   p: PlaygroundParams; dispatch: Dispatch<ParamsAction>; onReroll?: () => void; use?: PanelUse;
+  /** shown first: what the edits reach (a ScopeSwitch) */
+  banner?: ReactNode;
   /** extra sections, shown under Graph */
   children?: ReactNode;
 }) {
   const set = (patch: Partial<PlaygroundParams>) => dispatch({ type: 'set', patch });
   const free = use === 'playground';
   const recipe = use === 'recipe';
+  const warnings = paramWarnings(p);
 
   return (
     <div className={styles.panel}>
+      {banner}
+      {warnings.length > 0 && <ul className={styles.warnBox} aria-label="settings that cancel out">
+        {warnings.map(w => <li key={w}>{w}</li>)}
+      </ul>}
       {free && <section>
         <h3>Presets <Info k="presets" /></h3>
         <div className={styles.chips}>

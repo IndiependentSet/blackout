@@ -4,6 +4,7 @@ import type { Resource } from '../../hooks/useResource';
 import { Button } from '../../themes/stargazer/kit/Button';
 import { Num, Row } from '../Playground/controls';
 import { ParamsPanel } from '../Playground/ParamsPanel';
+import { ScopeSwitch } from '../Playground/ScopeSwitch';
 import { toGenOptions } from '../Playground/params';
 import { RecipeBar } from '../Recipes/RecipeBar';
 import { ConstraintsSection } from './ConstraintsSection';
@@ -41,7 +42,9 @@ export function SchedulePanel({ state, dispatch, recipes }: { state: EditorState
       <RecipeBar key={String(tab)} options={toGenOptions(params)} recipes={recipes}
         range={typeof tab === 'number' ? { unit: 'sky', index: tab, count: schedule.sites.length } : null}
         onApply={(shape, range) => dispatch(range ? { type: 'shape', shape, from: range.from, to: range.to } : { type: 'params', action: { type: 'shape', shape } })} />
-      <ParamsPanel p={params} dispatch={action => dispatch({ type: 'params', action })} use={site ? 'site' : 'fallback'}>
+      <ParamsPanel p={params} dispatch={action => dispatch({ type: 'params', action })} use={site ? 'site' : 'fallback'}
+        banner={site && <ScopeSwitch scope={state.scope} onScope={scope => dispatch({ type: 'scope', scope })}
+          one={`Sky ${(tab as number) + 1}`} all={`All ${schedule.sites.length} skies`} />}>
         {site && <ConstraintsSection c={tabConstraints(state)} onChange={patch => dispatch({ type: 'constraints', patch })} />}
       </ParamsPanel>
     </div>

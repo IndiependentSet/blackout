@@ -19,6 +19,8 @@
 .bar:hover i, .bar:focus-visible i { opacity: .85; }
 .bar:focus-visible { outline: 2px solid var(--sg-cream); outline-offset: 2px; }
 .barOn i { opacity: 1; box-shadow: 0 0 0 2px var(--sg-cream); }
+/* editing all tiers at once: every bar is part of the edit */
+.barAll i { opacity: 1; }
 /* a phone fits a hundred tiers by closing the gaps */
 @media (max-width: 760px) { .bars, .bands { gap: 1px; } .bar, .bar i { border-radius: 2px; } }
 .diff1 { background: var(--sg-mint); }

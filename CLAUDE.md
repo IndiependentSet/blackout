@@ -157,7 +157,13 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
     way: the open rule on the left (its `RecipeBar`, then the full `ParamsPanel`,
     so every generator option is in reach everywhere), the preview in the
     middle, save/publish on the right; a dirty draft asks before the page is left
-    (`hooks/useUnsavedGuard`). They wear Stargazer's look: `app/admin/AdminPage`
+    (`hooks/useUnsavedGuard`). On Tonight and the pool pages a `ScopeSwitch` at
+    the top of the panel says what an edit reaches — the open sky/tier, or all
+    of them (`screens/Playground/scope.ts`: "all" copies only the settings the
+    edit changed, so each rule keeps its own size, stars, budget and hardness).
+    The panel also lists settings that cancel each other out
+    (`Playground/warnings.ts`: a density above what max degree or edge reach
+    allows, a max degree the reach caps, a min degree nothing can meet). They wear Stargazer's look: `app/admin/AdminPage`
     puts them on Stargazer's night (`.sg` tokens, starfield, the nav groups as
     pill tab bars), they build from `themes/stargazer/kit` (its `Button` has an
     `xs` size for their dense panels, `Note`) and Stargazer's tokens only, the

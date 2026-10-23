@@ -38,7 +38,7 @@ export function TierStrip({ state, recipes, onTab }: { state: PoolEditor; recipe
             const { first: a, last: b } = tierLevels(state, i);
             return (
               <button key={i} type="button" tabIndex={i === (typeof tab === 'number' ? tab : 0) ? 0 : -1}
-                className={cx(styles.bar, i === tab && styles.barOn)} style={{ flexGrow: t.count }}
+                className={cx(styles.bar, i === tab && styles.barOn, state.scope === 'all' && typeof tab === 'number' && styles.barAll)} style={{ flexGrow: t.count }}
                 aria-pressed={i === tab} aria-label={`Tier ${i + 1}, ${levelsLabel(a, b)}, ${t.size} stars, ${t.diff} of 3`}
                 title={`Tier ${i + 1} · ${levelsLabel(a, b)} · ${t.size} stars · ${'★'.repeat(t.diff)}`} onClick={() => onTab(i)}>
                 <i className={styles['diff' + t.diff]} style={{ height: `${heights[i] * 100}%` }} />
