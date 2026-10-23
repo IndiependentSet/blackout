@@ -114,7 +114,14 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
       `kit/` (Page and its skies, Starfield, Button, TabBar, Moon, MiniStar,
       Planet, Figure — a still sky for previews, results and the atlas —,
       icons), `play/` (`SkyPlay` — the one board screen every mode uses, phone
-      column or desktop three-column —, `SkyBoard`, the telescope, `sky.ts`)
+      column or desktop three-column —, `SkyBoard`, the telescope, `sky.ts`, and `warp.ts` — where each
+      star is drawn: the lattice taken off the grid with a seeded tilt,
+      stretch, slant, slow drift, per-star nudge and longer/shorter tails, plus
+      a size per star; seeded by the figure itself (`skySeed`), so a sky, its
+      preview and its atlas page match for every player; stars that would cross
+      a line, crowd another star, sit on a line not theirs or fold two lines
+      together are calmed one by one, then put back on their cells. Drawing
+      only: the puzzle is untouched, and arrow keys move by the drawn positions)
       and `screens/` (Tonight, FirstNight, Sky — daily play and Night
       charted —, Atlas, Voyage, Rush, Duel, Observatory). It never imports
       `src/ui/` (that kit is CATASTROPHE INC.'s).
@@ -347,7 +354,8 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
 
 *(This and the next section are the CATASTROPHE INC. board, in `themes/catastrophe/`.
 Stargazer's `SkyBoard` is a plain SVG fitted to the sky — a small graph needs no
-camera — with its star size growing for big skies, capped, in `play/sky.ts`.)*
+camera — with its star size growing for big skies, capped, in `play/sky.ts`, and
+its stars placed off the lattice by `play/warp.ts`.)*
 
 Levels used to be scaled down to fit a fixed viewBox, so spacing collapsed as
 graphs grew (150 world units per lattice step in house 1, 40 in the worst house

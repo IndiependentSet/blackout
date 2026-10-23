@@ -36,7 +36,7 @@ export const Figure = memo(function Figure({ figure, mode, lit = [], className }
       {mode === 'dim' && <>
         {sky.lines.map(l => <line key={l.i} className={styles.figDark} x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2} strokeWidth={3 * s} strokeDasharray={`${2 * s} ${10 * s}`} />)}
         {sky.stars.map(n => (
-          <g key={n.i}><circle cx={n.x} cy={n.y} r={14 * s} className={styles.figHalo} /><circle cx={n.x} cy={n.y} r={6.5 * s} className={styles.figDim} /></g>
+          <g key={n.i}><circle cx={n.x} cy={n.y} r={14 * s * n.size} className={styles.figHalo} /><circle cx={n.x} cy={n.y} r={6.5 * s * n.size} className={styles.figDim} /></g>
         ))}
       </>}
       {mode === 'lit' && <>
@@ -49,14 +49,14 @@ export const Figure = memo(function Figure({ figure, mode, lit = [], className }
         {sky.stars.map(n => n.lit ? (
           <g key={n.i}>
             <circle cx={n.x} cy={n.y} r={44 * s} fill={glow} />
-            <path d={STAR_PATH} transform={`translate(${n.x} ${n.y}) scale(${s})`} className={styles.figStar} />
+            <path d={STAR_PATH} transform={`translate(${n.x} ${n.y}) scale(${s * n.size})`} className={styles.figStar} />
           </g>
-        ) : <circle key={n.i} cx={n.x} cy={n.y} r={7 * s} className={styles.figStar} />)}
+        ) : <circle key={n.i} cx={n.x} cy={n.y} r={7 * s * n.size} className={styles.figStar} />)}
       </>}
       {mode === 'atlas' && <>
         {sky.lines.map(l => <line key={l.i} className={styles.figLine} x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2} strokeWidth={5 * s} />)}
         {sky.stars.map(n => (
-          <g key={n.i}><circle cx={n.x} cy={n.y} r={30 * s} fill={glow} /><circle cx={n.x} cy={n.y} r={9 * s} className={styles.figStar} /></g>
+          <g key={n.i}><circle cx={n.x} cy={n.y} r={30 * s * n.size} fill={glow} /><circle cx={n.x} cy={n.y} r={9 * s * n.size} className={styles.figStar} /></g>
         ))}
       </>}
     </svg>

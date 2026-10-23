@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Level, SiteResult } from '../../../domain/types';
+import { skyLayout } from './warp';
 import { SKY_STEP, activeScope, darkLabel, scopeForKey, skyEntries, skyMessage, skyOf, starfield } from './sky';
 
 /* a path of three stars, 0 - 1 - 2: par is the middle one */
@@ -9,10 +10,15 @@ const path: Level = {
 };
 
 describe('skyOf', () => {
-  it('puts the top-left star at the origin and lights lines touching a lit star', () => {
+  it('draws the stars where the warp puts them, the sky starting at the origin, and lights lines touching a lit star', () => {
     const sky = skyOf(path, [0]);
-    expect(sky.stars[0]).toMatchObject({ x: 0, y: 0, lit: true });
-    expect(sky.stars[2]).toMatchObject({ x: 2 * SKY_STEP, y: 0, lit: false });
+    const { at } = skyLayout(path);
+    expect(Math.min(...sky.stars.map(s => s.x))).toBeCloseTo(0);
+    expect(Math.min(...sky.stars.map(s => s.y))).toBeCloseTo(0);
+    expect(sky.stars[2].x - sky.stars[0].x).toBeCloseTo((at[2].c - at[0].c) * SKY_STEP);
+    expect(sky.stars[2].y - sky.stars[0].y).toBeCloseTo((at[2].r - at[0].r) * SKY_STEP);
+    expect(sky.stars.map(s => s.lit)).toEqual([true, false, false]);
+    expect(sky.hit).toBeLessThanOrEqual(45);
     expect(sky.lines.map(l => l.lit)).toEqual([true, false]);
     expect(sky.dark).toBe(1);
     expect(sky.scale).toBe(1);

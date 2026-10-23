@@ -1,12 +1,19 @@
 import { coveredEdges } from '../../../domain/cover';
 import { rngFromSeed } from '../../../domain/rng';
 import type { Hint, HintTier, Level, SiteResult } from '../../../domain/types';
+import { skyLayout } from './warp';
 
-/** World units per lattice step on the sky board. */
+/** World units per line on the sky board (the median line is this long). */
 export const SKY_STEP = 100;
 const MARGIN = 48;
+/** a star's tap target, world units, at most: a warped sky shrinks it to half its closest pair */
+const HIT = 45;
 
-export interface SkyStar { i: number; x: number; y: number; lit: boolean }
+export interface SkyStar {
+  i: number; x: number; y: number; lit: boolean;
+  /** how big this star is drawn, around 1 */
+  size: number;
+}
 export interface SkyLine { i: number; x1: number; y1: number; x2: number; y2: number; lit: boolean }
 export interface Sky {
   viewBox: string;
@@ -16,29 +23,40 @@ export interface Sky {
   lines: SkyLine[];
   /** lines with no lit star at either end */
   dark: number;
+  /** tap target radius: never so big that two stars' targets overlap */
+  hit: number;
 }
 
-/** The level drawn as a patch of sky: stars on the lattice, lines lit once a star at either end is. */
+/** The level drawn as a patch of sky: stars where `skyLayout` puts them (off the lattice), lines lit once a
+    star at either end is. */
 export function skyOf(lv: Pick<Level, 'nodes' | 'edges'>, placed: readonly number[]): Sky {
   const lit = new Set(placed);
   const covered = coveredEdges(lv, placed);
-  const cs = lv.nodes.map(n => n.c);
-  const rs = lv.nodes.map(n => n.r);
-  const c0 = Math.min(...cs), r0 = Math.min(...rs);
-  const w = (Math.max(...cs) - c0) * SKY_STEP, h = (Math.max(...rs) - r0) * SKY_STEP;
-  const at = (i: number) => ({ x: (lv.nodes[i].c - c0) * SKY_STEP, y: (lv.nodes[i].r - r0) * SKY_STEP });
+  const { at: pos, size } = skyLayout(lv);
+  const xs = pos.map(p => p.c), ys = pos.map(p => p.r);
+  const x0 = Math.min(...xs), y0 = Math.min(...ys);
+  const w = (Math.max(...xs) - x0) * SKY_STEP, h = (Math.max(...ys) - y0) * SKY_STEP;
+  const at = (i: number) => ({ x: (pos[i].c - x0) * SKY_STEP, y: (pos[i].r - y0) * SKY_STEP });
   const scale = Math.min(2, Math.max(1, Math.max(w, h) / 400));
   const pad = MARGIN * scale;
   return {
     viewBox: `${-pad} ${-pad} ${w + 2 * pad} ${h + 2 * pad}`,
     scale,
-    stars: lv.nodes.map((_, i) => ({ i, ...at(i), lit: lit.has(i) })),
+    stars: lv.nodes.map((_, i) => ({ i, ...at(i), lit: lit.has(i), size: size[i] })),
     lines: lv.edges.map(([u, v], i) => {
       const a = at(u), b = at(v);
       return { i, x1: a.x, y1: a.y, x2: b.x, y2: b.y, lit: covered.has(i) };
     }),
     dark: lv.edges.length - covered.size,
+    hit: Math.min(HIT, closest(pos) * SKY_STEP / 2),
   };
+}
+
+function closest(pos: readonly { c: number; r: number }[]): number {
+  let d = Infinity;
+  for (let i = 0; i < pos.length; i++)
+    for (let j = i + 1; j < pos.length; j++) d = Math.min(d, Math.hypot(pos[i].c - pos[j].c, pos[i].r - pos[j].r));
+  return d;
 }
 
 const plural = (n: number, word: string) => n + ' ' + word + (n === 1 ? '' : 's');
