@@ -28,7 +28,7 @@ vi.mock('../supabase/client', () => ({
 }));
 vi.mock('../logger', () => ({ logger: { error: vi.fn() } }));
 
-const { setUsername, searchPlayers } = await import('./profiles');
+const { setUsername, searchPlayers, searchFilter } = await import('./profiles');
 const { getFriendships } = await import('./friendships');
 const { getBoardFor } = await import('./leaderboards');
 const { createSquad, joinSquadByCode } = await import('./squads');
@@ -60,6 +60,18 @@ describe('profiles', () => {
     expect(await searchPlayers('a', 'me')).toEqual({ ok: true, data: [] });
     responses.profiles = { data: [{ id: 'me' }, { id: 'you' }] };
     expect(await searchPlayers('yo', 'me')).toEqual({ ok: true, data: [{ id: 'you' }] });
+  });
+});
+
+describe('searchFilter', () => {
+  it('matches a handle anywhere in it, not only from the start', () => {
+    expect(searchFilter('cat')).toBe('username.ilike.%cat%');
+  });
+  it('strips characters that would break the filter', () => {
+    expect(searchFilter('a%b,c(d)*')).toBe('username.ilike.%abcd%');
+  });
+  it('keeps an invite code exact', () => {
+    expect(searchFilter('cat1a2b')).toBe('invite_code.eq.CAT-1A2B');
   });
 });
 

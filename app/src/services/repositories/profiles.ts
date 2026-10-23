@@ -94,14 +94,18 @@ export async function setAvatar(userId: string, avatar: string | null): Promise<
   return ok(avatar);
 }
 
-/** Handle prefix or exact personal invite code only — never email. */
+/** The PostgREST `or` filter for a search: the exact invite code, or the handle contains the term (case-insensitive). */
+export function searchFilter(q: string): string {
+  const isCode = /^[A-Za-z]{3}-?[A-Za-z0-9]{4}$/.test(q);
+  if (isCode) return 'invite_code.eq.' + q.toUpperCase().replace(/^([A-Za-z]{3})([A-Za-z0-9]{4})$/, '$1-$2');
+  return 'username.ilike.%' + q.replace(/[%,()*]/g, '') + '%';
+}
+
+/** Handle containing the term, or an exact personal invite code — never email, never a partial code. */
 export async function searchPlayers(term: string, selfId: string): Promise<Result<Profile[]>> {
   const q = (term || '').trim();
   if (q.length < 2) return ok([]);
-  const isCode = /^[A-Za-z]{3}-?[A-Za-z0-9]{4}$/.test(q);
-  const filter = isCode
-    ? 'invite_code.eq.' + q.toUpperCase().replace(/^([A-Za-z]{3})([A-Za-z0-9]{4})$/, '$1-$2')
-    : 'username.ilike.' + q.replace(/[%,]/g, '') + '%';
+  const filter = searchFilter(q);
   const { data, error } = await supabase.from('profiles').select(PUBLIC_COLS).or(filter).limit(20);
   const res = toResult('searchPlayers', (data || []) as Profile[], error);
   return res.ok ? ok(res.data.filter(p => p.id !== selfId)) : res;
