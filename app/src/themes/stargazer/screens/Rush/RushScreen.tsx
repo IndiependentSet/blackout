@@ -10,6 +10,7 @@ import { Note, Page, TopBar } from '../../kit/Page';
 import { cx } from '../../kit/cx';
 import { SkyPlay } from '../../play/SkyPlay';
 import { NO_SKIES, plural } from '../../copy';
+import { RushLobby } from './RushLobby';
 import { RushSummary } from './RushSummary';
 import styles from './Rush.module.css';
 
@@ -87,9 +88,11 @@ function RushRun({ userId, best, onFinish, onBack, onAgain }: Props & { onAgain:
   );
 }
 
-/* Meteor Rush (1g): survival. Chart as many skies as the clock allows; each run is its own mount, so "Again" is a new key. */
+/* Meteor Rush (1g): survival. The leaderboard first, then as many skies as the clock allows; each run is its own mount,
+   so "Again" is a new key (and goes straight into the next run). */
 export function RushScreen(props: Props) {
   const [run, setRun] = useState(0);
+  const [started, setStarted] = useState(false);
   const pool = usePoolPublished('survival');
   if (pool === 'empty') {
     return (
@@ -100,5 +103,6 @@ export function RushScreen(props: Props) {
       </Page>
     );
   }
+  if (!started) return <RushLobby userId={props.userId} best={props.best} onStart={() => setStarted(true)} onBack={props.onBack} />;
   return <RushRun key={run} {...props} onAgain={() => setRun(n => n + 1)} />;
 }

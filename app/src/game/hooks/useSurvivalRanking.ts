@@ -3,8 +3,8 @@ import { mergeBest, type RunSummary, type SurvivalBoardRow } from '../../domain/
 import { getBestRun, getSurvivalLeaderboard } from '../../services/repositories/survival';
 
 /** The survival leaderboard, held off (`undefined` data) until `ready`, so it is read after the last site was banked. */
-export function useSurvivalBoard(ready: boolean): { rows: SurvivalBoardRow[] | undefined; loading: boolean } {
-  const board = useResource(ready ? 'survival-board' : null, () => getSurvivalLeaderboard());
+export function useSurvivalBoard(ready: boolean, limit?: number): { rows: SurvivalBoardRow[] | undefined; loading: boolean } {
+  const board = useResource(ready ? 'survival-board:' + (limit ?? '') : null, () => getSurvivalLeaderboard(limit));
   return { rows: board.data, loading: board.loading };
 }
 
