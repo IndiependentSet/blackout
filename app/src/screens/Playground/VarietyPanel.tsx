@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Button, cx } from '../../ui';
+import { Button } from '../../themes/stargazer/kit/Button';
+import { cx } from '../../themes/stargazer/kit/cx';
 import { Info } from './Info';
 import { encodeParams, type PlaygroundParams } from './params';
 import { useVariety } from './useVariety';
@@ -29,8 +30,8 @@ export function VarietyPanel({ params, onLoadSeed, onLoadParams }: {
           {SAMPLES.map(n => <option key={n} value={n}>{n.toLocaleString()} seeds</option>)}
         </select>
         {running
-          ? <Button size="mini" variant="muted" onClick={stop}>Stop</Button>
-          : <Button size="mini" onClick={() => start(params, samples)}>{s ? 'Run again' : 'Run'}</Button>}
+          ? <Button size="xs" kind="outline" onClick={stop}>Stop</Button>
+          : <Button size="xs" onClick={() => start(params, samples)}>{s ? 'Run again' : 'Run'}</Button>}
         {s && <span className={styles.progress}>
           {s.tried.toLocaleString()} / {run.samples.toLocaleString()} · {(run.ms / 1000).toFixed(1)}s
           {run.status === 'stopped' && ' · stopped'}
@@ -60,7 +61,7 @@ export function VarietyPanel({ params, onLoadSeed, onLoadParams }: {
                 <b>{pct(t.count / Math.max(1, s.found))}</b> · {t.count}× · {t.nodes} nodes, {t.edges} edges · par {t.par} · {'★'.repeat(t.stars)}
                 {t.drawings > 1 && ` · ${t.drawings} drawings`}
               </span>
-              <Button size="mini" variant="secondary" onClick={() => onLoadSeed(t.seed)}>seed {t.seed}</Button>
+              <Button size="xs" kind="soft" onClick={() => onLoadSeed(t.seed)}>seed {t.seed}</Button>
             </li>
           ))}
         </ol>

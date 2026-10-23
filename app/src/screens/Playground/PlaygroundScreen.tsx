@@ -1,5 +1,6 @@
 import { useEffect, useReducer, useState } from 'react';
-import { Button, cx } from '../../ui';
+import { Button } from '../../themes/stargazer/kit/Button';
+import { cx } from '../../themes/stargazer/kit/cx';
 import { useWindowKey } from '../../hooks/useWindowKey';
 import { ParamsPanel } from './ParamsPanel';
 import { Info } from './Info';
@@ -15,7 +16,7 @@ import { usePlacement } from './usePlacement';
 import { VarietyPanel } from './VarietyPanel';
 import styles from './Playground.module.css';
 
-type View = 'schematic' | 'board';
+type View = 'schematic' | 'sky';
 /* UI-only randomness: picking the next seed, never inside generation */
 const randomSeed = () => Math.floor(Math.random() * 1e6);
 
@@ -58,9 +59,9 @@ export function PlaygroundScreen() {
         <ParamsPanel p={params} dispatch={dispatch} onReroll={reroll} />
         <main className={styles.main}>
           <div className={styles.toolbar}>
-            <Button size="mini" variant={view === 'schematic' ? 'primary' : 'secondary'} onClick={() => setView('schematic')}>Schematic</Button>
-            <Button size="mini" variant={view === 'board' ? 'primary' : 'secondary'} onClick={() => setView('board')}>Board</Button>
-            <Button size="mini" variant="mint" onClick={reroll} title="random seed (r)">🎲 seed {params.seed}</Button>
+            <Button size="xs" kind={view === 'schematic' ? 'primary' : 'soft'} onClick={() => setView('schematic')}>Schematic</Button>
+            <Button size="xs" kind={view === 'sky' ? 'primary' : 'soft'} onClick={() => setView('sky')}>Sky</Button>
+            <Button size="xs" kind="mint" onClick={reroll} title="random seed (r)">🎲 Seed {params.seed}</Button>
             <span className={styles.toggle}><label><input type="checkbox" checked={showSol} onChange={e => setShowSol(e.target.checked)} /> solution</label><Info k="solution" /></span>
             {view === 'schematic' && <>
               <OptimaStepper on={showAlt} onToggle={setShowAlt} idx={altIdx} kept={alts.length}
@@ -71,7 +72,7 @@ export function PlaygroundScreen() {
                 <option value="none">no labels</option>
               </select><Info k="labels" /></span>
             </>}
-            {level && <Button size="mini" variant="muted" title="copy the level as JSON"
+            {level && <Button size="xs" kind="outline" title="copy the level as JSON"
               onClick={() => navigator.clipboard?.writeText(JSON.stringify(level))}>Copy JSON</Button>}
           </div>
           <div className={cx(styles.stage, running && styles.stale)}>
@@ -80,7 +81,7 @@ export function PlaygroundScreen() {
               <SchematicView level={level} alt={showAlt ? alts[altIdx] ?? null : null} crossings={outcome.crossings}
                 placed={shown} dimRest={showSol} labels={labels} onTapNode={onTapNode} />
             )}
-            {level && view === 'board' && <PlayPreview key={outcomeKey} level={level} placed={shown} onTapNode={onTapNode} />}
+            {level && view === 'sky' && <PlayPreview key={outcomeKey} level={level} placed={shown} onTapNode={onTapNode} />}
             {!level && !running && !error && <p className={styles.warn}>No level satisfied these rules. See the rejection counts.</p>}
             {level && <PlayBar status={playStatus(level, shown)} showSol={showSol} onClear={play.clear} />}
           </div>

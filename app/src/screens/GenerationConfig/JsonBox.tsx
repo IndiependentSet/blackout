@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { GenerationSchedule } from '../../domain/generation';
 import { checkGameSchedule } from '../../domain/generationConfig';
-import { Button } from '../../ui';
+import { Button } from '../../themes/stargazer/kit/Button';
 import styles from './GenerationConfig.module.css';
 
 /** The draft as JSON: to copy out, or to paste a schedule in (checked as the game would). */
@@ -25,8 +25,8 @@ export function JsonBox({ schedule, onApply }: { schedule: GenerationSchedule; o
       <textarea className={styles.json} value={text} onChange={e => setText(e.target.value)} aria-label="schedule JSON" spellCheck={false} />
       {!!errors.length && <ul className={styles.errors}>{errors.map(e => <li key={e}>{e}</li>)}</ul>}
       <div className={styles.actions}>
-        <Button size="mini" variant="secondary" onClick={show}>Show the draft</Button>
-        <Button size="mini" variant="mint" onClick={apply}>Use this JSON</Button>
+        <Button size="xs" kind="soft" onClick={show}>Show the draft</Button>
+        <Button size="xs" kind="mint" onClick={apply}>Use this JSON</Button>
       </div>
     </details>
   );

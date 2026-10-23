@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { crossingPairs } from '../../domain/graphStats';
 import type { SitePreview } from '../../services/generation/scheduleClient';
-import { cx } from '../../ui';
+import { cx } from '../../themes/stargazer/kit/cx';
 import { Info } from '../Playground/Info';
 import { playStatus } from '../Playground/play';
 import { PlayBar } from '../Playground/PlayBar';
@@ -37,7 +37,7 @@ export function WeekPreview({ sites, running, error, previewKey, tab, onTab }: P
             const sum = siteSummary(s);
             return (
               <button key={i} type="button" className={cx(styles.site, tab === i && styles.siteOpen)} onClick={() => onTab(i)}>
-                <b>Site {i + 1}</b>
+                <b>Sky {i + 1}</b>
                 <span>{sum.line}</span>
                 <span className={cx(s.salt === null && styles.slow)}>{sum.made}</span>
                 <span className={cx(sum.slow && styles.slow)}>{s.ms} ms</span>
@@ -49,14 +49,14 @@ export function WeekPreview({ sites, running, error, previewKey, tab, onTab }: P
       <div className={pg.toolbar}>
         <span className={pg.toggle}>The week<Info k="week" /></span>
         <span className={pg.toggle}><label><input type="checkbox" checked={showSol} onChange={e => setShowSol(e.target.checked)} /> solution</label></span>
-        {sites?.some(s => s.ms > SLOW_MS) && <span className={pg.warn}>a site took over {SLOW_MS} ms here</span>}
-        {sites?.some(s => s.salt === null) && <span className={pg.warn}>a site fell back</span>}
+        {sites?.some(s => s.ms > SLOW_MS) && <span className={pg.warn}>a sky took over {SLOW_MS} ms here</span>}
+        {sites?.some(s => s.salt === null) && <span className={pg.warn}>a sky fell back</span>}
       </div>
       <div className={cx(pg.stage, running && pg.stale)}>
         {error && <p className={pg.warn}>{error}</p>}
         {!sites && !error && <p className={pg.muted}>generating the week…</p>}
         {tab === 'fallback' && sites && (
-          <p className={pg.muted}>The fallback only runs for a site whose retries all fail; the week above marks any site that used it.</p>
+          <p className={pg.muted}>The fallback only runs for a sky whose retries all fail; the night above marks any sky that used it.</p>
         )}
         {open && <>
           <SchematicView level={open.level} alt={null} crossings={crossings} placed={shown} dimRest={showSol}

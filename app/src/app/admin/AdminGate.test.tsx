@@ -18,18 +18,18 @@ beforeEach(() => { isAdmin.mockReset(); });
 describe('AdminGate', () => {
   it('waits for the session', () => {
     renderWith(auth({ ready: false }));
-    expect(screen.getByText('CHECKING BADGE…')).toBeInTheDocument();
+    expect(screen.getByText('Checking your pass…')).toBeInTheDocument();
     expect(screen.queryByText('secret tools')).toBeNull();
   });
   it('sends a signed-out visitor to sign in, without asking the db', () => {
     renderWith(auth());
-    expect(screen.getByText('STAFF ONLY')).toBeInTheDocument();
+    expect(screen.getByText('Sign in first')).toBeInTheDocument();
     expect(isAdmin).not.toHaveBeenCalled();
   });
   it('turns away a signed-in non-admin', async () => {
     isAdmin.mockResolvedValue(ok(false));
     renderWith(auth({ userId: 'u', handle: '@meow' }));
-    expect(await screen.findByText('MANAGEMENT ONLY')).toBeInTheDocument();
+    expect(await screen.findByText('Admins only')).toBeInTheDocument();
     expect(screen.queryByText('secret tools')).toBeNull();
   });
   it('lets an admin in', async () => {

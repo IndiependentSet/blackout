@@ -1,6 +1,6 @@
 import type { Dispatch, ReactNode } from 'react';
 import { DEFAULT_SCHEDULE, OPTION_LIMITS as L, STRATEGIES, type Strategy } from '../../domain/generation';
-import { Button } from '../../ui';
+import { Button } from '../../themes/stargazer/kit/Button';
 import { Check, Num, Range, Row, Select } from './controls';
 import { Info } from './Info';
 import type { ParamsAction, PlaygroundParams } from './params';
@@ -30,10 +30,10 @@ export function ParamsPanel({ p, dispatch, onReroll, use = 'playground', childre
         <h3>Presets <Info k="presets" /></h3>
         <div className={styles.chips}>
           {DEFAULT_SCHEDULE.sites.map((s, i) => (
-            <Button key={i} size="mini" variant="secondary" title={`${s.size} nodes, difficulty ${s.diff}`}
-              onClick={() => dispatch({ type: 'site', idx: i })}>Site {i + 1}</Button>
+            <Button key={i} size="xs" kind="soft" title={`${s.size} nodes, difficulty ${s.diff}`}
+              onClick={() => dispatch({ type: 'site', idx: i })}>Sky {i + 1}</Button>
           ))}
-          <Button size="mini" variant="muted" onClick={() => dispatch({ type: 'reset' })}>Reset</Button>
+          <Button size="xs" kind="outline" onClick={() => dispatch({ type: 'reset' })}>Reset</Button>
         </div>
       </section>}
 
@@ -41,7 +41,7 @@ export function ParamsPanel({ p, dispatch, onReroll, use = 'playground', childre
         <h3>Graph</h3>
         {free && <Row label="Seed" help="seed">
           <Num v={p.seed} min={0} on={seed => set({ seed })} />
-          {onReroll && <Button size="mini" onClick={onReroll} title="random seed (r)">🎲</Button>}
+          {onReroll && <Button size="xs" onClick={onReroll} title="random seed (r)">🎲</Button>}
         </Row>}
         <Row label="Strategy" help="strategy">
           <Select v={p.strategy} on={v => set({ strategy: v as Strategy })}>

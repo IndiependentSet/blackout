@@ -56,7 +56,7 @@ export const HELP: Record<HelpKey, HelpEntry> = {
     title: 'Strategy',
     what: 'How the graph is built. gadgets: snapped together from a few fixed building blocks (spur, hub, paths, crown, rings), each planting a known deduction. free: no templates; junctions are placed one by one and wired from the settings (density, spread, edge length, shortest cycle).',
     effect: 'Gadgets hit a star rating reliably but repeat themselves (see Variety). Free graphs vary far more, but their difficulty is only measured afterwards, so expect more rejections; the hardness filters decide what is kept. Ties are broken differently too: gadgets hang a spur (a dead end), free adds a path (never a dead end).',
-    game: 'gadgets, for every site.',
+    game: 'gadgets, for every sky.',
   },
   density: {
     title: 'Density',
@@ -83,18 +83,18 @@ export const HELP: Record<HelpKey, HelpEntry> = {
     title: 'Max optimal covers',
     what: 'The most minimum covers a level may have. 1 = unique (one best set of pads), 0 = no limit, N = at most N.',
     effect: 'Above the limit the generator repairs the graph where two covers disagree: gadgets hang a spur (the leaf rule then forces that node), free adds a path. With a few optima the level stays fair (any of them scores par) but the last moves can become "either works". The schematic\'s other optima mark where each differs.',
-    game: '1. Uniqueness is what makes a level deducible rather than a guess, and the INSIDER hint assumes it.',
+    game: '1. Uniqueness is what makes a level deducible rather than a guess, and the telescope’s Spot assumes it.',
   },
   greedyMustFail: {
     title: 'Greedy must fail',
     what: 'Reject a level if always taking the junction with the most open paths already reaches par.',
-    effect: 'That greedy habit is what a player falls into first; a level it solves needs no looking ahead. On, every kept level punishes it by at least one cat (counted under "greedy" when rejected). Cheap to check.',
+    effect: 'That greedy habit is what a player falls into first; a level it solves needs no looking ahead. On, every kept level punishes it by at least one star (counted under "greedy" when rejected). Cheap to check.',
     game: 'Off.',
   },
   minBoundGap: {
     title: 'Min bound gap',
-    what: 'Reject a level unless par is at least this many cats above the matching bound: the number of paths that share no junction, which is what the ESTIMATE consultant tells the player.',
-    effect: 'A gap of 0 means the estimate is the answer: one cat per independent path and done. Each extra cat of gap is a place where the player has to see further than that. Rejections count under "bound".',
+    what: 'Reject a level unless par is at least this many stars above the matching bound: the number of lines that share no star, which is what the telescope’s Count tells the player.',
+    effect: 'A gap of 0 means the estimate is the answer: one star per independent line and done. Each extra star of gap is a place where the player has to see further than that. Rejections count under "bound".',
     game: 'Off.',
   },
   minDegree: {
@@ -125,7 +125,7 @@ export const HELP: Record<HelpKey, HelpEntry> = {
     title: 'Allow crossings',
     what: 'Let edges cross each other.',
     effect: 'Off, every new edge is checked against every existing one, so the drawing is planar. On, that check is skipped. The graph may still be planar in the graph-theory sense (it could be redrawn without crossings); the stats\' Euler check only proves non-planarity when edges > 3 × nodes − 6. Crossings are drawn dashed in the schematic.',
-    game: 'Off. On the board a crossing looks like two paths overlapping, not a junction.',
+    game: 'Off. In the sky a crossing looks like two lines overlapping, not a star.',
   },
   extraEdges: {
     title: 'Extra edges',
@@ -208,18 +208,18 @@ export const HELP: Record<HelpKey, HelpEntry> = {
   /* ---------- view ---------- */
   presets: {
     title: 'Presets',
-    what: 'Load the settings the game uses for site N (node count, difficulty, time budget). The seed is kept.',
-    effect: 'The daily level itself also re-tries with salted seeds and requires site 1 to have a degree-3 node and par ≤ 2, so a preset reproduces the rules, not that exact level.',
+    what: 'Load the settings the game uses for sky N (node count, difficulty, time budget). The seed is kept.',
+    effect: 'The daily level itself also re-tries with salted seeds and requires sky 1 to have a degree-3 node and par ≤ 2, so a preset reproduces the rules, not that exact level.',
   },
   play: {
     title: 'Play-test',
-    what: 'Tap a node, in either view, to place a cat on it; tap again to take it away. A path is covered once a cat sits at either end. Clear every path with as few cats as you can.',
-    effect: 'Par is the size of the minimum cover. "Perfect" means you cleared it with exactly par cats; more is "over par" (the game takes 5 points off per extra cat). Your cats carry over when you switch between Schematic and Board, and reset when a new graph is generated.',
+    what: 'Tap a node, in either view, to light that star; tap again to dim it. A line is lit once a star at either end is lit. Light every line with as few stars as you can.',
+    effect: 'Par is the size of the minimum cover. "At par" means you charted it with exactly par stars; more is "over par" (the game takes 5 points off per extra star). Your lit stars carry over when you switch between Schematic and Sky, and reset when a new graph is generated.',
   },
   solution: {
     title: 'Solution',
     what: 'Highlight the minimum vertex cover: the fewest nodes such that every edge touches at least one. Shortcut: s.',
-    effect: 'In the schematic, cover nodes are gold, their edges green and everything else muted; on the board, cats are placed on them. While it is on, tapping nodes does nothing; your own cats come back when you turn it off.',
+    effect: 'In the schematic, cover nodes are gold, their edges green and everything else muted; in the sky, those stars are lit. While it is on, tapping nodes does nothing; your own stars come back when you turn it off.',
   },
   otherOptima: {
     title: 'Other optima',
@@ -244,7 +244,7 @@ export const HELP: Record<HelpKey, HelpEntry> = {
   },
   varietyDrawings: {
     title: 'Distinct drawings',
-    what: 'How many different pictures were found: the same graph drawn in a different layout counts again, but moving, rotating or mirroring the same picture does not. This is closer to what a player sees, though the house around it differs too.',
+    what: 'How many different pictures were found: the same graph drawn in a different layout counts again, but moving, rotating or mirroring the same picture does not. This is closer to what a player sees, though the game also nudges each star off its cell.',
   },
   varietyRepeat: {
     title: 'Repeat chance',
@@ -275,17 +275,17 @@ export const HELP: Record<HelpKey, HelpEntry> = {
   /* ---------- stats ---------- */
   'stat.par': {
     title: 'Par',
-    what: 'The size of the minimum vertex cover: the fewest cats that touch every path. This is the score target.',
+    what: 'The size of the minimum vertex cover: the fewest stars that light every line. This is the score target.',
   },
   'stat.greedy': {
     title: 'Greedy cover',
-    what: 'How many cats you need if you always take the junction with the most uncovered paths. "solves it" means that reaches par.',
-    effect: 'A level greedy solves can be cleared without looking ahead. +N means the greedy habit costs N cats here. "Greedy must fail" keeps only the latter.',
+    what: 'How many stars you need if you always light the one with the most dark lines. "solves it" means that reaches par.',
+    effect: 'A level greedy solves can be cleared without looking ahead. +N means the greedy habit costs N stars here. "Greedy must fail" keeps only the latter.',
   },
   'stat.bound': {
     title: 'Matching bound',
-    what: 'Paths that share no junction, picked in order: each needs its own cat, so par is at least this. It is the number the ESTIMATE consultant gives.',
-    effect: '"tight" means the estimate is the answer. The gap is how much more the player has to find than the consultant tells them.',
+    what: 'Lines that share no star, picked in order: each needs its own lit star, so par is at least this. It is the number the telescope’s Count gives.',
+    effect: '"tight" means the estimate is the answer. The gap is how much more the player has to find than the telescope tells them.',
   },
   'stat.optima': {
     title: 'Optimal covers',
@@ -347,43 +347,43 @@ export const HELP: Record<HelpKey, HelpEntry> = {
   /* ---------- the generation config page ---------- */
   retries: {
     title: 'Retries',
-    what: 'How many salted seeds each site tries, with its own rules, before giving up on them.',
+    what: 'How many salted seeds each sky tries, with its own rules, before giving up on them.',
     effect: 'Each retry is a full generator run, so more retries mean more chances to meet strict rules and constraints, and more time on a player\'s device when they fail.',
     game: '6.',
   },
   fallback: {
     title: 'Fallback',
-    what: 'What a site settles for when every retry came back empty: these rules, at the site\'s own node count, with no constraints.',
-    effect: 'Keep it easy to satisfy. If the fallback fails too, the site has no level and the game cannot start.',
+    what: 'What a sky settles for when every retry came back empty: these rules, at the sky\'s own node count, with no constraints.',
+    effect: 'Keep it easy to satisfy. If the fallback fails too, the sky has no level and the night cannot start.',
     game: '★, 900 ms budget.',
   },
   minNodes: {
     title: 'At least N nodes',
     what: 'Reject a level with fewer junctions than this.',
-    effect: 'The generator can come in under the target size; this makes the site retry instead.',
-    game: 'Site 1: 4.',
+    effect: 'The generator can come in under the target size; this makes the sky retry instead.',
+    game: 'Sky 1: 4.',
   },
   maxNodes: {
     title: 'At most N nodes',
     what: 'Reject a level with more junctions than this.',
-    effect: 'The generator can overshoot the target size by a couple of junctions; this makes the site retry instead.',
-    game: 'Every daily site and campaign level: 40 at most.',
+    effect: 'The generator can overshoot the target size by a couple of junctions; this makes the sky retry instead.',
+    game: 'Every sky of the night and every voyage level: 40 at most.',
   },
   minK: {
     title: 'Par at least',
-    what: 'Reject a level whose par (minimum number of cats) is below this.',
+    what: 'Reject a level whose par (minimum number of lit stars) is below this.',
     effect: 'Par grows with the junction count but not by a fixed rule; this keeps a level from coming out easier than its neighbours.',
     game: 'Campaign: a par floor that rises level by level.',
   },
   maxK: {
     title: 'Par at most',
-    what: 'Reject a level whose par (minimum number of cats) is above this.',
-    game: 'Site 1: 2, so the first site stays a gentle start.',
+    what: 'Reject a level whose par (minimum number of lit stars) is above this.',
+    game: 'Sky 1: 2, so the first sky stays a gentle start.',
   },
   hasDegree: {
     title: 'Has a junction of degree',
     what: 'Reject a level unless at least one junction has exactly this many paths.',
-    game: 'Site 1: 3, so there is a visible "busiest junction" to start from.',
+    game: 'Sky 1: 3, so there is a visible "busiest star" to start from.',
   },
   effectiveDay: {
     title: 'Effective from day',
@@ -397,8 +397,8 @@ export const HELP: Record<HelpKey, HelpEntry> = {
   },
   week: {
     title: 'The week',
-    what: 'Each site\'s level on the preview day: junctions, par, stars, the retry that produced it, and the time it took here.',
-    effect: 'Players generate these on the main thread one after another, so a slow site is a frozen screen on a phone. "fallback" means no retry met the site\'s rules.',
+    what: 'Each sky\'s level on the preview day: junctions, par, stars, the retry that produced it, and the time it took here.',
+    effect: 'Players generate these on the main thread one after another, so a slow sky is a frozen screen on a phone. "fallback" means no retry met the sky\'s rules.',
   },
   history: {
     title: 'Saved configs',

@@ -1,6 +1,5 @@
 import type { Dispatch } from 'react';
-import { SITES } from '../../domain/sites';
-import { Button } from '../../ui';
+import { Button } from '../../themes/stargazer/kit/Button';
 import { Num, Row } from '../Playground/controls';
 import { ParamsPanel } from '../Playground/ParamsPanel';
 import { ConstraintsSection } from './ConstraintsSection';
@@ -23,15 +22,15 @@ export function SchedulePanel({ state, dispatch }: { state: EditorState; dispatc
           </Row>
           <div className={styles.tabs} role="tablist" aria-label="schedule rules">
             {schedule.sites.map((s, i) => (
-              <Button key={i} size="mini" role="tab" aria-selected={tab === i} variant={tab === i ? 'primary' : 'secondary'}
-                title={`${SITES[i]}: ${s.size} nodes, ${'★'.repeat(s.diff)}`} onClick={() => dispatch({ type: 'tab', tab: i })}>
-                Site {i + 1}
+              <Button key={i} size="xs" role="tab" aria-selected={tab === i} kind={tab === i ? 'primary' : 'soft'}
+                title={`Sky ${i + 1}: ${s.size} nodes, ${'★'.repeat(s.diff)}`} onClick={() => dispatch({ type: 'tab', tab: i })}>
+                Sky {i + 1}
               </Button>
             ))}
-            <Button size="mini" role="tab" aria-selected={tab === 'fallback'} variant={tab === 'fallback' ? 'primary' : 'muted'}
+            <Button size="xs" role="tab" aria-selected={tab === 'fallback'} kind={tab === 'fallback' ? 'primary' : 'outline'}
               onClick={() => dispatch({ type: 'tab', tab: 'fallback' })}>Fallback</Button>
           </div>
-          <div className={styles.basis}>{site ? `Site ${(tab as number) + 1} · ${SITES[tab as number]}` : 'Fallback: any site whose retries all fail'}</div>
+          <div className={styles.basis}>{site ? `Sky ${(tab as number) + 1} of ${schedule.sites.length}` : 'Fallback: any sky whose retries all fail'}</div>
         </section>
       </div>
       <ParamsPanel p={tabParams(state)} dispatch={action => dispatch({ type: 'params', action })} use={site ? 'site' : 'fallback'}>

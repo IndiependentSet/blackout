@@ -1,4 +1,4 @@
-import { Button } from '../../ui';
+import { Button } from '../../themes/stargazer/kit/Button';
 import { Info } from './Info';
 import { optimumCaption, stepOptimum } from './optima';
 import styles from './Playground.module.css';
@@ -17,9 +17,9 @@ export function OptimaStepper({ on, onToggle, idx, kept, others, onStep }: {
       <label><input type="checkbox" checked={on} onChange={e => onToggle(e.target.checked)} /> other optima</label>
       {on && (kept > 0
         ? <>
-            {kept > 1 && <Button size="mini" variant="secondary" aria-label="previous optimum" onClick={() => onStep(stepOptimum(idx, -1, kept))}>◀</Button>}
+            {kept > 1 && <Button size="xs" kind="soft" aria-label="previous optimum" onClick={() => onStep(stepOptimum(idx, -1, kept))}>◀</Button>}
             <span className={styles.muted}>{optimumCaption(idx, kept, others)}</span>
-            {kept > 1 && <Button size="mini" variant="secondary" aria-label="next optimum" onClick={() => onStep(stepOptimum(idx, 1, kept))}>▶</Button>}
+            {kept > 1 && <Button size="xs" kind="soft" aria-label="next optimum" onClick={() => onStep(stepOptimum(idx, 1, kept))}>▶</Button>}
           </>
         : <span className={styles.muted}>none (unique)</span>)}
       <Info k="otherOptima" />
