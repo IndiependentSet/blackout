@@ -81,6 +81,8 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
     configured for: only `daily` today), `generationConfig.ts` (which saved
     config is in force on a day, and the schedule it resolves to — falling
     back to `DEFAULT_SCHEDULE` when none is saved or it doesn't parse),
+    `stats.ts` (`parseStats`: a player's own numbers from `player_stats()`; `percent`, `sparkPoints`),
+    `ranking.ts` (the shape of a leaderboard — `BoardKind`, `Board`, `windowOf`, `placeText` —; the ordering itself is SQL's),
     `graphStats.ts` and `graphIdentity.ts` (when
     two levels are the same: `drawingKey` up to moving/rotating/mirroring,
     `shapeKey` up to node order — an exact canonical labelling), and the
@@ -113,7 +115,7 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
       `copy.ts` (planet names, name ideas, share text, week/month calendars),
       `kit/` (Page and its skies, Starfield, Button, TabBar, Moon, MiniStar,
       Planet, Figure — a still sky for previews, results and the atlas —,
-      icons), `play/` (`SkyPlay` — the one board screen every mode uses, phone
+      icons, `Leaderboard`/`Pills`/`PlaceLink`/`Sparkline` — a board drawn, its switches, the one-line "#12 of 340 tonight · Board ›"), `play/` (`SkyPlay` — the one board screen every mode uses, phone
       column or desktop three-column —, `SkyBoard`, the telescope, `sky.ts`, and `warp.ts` — where each
       star is drawn: the lattice taken off the grid with a seeded tilt,
       stretch, slant, slow drift, per-star nudge and longer/shorter tails, plus
@@ -123,7 +125,7 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
       together are calmed one by one, then put back on their cells. Drawing
       only: the puzzle is untouched, and arrow keys move by the drawn positions)
       and `screens/` (Tonight, FirstNight, Sky — daily play and Night
-      charted —, Atlas, Voyage, Rush, Duel, Observatory). It never imports
+      charted —, Atlas, Voyage, Rush, Duel, Observatory, Stats, Board — the leaderboard pages, below). It never imports
       `src/ui/` (that kit is CATASTROPHE INC.'s).
       **On a phone every page fits the screen with no page scrolling** (checked
       at 390×844 and 375×667): the `Page` column is exactly screen height, the
@@ -140,6 +142,17 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
       `input/useBoardPointer.ts`), `sprites/`, `screens/` (Hub, WorkOrder,
       HowToPlay, Campaign, Survival, Match, StaffOffice, Crew), the staff
       badge and the "Back to Stargazer" pill.
+  - **Voyage flight** (`themes/stargazer/screens/Voyage/`): charting the last level of a world (not Neptune's) plays a ~9 s
+    full-screen flight to the next world instead of dropping back to the voyage. Design reference:
+    `handoff/VoyageTransit.jsx` + `handoff/PROMPT-voyage.md` (ported, not redesigned). `VoyagePlay`'s `onWorldDone` →
+    `StargazerApp` sets `route 'voyage'`, `openChapter` (seeds `VoyageScreen`'s `initialChapter`, keyed so it resets) and
+    `transit`; `VoyageTransit` (`{from, to, onDone, startAt = 1.2, clears?}`) overlays the real screen, which already shows the
+    world just charted. Every frame is a pure function of T: `timeline.ts` (`CUES`, `TOTAL`, `skip`: a tap between Liftoff and
+    Approach jumps to Arrival), `frame.ts` (`frameAt`), `motion.ts` (easings, `animate`, `alpha`/`mix` over theme CSS variables
+    — no hex), `Hero`, `Motif` (per-world surroundings), `Route`, seeded particles in `flightParticles.ts`. The screen under and
+    inside the flight is drawn from the same parts (`VoyageView`: `Stop`, `WorldsRow`, `ChapterCard`, `NextWorld`;
+    `FlightScreen` assembles them), so the two match. Purely visual: it never touches clears or persistence. Reduced motion shows
+    the arrival frame for 300 ms fade + a short hold; Escape leaves.
   - `themes/transit/` — the wormhole animation between the seventh tap on the Stargazer title and CATASTROPHE INC.
     (`WormholeTransit`, ported from the handoff in `Wormhole Easter Egg Animation/`, which stays as the design
     reference). Every frame is a pure function of the clock's `T` (`timeline.ts`: `CUES`, `tick`, `choose`, `skip`;
@@ -323,6 +336,40 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
     re-checked with `solve`, published through `publish_match_pool_system` — service role only, match mode only, keeps the
     newest seven pools (a running match keeps its level in `matches.level`). `publish_level_pool` is now admin check +
     `publish_pool_unchecked`. Same secrets as `publish-daily`. The jobs run as `service_role`, which bypasses RLS but not GRANTs: a table they read needs `grant select … to service_role` in its migration (the CI stub grants everything by default, so CI cannot catch a missing one). Both publish workflows also run after a successful `migrate` (`workflow_run`), so a deploy never leaves the daily week or the match pool empty; both are idempotent. Until a pool exists the server answers `no match levels published` and the lobby says so (`isUnpublished` → `UNPUBLISHED_COPY`).
+  - **Leaderboards** (`app/sql/2026-10-30-leaderboards.sql`, guarded by `sql/ci/checks/leaderboards.sql`): every Stargazer
+    board — `night` (one night's points), `week` (the seven nights ending at a day, by `day_number`), `alltime` (every night ever; added in `2026-11-02-alltime-board.sql`), `voyage` (campaign
+    stars), `rush` (best run), `duel` (ranked rating, from 5 ranked duels) — is one read, `board_rows(board, day, ids, limit)`:
+    the server measures, orders and ranks (the file's header lists each board's tie-breaks; equal rows share a place), and
+    adds the caller's own row when it is below the cut; `limit 0` reads only the caller's place. `security definer` over
+    private tables; the ladder needs a signed-in player. The old views (`leaderboard_weekly`, `_alltime`, `_survival`,
+    `_ranked`) stay for CATASTROPHE INC. Read through `repositories/leaderboards.ts` `getBoard`, `game/hooks/useBoard.ts`
+    (`useBoard`: fellow stargazers when the player has any, else everyone, with a switch; `useMyPlace`), drawn by
+    `kit/Leaderboard`, placed by `screens/Board/` (`BoardPanel` = read + draw, used by Rush's lobby and dawn page;
+    `BoardView` = switch between boards, used inside the Observatory; `BoardScreen` = a whole page, route `board` in
+    `StargazerApp`). **A board never appears in play**: `SkyPlay` takes no board data; a board is opened from a one-line
+    `PlaceLink` on Tonight, Night charted, Voyage and the duel lobby, from Rush's lobby and dawn page, from the duel
+    result's "Ladder" line, and from the Observatory. Changing an ordering rule means the SQL and the copy in
+    `themes/stargazer/copy.ts` `BOARDS` together.
+  - **The duel ladder** (`app/sql/2026-11-01-duel-ladder.sql`, guarded by `sql/ci/checks/duel-ladder.sql`; it remakes `board_rows`
+    and `board_scored`, so read that file's header, not the 10-30 one, for what they return now). The `duel` and `season`
+    boards are the ladder's and share a page (`BoardScreen` with kinds `['duel','season']`, a switch "Ladder / This month"): they
+    list the top `LADDER_TOP` and `LADDER_AROUND` rows either side of the reader (`p_around`; `withGaps` marks the rows left
+    out), each rival's row says who leads their head-to-head (`won_vs`/`lost_vs`, any finished duel; `versusText`) and which
+    way the rating has moved over the last five ranked duels (`trend`, duel board only), and a fellow stargazer's row offers
+    "Challenge" (`useChallenge` → `create_match`, unranked; the ranked opponent search stays in the lobby, one button away:
+    "Find a ranked duel"). `ladder_progress()` (`useLadderProgress`) says "3 of 5 ranked duels to appear" before a newcomer is
+    listed (`LADDER_MIN_GAMES` all-time, `SEASON_MIN_GAMES` in a month). **A season is a calendar month (UTC) of rating
+    gained** — the sum of what each ranked duel moved (`match_players.rating_after - rating_before`), everyone from zero —
+    not a second Elo: `match_ratings` and its trigger are untouched, so the all-time rating and its peak (Stats) carry on.
+    `season_start(day)` (SQL) and `seasonOf(day)` (`domain/calendar.ts`) name the same month; `player_stats` gains
+    `season_gain`/`season_games`.
+  - **Stats** (`app/sql/2026-10-31-player-stats.sql`, guarded by `sql/ci/checks/player-stats.sql`): `player_stats()` answers
+    the signed-in player's own numbers in one call — nights (played, full moons, skies, at par, points, best night), the
+    streak, the voyage, Meteor Rush, and the duels (rating, peak, record, last five results, the rating after each of the last
+    30 ranked duels). Own numbers only (it reads `auth.uid()`, takes no argument); a signed-out caller is refused. Read through
+    `repositories/stats.ts`, `game/hooks/useStats.ts` and `domain/stats.ts` `parseStats` (a missing field reads as zero), drawn by
+    `themes/stargazer/screens/Stats/StatsScreen` (route `stats`, opened from the Observatory's "Stats" link; each section ends
+    with the player's place on that mode's board, a `PlaceLink` into the board page). Outside play only.
   - **Named constellations** (`app/sql/2026-10-25-sky-names.sql`, guarded by
     `sql/ci/checks/sky-names.sql`): `sky_names (user_id, day_number, name,
     figure)`, one row per player per night, upserted to rename. Row level

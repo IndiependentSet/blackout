@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import { matchOutcome, otherPlayer } from '../../../../domain/match';
 import { displayName, initial } from '../../../../domain/profile';
 import { RATING_START } from '../../../../domain/rating';
+import { LADDER_MIN_GAMES } from '../../../../domain/ranking';
 import type { MatchView } from '../../../../domain/types';
+import { useMyPlace } from '../../../../game/hooks/useBoard';
 import { useLadder } from '../../../../game/match/useLadder';
 import { useLobby } from '../../../../game/match/useLobby';
 import { useMatchmaking } from '../../../../game/match/useMatchmaking';
@@ -10,7 +12,8 @@ import { UNPUBLISHED_COPY } from '../../../../services/repositories/levelPools';
 import { Button } from '../../kit/Button';
 import { Scroll } from '../../kit/Layout';
 import { Avatar, Eyebrow, Note, Page, TopBar } from '../../kit/Page';
-import { NO_SKIES } from '../../copy';
+import { PlaceLink } from '../../kit/PlaceLink';
+import { NO_SKIES, ladderProgressText } from '../../copy';
 import styles from './Duel.module.css';
 
 interface Props {
@@ -18,6 +21,8 @@ interface Props {
   /** a fellow stargazer picked elsewhere, listed first */
   preselect?: string | null;
   onOpenMatch: (matchId: string) => void;
+  /** the ladder's own page */
+  onLadder: () => void;
   onBack: () => void;
 }
 
@@ -38,9 +43,10 @@ function useSeconds(since: number | null): number {
 
 /* Star Duel lobby (1h): challenges waiting for you, duels on the clock, your fellow stargazers to challenge, and a
    ranked duel against whoever else is looking. The server holds every match; this screen only reads and asks. */
-export function DuelLobby({ userId, preselect, onOpenMatch, onBack }: Props) {
+export function DuelLobby({ userId, preselect, onOpenMatch, onLadder, onBack }: Props) {
   const lobby = useLobby(userId);
   const ladder = useLadder(userId);
+  const place = useMyPlace('duel', userId);
   const { search, start, cancel } = useMatchmaking(onOpenMatch);
   const seconds = useSeconds(search.status === 'searching' ? search.startedAt : null);
   const { groups, friends, record } = lobby;
@@ -58,6 +64,13 @@ export function DuelLobby({ userId, preselect, onOpenMatch, onBack }: Props) {
         <span>Rating <b>{rating}</b></span>
         <span><b>{record ? record.won : 0}</b> won · <b>{record ? record.lost : 0}</b> lost · <b>{record ? record.drawn : 0}</b> tied</span>
       </div>
+      {place ? <PlaceLink place={place} label="on the ladder" onOpen={onLadder} />
+        : (
+          <div className={styles.ladderLine}>
+            <span>{ladderProgressText(ladder.mine ? ladder.mine.games : 0, LADDER_MIN_GAMES, 'on the ladder')}</span>
+            <Button kind="ghost" size="sm" onClick={onLadder}>Ladder ›</Button>
+          </div>
+        )}
       {lobby.error && <Note tone="error">{say(lobby.error)}</Note>}
 
       {groups.incoming.map(v => (

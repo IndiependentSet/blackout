@@ -1,0 +1,7 @@
+.link {
+  display: inline-flex; align-items: baseline; gap: 6px; align-self: flex-start; padding: 4px 0; border: 0; background: transparent;
+  cursor: pointer; font: 600 13px var(--sg-font-body); color: var(--sg-text-soft);
+}
+.link b { color: var(--sg-text); font-weight: 800; }
+.go { margin-left: 4px; color: var(--sg-gold); font-weight: 800; }
+.link:hover .go { color: var(--sg-gold-hover); }

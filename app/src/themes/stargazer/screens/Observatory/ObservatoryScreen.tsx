@@ -4,6 +4,7 @@ import { displayName, initial } from '../../../../domain/profile';
 import type { Night } from '../../../../domain/types';
 import { useHandleEditor } from '../../../../game/account/useHandleEditor';
 import { useCrew, type Crew } from '../../../../game/crew/useCrew';
+import { useMyPlace, type Place } from '../../../../game/hooks/useBoard';
 import { usePlayerStats } from '../../../../game/hooks/usePlayerStats';
 import { useResource } from '../../../../hooks/useResource';
 import { useIsAdmin } from '../../../../services/auth/useIsAdmin';
@@ -11,13 +12,12 @@ import type { AuthState } from '../../../../services/auth/authContext';
 import { signOut } from '../../../../services/repositories/auth';
 import { getProfile } from '../../../../services/repositories/profiles';
 import { Button } from '../../kit/Button';
-import { Scroll } from '../../kit/Layout';
 import { Moon } from '../../kit/Moon';
 import { Avatar, Note, Page, TopBar } from '../../kit/Page';
 import { useWide } from '../../kit/useWide';
 import { TabBar, type Tab } from '../../kit/TabBar';
-import { cx } from '../../kit/cx';
 import { monthOf, plural } from '../../copy';
+import { BoardView } from '../Board/BoardView';
 import { AvatarPicker } from './AvatarPicker';
 import { SignIn } from './SignIn';
 import { Stargazers } from './Stargazers';
@@ -32,6 +32,7 @@ interface Props {
   named: number;
   onTab: (tab: Tab) => void;
   onDuel: (friendId: string) => void;
+  onStats: () => void;
   onHowTo: () => void;
 }
 
@@ -39,7 +40,7 @@ interface Props {
 type View = 'overview' | 'stargazers' | 'board' | 'avatar';
 type Stats = ReturnType<typeof usePlayerStats>;
 
-function Overview({ auth, userId, streak, named, month, today, stats, crew, onOpen }: Pick<Props, 'auth' | 'streak' | 'named' | 'month' | 'today'> & { userId: string; stats: Stats; crew: Crew; onOpen: (v: View) => void }) {
+function Overview({ auth, userId, streak, named, month, today, stats, crew, week, onOpen, onStats }: Pick<Props, 'auth' | 'streak' | 'named' | 'month' | 'today' | 'onStats'> & { userId: string; stats: Stats; crew: Crew; week: Place | null; onOpen: (v: View) => void }) {
   const handle = useHandleEditor(userId, auth.username, auth.setHandle);
   const { admin } = useIsAdmin(userId);
   const m = monthOf(today);
@@ -61,7 +62,7 @@ function Overview({ auth, userId, streak, named, month, today, stats, crew, onOp
           ) : (
             <button className={styles.name} onClick={handle.start} aria-label="Edit your handle">{displayName({ username: auth.username }) || 'Stargazer'}</button>
           )}
-          <span className={styles.rank}>Night watch · {plural(streak, 'night')} in a row{stats.rank ? ` · #${stats.rank} this week` : ''}</span>
+          <span className={styles.rank}>Night watch · {plural(streak, 'night')} in a row{week ? ` · #${week.entry.place} this week` : ''}</span>
           {handle.error && <span className={styles.error}>{handle.error}</span>}
         </div>
       </div>
@@ -85,8 +86,11 @@ function Overview({ auth, userId, streak, named, month, today, stats, crew, onOp
           <span>{f ? plural(f.friends.length, 'friend') : '…'}{f && f.incoming.length > 0 ? ` · ${f.incoming.length} asking` : ''}</span>
           {f && f.incoming.length > 0 && <i className={styles.ping} aria-label="requests waiting" />}
         </button>
+        <button className={styles.link} onClick={onStats}>
+          <b>Stats</b><span>Nights, voyage, Rush and duels</span>
+        </button>
         <button className={styles.link} onClick={() => onOpen('board')}>
-          <b>This week’s night watch</b><span>{stats.rank ? `You’re #${stats.rank}` : 'The leaderboard'}</span>
+          <b>This week’s night watch</b><span>{week ? `You’re #${week.entry.place} of ${week.total}` : 'The leaderboard'}</span>
         </button>
       </div>
       {admin && (
@@ -98,31 +102,16 @@ function Overview({ auth, userId, streak, named, month, today, stats, crew, onOp
   );
 }
 
-function WeekBoard({ userId, stats }: { userId: string; stats: Stats }) {
-  if (stats.boardError) return <Note tone="error">Couldn’t load the board: {stats.boardError}</Note>;
-  if (stats.board.length === 0) return <Note>Nobody has charted a sky this week yet. Be the first.</Note>;
-  return (
-    <Scroll label="This week’s night watch">
-      <ol className={styles.board}>
-        {stats.board.map((r, i) => (
-          <li key={r.user_id} className={cx(styles.boardRow, r.user_id === userId && styles.mine)}>
-            <span className={styles.place}>{i + 1}</span><span className={styles.boardName}>{displayName(r)}{r.user_id === userId ? ' (you)' : ''}</span><span>{r.score}</span>
-          </li>
-        ))}
-      </ol>
-    </Scroll>
-  );
-}
-
 function SignedIn(props: Props & { userId: string; view: View; setView: (v: View) => void }) {
   const { userId, view, setView, onDuel } = props;
-  const stats = usePlayerStats(userId);
+  const stats = usePlayerStats(userId, null);
+  const week = useMyPlace('week', userId, { day: props.today });
   const crew = useCrew(userId, 'week');
   const me = useResource('me:' + userId, () => getProfile(userId));
   if (view === 'stargazers') return <Stargazers userId={userId} crew={crew} code={me.data?.invite_code ?? '—'} onDuel={onDuel} />;
   if (view === 'avatar') return <AvatarPicker userId={userId} auth={props.auth} />;
-  if (view === 'board') return <WeekBoard userId={userId} stats={stats} />;
-  return <Overview {...props} stats={stats} crew={crew} onOpen={setView} />;
+  if (view === 'board') return <BoardView kinds={['week', 'night', 'alltime']} userId={userId} day={props.today} onSignIn={() => setView('overview')} />;
+  return <Overview {...props} stats={stats} crew={crew} week={week} onOpen={setView} />;
 }
 
 const TITLES: Record<View, string> = { overview: 'Observatory', stargazers: 'Fellow stargazers', board: 'This week’s night watch', avatar: 'Your picture' };

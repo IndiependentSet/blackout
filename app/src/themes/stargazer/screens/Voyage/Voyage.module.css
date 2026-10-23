@@ -35,6 +35,8 @@
   width: 52px; height: 52px; box-sizing: border-box; font-size: 18px;
   background: rgba(255, 255, 255, .05); border: 2px dashed var(--sg-next-ring); color: var(--sg-text-faint);
 }
+.burst { position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--sg-gold); pointer-events: none; }
+.done { position: relative; }
 .note { font-size: 13px; font-weight: 700; color: var(--sg-text-soft); }
 
 .nextWorld {
@@ -43,6 +45,7 @@
 }
 .nextWorld [class*='eyebrow'] { display: flex; align-items: center; gap: 6px; }
 .planetNext { position: absolute; left: -10px; top: -6px; width: 110px; height: 110px; border-radius: 50%; opacity: .45; }
+.nextOpen .planetNext { opacity: 1; }
 .nextName { font-family: var(--sg-font-heading); font-size: 22px; color: var(--sg-text-soft); }
 
 
@@ -53,3 +56,27 @@
   .planetNext { width: 90px; height: 90px; }
   .world { width: 34px; height: 34px; }
 }
+
+/* the flight between worlds: the screen redrawn on its 390×844 stage, and the layers it flies in */
+.flightScreen {
+  position: absolute; inset: 0; display: flex; flex-direction: column; gap: 14px; padding: 50px 20px 0; box-sizing: border-box;
+  color: var(--sg-text); font-family: var(--sg-font-body); pointer-events: none;
+}
+.flightScreen > * { flex-shrink: 0; }
+.flightPath { flex: 1 1 0; }
+.flightScreen .path { flex: none; }
+
+.transit { position: fixed; inset: 0; z-index: 100; overflow: hidden; touch-action: manipulation; color: var(--sg-text); font-family: var(--sg-font-body);
+  background: linear-gradient(180deg, var(--sg-night-0) 0%, var(--sg-night-1) 58%, var(--sg-dusk) 100%); }
+.transitFade { animation: voyageFade .3s ease-out both; }
+@keyframes voyageFade { from { opacity: 0; } to { opacity: 1; } }
+.layer { position: absolute; inset: 0; }
+.stage { position: absolute; left: 50%; top: 50%; width: 390px; height: 844px; transform-origin: center; overflow: hidden; }
+.head { position: absolute; left: 20px; right: 20px; top: 50px; display: flex; flex-direction: column; gap: 6px; }
+.headEyebrow { font-size: 12px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--sg-mint); }
+.headName { font-family: var(--sg-font-heading); font-size: 30px; line-height: 1; color: var(--sg-cream); }
+.tapRing { position: absolute; left: -10px; top: 724px; width: 150px; height: 150px; border-radius: 50%; border: 2px solid var(--sg-gold); }
+.finger { position: absolute; left: 153px; width: 44px; height: 44px; border-radius: 50%; background: rgba(255, 244, 214, .35); box-shadow: inset 0 0 0 2px var(--sg-cream); }
+.ship { position: absolute; }
+.shipTrail { position: absolute; left: -2px; top: 2px; width: 4px; border-radius: 4px; background: linear-gradient(180deg, var(--sg-cream), transparent); }
+.shipDot { position: absolute; left: -6px; top: -6px; width: 12px; height: 12px; border-radius: 50%; background: var(--sg-cream); box-shadow: 0 0 18px var(--sg-gold), 0 0 4px var(--sg-cream); }
