@@ -15,6 +15,7 @@
     "check": "npm run lint && npm run typecheck && npm run test && npm run build",
     "daily:publish": "npx --yes tsx tools/publish-daily.ts",
     "match-pool:publish": "npx --yes tsx tools/publish-match-pool.ts",
+    "pools:publish": "npx --yes tsx tools/publish-pools.ts",
     "db:up": "tools/db-local.sh up",
     "db:down": "tools/db-local.sh down",
     "db:reset": "tools/db-local.sh reset",
