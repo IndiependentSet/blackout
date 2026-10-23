@@ -19,7 +19,7 @@ const strategySelect = () => screen.getByLabelText('Strategy', { selector: 'sele
 describe('pool page', () => {
   it('changes only the open tier, unless told to change them all', async () => {
     render(<LevelPoolsScreen mode="survival" />);
-    expect(screen.getByRole('radio', { name: 'Tier 1 · slots 0–2' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: 'Tier 1 · slots 0–1' })).toBeChecked();
     await userEvent.selectOptions(strategySelect(), 'free');
     expect((await draft()).tiers.map(t => t.options.strategy ?? 'gadgets')).toEqual(['free', 'gadgets', 'gadgets', 'gadgets', 'gadgets']);
 
