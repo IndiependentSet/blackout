@@ -140,6 +140,17 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
       `input/useBoardPointer.ts`), `sprites/`, `screens/` (Hub, WorkOrder,
       HowToPlay, Campaign, Survival, Match, StaffOffice, Crew), the staff
       badge and the "Back to Stargazer" pill.
+  - **Voyage flight** (`themes/stargazer/screens/Voyage/`): charting the last level of a world (not Neptune's) plays a ~9 s
+    full-screen flight to the next world instead of dropping back to the voyage. Design reference:
+    `handoff/VoyageTransit.jsx` + `handoff/PROMPT-voyage.md` (ported, not redesigned). `VoyagePlay`'s `onWorldDone` →
+    `StargazerApp` sets `route 'voyage'`, `openChapter` (seeds `VoyageScreen`'s `initialChapter`, keyed so it resets) and
+    `transit`; `VoyageTransit` (`{from, to, onDone, startAt = 1.2, clears?}`) overlays the real screen, which already shows the
+    world just charted. Every frame is a pure function of T: `timeline.ts` (`CUES`, `TOTAL`, `skip`: a tap between Liftoff and
+    Approach jumps to Arrival), `frame.ts` (`frameAt`), `motion.ts` (easings, `animate`, `alpha`/`mix` over theme CSS variables
+    — no hex), `Hero`, `Motif` (per-world surroundings), `Route`, seeded particles in `flightParticles.ts`. The screen under and
+    inside the flight is drawn from the same parts (`VoyageView`: `Stop`, `WorldsRow`, `ChapterCard`, `NextWorld`;
+    `FlightScreen` assembles them), so the two match. Purely visual: it never touches clears or persistence. Reduced motion shows
+    the arrival frame for 300 ms fade + a short hold; Escape leaves.
   - `themes/transit/` — the wormhole animation between the seventh tap on the Stargazer title and CATASTROPHE INC.
     (`WormholeTransit`, ported from the handoff in `Wormhole Easter Egg Animation/`, which stays as the design
     reference). Every frame is a pure function of the clock's `T` (`timeline.ts`: `CUES`, `tick`, `choose`, `skip`;
