@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import type { PoolMode } from '../../domain/gameModes';
+import { POOL_MODE_LABEL, type PoolMode } from '../../domain/gameModes';
 import { poolSlots, type LevelCurve } from '../../domain/generation';
 import type { PoolInfo } from '../../services/repositories/levelPools';
-import { Button, Message, cx } from '../../ui';
+import { Button } from '../../themes/stargazer/kit/Button';
+import { cx } from '../../themes/stargazer/kit/cx';
+import { Note } from '../../themes/stargazer/kit/Page';
 import { publishBlockers, type Build } from './usePoolBuild';
 import pg from '../Playground/Playground.module.css';
 import styles from './LevelPools.module.css';
@@ -36,7 +38,7 @@ export function PublishPanel({ mode, curve, build, current, curveErrors, pools, 
       <section>
         <h3>Publish</h3>
         <p className={styles.basis}>
-          A published pool goes live at once for new campaign levels, new survival runs and new challenges.
+          A published pool goes live at once for new Voyage levels, new Meteor Rush runs and new Star Duels.
           Levels a player has already cleared keep the version they cleared them on; matches and runs under way keep theirs.
         </p>
         <label className={styles.field}>
@@ -44,16 +46,16 @@ export function PublishPanel({ mode, curve, build, current, curveErrors, pools, 
           <input value={note} maxLength={200} onChange={e => setNote(e.target.value)} placeholder="what changed, and why" />
         </label>
         {!!blockers.length && <ul className={styles.errors}>{blockers.map(b => <li key={b}>{b}</li>)}</ul>}
-        {error && <Message tone="error">{error}</Message>}
+        {error && <Note tone="error">{error}</Note>}
         {publishedVersion !== null && !error && <div className={styles.ok}>Published as version {publishedVersion}.</div>}
         <div className={styles.actions}>
-          <Button size="mini" variant="primary" disabled={!!blockers.length || busy} onClick={publish}>{busy ? 'Publishing…' : 'Publish'}</Button>
+          <Button size="xs" kind="primary" disabled={!!blockers.length || busy} onClick={publish}>{busy ? 'Publishing…' : 'Publish'}</Button>
         </div>
       </section>
       <section>
         <h3>Published</h3>
-        {poolsError ? <Message tone="error">{poolsError}</Message>
-          : !pools.length ? <p className={styles.basis}>Nothing published for {mode} yet: players see “no levels published”.</p>
+        {poolsError ? <Note tone="error">{poolsError}</Note>
+          : !pools.length ? <p className={styles.basis}>Nothing published for {POOL_MODE_LABEL[mode]} yet: players see “no levels published”.</p>
           : (
             <ul className={styles.history}>
               {pools.map((p, i) => (

@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { crossingPairs } from '../../domain/graphStats';
 import type { SlotResult } from '../../services/generation/poolClient';
-import { Button, cx } from '../../ui';
+import { Button } from '../../themes/stargazer/kit/Button';
+import { cx } from '../../themes/stargazer/kit/cx';
 import { playStatus } from '../Playground/play';
 import { PlayBar } from '../Playground/PlayBar';
 import { SchematicView } from '../Playground/SchematicView';
@@ -32,8 +33,8 @@ export function PoolPreview({ build, current, onGenerate, onStop }: Props) {
     <>
       <div className={pg.toolbar}>
         {running
-          ? <Button size="mini" variant="secondary" onClick={onStop}>Stop</Button>
-          : <Button size="mini" variant="primary" onClick={onGenerate}>{build ? 'Generate again' : 'Generate the pool'}</Button>}
+          ? <Button size="xs" kind="soft" onClick={onStop}>Stop</Button>
+          : <Button size="xs" kind="primary" onClick={onGenerate}>{build ? 'Generate again' : 'Generate the pool'}</Button>}
         {build && <span className={styles.basis}>{build.results.length} / {build.total} made{build.status === 'stopped' ? ' · stopped' : ''}</span>}
         {build && !current && <span className={pg.warn}>the curve changed since this build</span>}
         {build?.error && <span className={pg.warn}>{build.error}</span>}

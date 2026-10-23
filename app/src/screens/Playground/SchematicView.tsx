@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { Level } from '../../domain/types';
-import { cx } from '../../ui';
+import { cx } from '../../themes/stargazer/kit/cx';
 import styles from './Playground.module.css';
 
 export type LabelMode = 'index' | 'degree' | 'none';

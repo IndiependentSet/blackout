@@ -1,14 +1,46 @@
-/* The admin pages' shared chrome: the gate's messages and the nav bar. */
-.gate { display: grid; gap: 14px; justify-items: center; padding-top: 18vh; text-align: center; }
-.gateTitle { font-family: var(--font-display); color: var(--gold); font-size: 28px; letter-spacing: .04em; }
-.gateCopy { color: var(--lavender); font-size: 15px; max-width: 420px; line-height: 1.4; }
-
-.nav {
-  display: flex; align-items: center; gap: 4px 14px; flex-wrap: wrap; padding: 10px 16px 0;
-  font-family: var(--font-body); font-size: 13px; font-weight: 800;
+/* The admin pages' shared chrome, in Stargazer's look: the night behind every page, the gate's messages and the nav
+   bar. Colours and fonts from themes/stargazer/tokens.css (the frame carries `.sg`). */
+.frame {
+  position: relative; min-height: 100vh; min-height: 100dvh; box-sizing: border-box;
+  background: linear-gradient(180deg, var(--sg-night-0) 0%, var(--sg-night-1) 58%, var(--sg-dusk) 100%) fixed;
+  color: var(--sg-text); font-family: var(--sg-font-body);
 }
-.badge { font-family: var(--font-display); color: var(--gold); letter-spacing: .06em; font-size: 15px; margin-right: 4px; }
-.link { color: var(--lavender); text-decoration: none; padding: 4px 0; border-bottom: 2px solid transparent; }
-.link:hover { color: var(--on-dark); }
-.current { color: var(--on-dark); border-bottom-color: var(--gold); }
-.who { margin-left: auto; color: var(--muted); font-weight: 700; }
+.content { position: relative; }
+
+.gate { display: grid; gap: 14px; justify-items: center; padding: 18vh 20px 0; text-align: center; }
+.gateEyebrow { font-size: 12px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--sg-mint); }
+.gateTitle { margin: 0; font-family: var(--sg-font-heading); font-weight: 400; color: var(--sg-cream); font-size: 32px; line-height: 1.1; }
+.gateCopy { color: var(--sg-text-soft); font-size: 15px; max-width: 420px; line-height: 1.45; margin-bottom: 6px; }
+.gateError { color: var(--sg-mars); font-weight: 700; }
+
+.nav { display: flex; align-items: center; gap: 8px 16px; flex-wrap: wrap; padding: 14px 16px 0; font-size: 14px; }
+.brand {
+  display: inline-flex; align-items: center; gap: 8px; text-decoration: none;
+  font-family: var(--sg-font-heading); font-size: 22px; line-height: 1; color: var(--sg-cream);
+}
+.brand:hover { color: var(--sg-gold-hover); }
+.badge {
+  font-family: var(--sg-font-body); font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--sg-mint); padding: 3px 8px; border-radius: 999px; background: color-mix(in srgb, var(--sg-mint) 14%, transparent);
+}
+.tabs {
+  display: flex; flex-wrap: wrap; gap: 2px; padding: 4px; border-radius: 999px;
+  background: var(--sg-bar); box-shadow: inset 0 0 0 1px var(--sg-hairline);
+}
+.tab {
+  padding: 7px 14px; border-radius: 999px; text-decoration: none; font-weight: 700; color: var(--sg-text-soft);
+}
+.tab:hover { color: var(--sg-text); }
+.tabOn, .tabOn:hover { background: color-mix(in srgb, var(--sg-gold) 14%, transparent); color: var(--sg-gold); font-weight: 800; }
+.back { color: var(--sg-text-soft); text-decoration: none; font-weight: 700; }
+.back:hover { color: var(--sg-gold); }
+.who { margin-left: auto; color: var(--sg-text-faint); font-weight: 700; }
+
+/* phone: the pages stay one row of pills that scrolls sideways, under the wordmark */
+@media (max-width: 760px) {
+  .nav { padding-top: 12px; }
+  .tabs { order: 3; flex-wrap: nowrap; overflow-x: auto; max-width: 100%; scrollbar-width: none; }
+  .tab { white-space: nowrap; }
+  .back { margin-left: auto; }
+  .who { display: none; }
+}

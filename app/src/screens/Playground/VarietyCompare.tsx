@@ -1,4 +1,4 @@
-import { Button } from '../../ui';
+import { Button } from '../../themes/stargazer/kit/Button';
 import { Info } from './Info';
 import { describeParams, type PlaygroundParams } from './params';
 import type { CompareRow } from './useVariety';
@@ -29,7 +29,7 @@ export function VarietyCompare({ rows, onLoad }: { rows: CompareRow[]; onLoad: (
                 <td>{pct(s.repeatShapes)}</td>
                 <td>{pct(s.tried ? s.met / s.tried : 0)}</td>
                 <td>{Math.round(s.msPerLevel)}</td>
-                <td><Button size="mini" variant="secondary" onClick={() => onLoad(params)}>Load</Button></td>
+                <td><Button size="xs" kind="soft" onClick={() => onLoad(params)}>Load</Button></td>
               </tr>
             ))}
           </tbody>

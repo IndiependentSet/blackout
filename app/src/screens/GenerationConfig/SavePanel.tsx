@@ -2,7 +2,8 @@ import { useState, type Dispatch } from 'react';
 import type { GameMode } from '../../domain/gameModes';
 import { DEFAULT_SCHEDULE } from '../../domain/generation';
 import { checkGameSchedule, configForDay, earliestEffectiveDay, resolveSchedule, type StoredConfig } from '../../domain/generationConfig';
-import { Button, Message } from '../../ui';
+import { Button } from '../../themes/stargazer/kit/Button';
+import { Note } from '../../themes/stargazer/kit/Page';
 import { Num, Row } from '../Playground/controls';
 import { HistoryList } from './HistoryList';
 import { JsonBox } from './JsonBox';
@@ -61,19 +62,19 @@ export function SavePanel({ mode, today, state, dispatch, rows, rowsError, write
           <input value={note} maxLength={200} onChange={e => setNote(e.target.value)} placeholder="what changed, and why" />
         </label>
         {!check.ok && <ul className={styles.errors}>{check.errors.map(e => <li key={e}>{e}</li>)}</ul>}
-        {writes.error && <Message tone="error">{writes.error}</Message>}
+        {writes.error && <Note tone="error">{writes.error}</Note>}
         {savedDay !== null && !state.dirty && <div className={styles.ok}>Saved: from day {savedDay} on, the game generates with this.</div>}
         <div className={styles.actions}>
-          <Button size="mini" variant="primary" disabled={!check.ok || writes.busy} onClick={() => void save()}>
+          <Button size="xs" kind="primary" disabled={!check.ok || writes.busy} onClick={() => void save()}>
             {writes.busy ? 'Saving…' : 'Save'}
           </Button>
-          <Button size="mini" variant="muted" onClick={() => dispatch({ type: 'load', schedule: DEFAULT_SCHEDULE, basis: 'the default' })}>Default</Button>
-          {inForce && <Button size="mini" variant="secondary" disabled={resolveSchedule(inForce).source !== 'saved'}
+          <Button size="xs" kind="outline" onClick={() => dispatch({ type: 'load', schedule: DEFAULT_SCHEDULE, basis: 'the default' })}>Default</Button>
+          {inForce && <Button size="xs" kind="soft" disabled={resolveSchedule(inForce).source !== 'saved'}
             onClick={() => load(inForce)}>In force today</Button>}
         </div>
         <JsonBox schedule={state.schedule} onApply={schedule => dispatch({ type: 'load', schedule, basis: 'pasted JSON' })} />
       </section>
-      {rowsError ? <Message tone="error">{rowsError}</Message>
+      {rowsError ? <Note tone="error">{rowsError}</Note>
         : <HistoryList rows={rows} today={today} busy={writes.busy} onLoad={load} onCancel={cancel} />}
     </div>
   );

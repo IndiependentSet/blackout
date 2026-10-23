@@ -18,7 +18,8 @@ interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
   kind?: Kind;
   /** full width */
   block?: boolean;
-  size?: 'lg' | 'md' | 'sm';
+  /** `xs` is for the admin pages' dense panels */
+  size?: 'lg' | 'md' | 'sm' | 'xs';
   tone?: 'mint' | 'soft';
 }
 

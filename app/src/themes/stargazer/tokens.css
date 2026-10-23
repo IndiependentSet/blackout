@@ -72,6 +72,12 @@
   --sg-neptune-1: #9fc6ff; --sg-neptune-2: #4c6fd1; --sg-neptune-3: #1a2766;
 
   --sg-shadow: 0 30px 80px rgba(0, 0, 0, .5);
+
+  /* translucent layers over the night: a soft panel and a hairline divider */
+  --sg-wash: rgba(255, 255, 255, .05);
+  --sg-hairline: rgba(255, 255, 255, .1);
+  --sg-scrim: rgba(5, 7, 20, .6);
+  --sg-font-mono: ui-monospace, "SF Mono", Menlo, monospace;
 }
 
 /* While Stargazer is showing, the document behind it is the night too, and does not rubber-band: a bounce or a

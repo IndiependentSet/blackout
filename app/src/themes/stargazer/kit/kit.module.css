@@ -107,6 +107,8 @@
 .btn-lg { height: 56px; padding: 0 30px; font-size: 17px; }
 .btn-md { height: 46px; padding: 0 18px; font-size: 15px; }
 .btn-sm { height: 38px; padding: 0 14px; font-size: 14px; }
+/* the admin pages' dense panels: a small pill in the body face, which reads better than the display face this small */
+.btn-xs { height: 28px; padding: 0 12px; font: 800 12.5px/1 var(--sg-font-body); }
 .btnBlock { width: 100%; }
 .btn-primary { background: var(--sg-gold); color: var(--sg-on-gold); }
 .btn-primary:hover:not(:disabled) { background: var(--sg-gold-hover); }

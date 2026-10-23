@@ -4,7 +4,7 @@ import { GAME_MODE_LABEL, GAME_MODES, type GameMode } from '../../domain/gameMod
 import { earliestEffectiveDay, resolveSchedule } from '../../domain/generationConfig';
 import { useResource } from '../../hooks/useResource';
 import { listConfigs } from '../../services/repositories/generationConfigs';
-import { cx } from '../../ui';
+import { cx } from '../../themes/stargazer/kit/cx';
 import { Info } from '../Playground/Info';
 import { editorReducer, initialEditor } from './editor';
 import { SavePanel } from './SavePanel';

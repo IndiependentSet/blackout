@@ -3,7 +3,7 @@ import { POOL_MODE_LABEL, POOL_MODES, type PoolMode } from '../../domain/gameMod
 import { curveRuleErrors, poolSlots } from '../../domain/generation';
 import { useResource } from '../../hooks/useResource';
 import { listPools, publishPool } from '../../services/repositories/levelPools';
-import { cx } from '../../ui';
+import { cx } from '../../themes/stargazer/kit/cx';
 import { CurvePanel } from './CurvePanel';
 import { initialPoolEditor, poolEditorReducer } from './poolEditor';
 import { PoolPreview } from './PoolPreview';

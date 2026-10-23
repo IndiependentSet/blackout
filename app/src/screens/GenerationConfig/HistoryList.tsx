@@ -1,5 +1,7 @@
 import { configStatus, resolveSchedule, type ConfigStatus, type StoredConfig } from '../../domain/generationConfig';
-import { Button, cx, Message } from '../../ui';
+import { Button } from '../../themes/stargazer/kit/Button';
+import { cx } from '../../themes/stargazer/kit/cx';
+import { Note } from '../../themes/stargazer/kit/Page';
 import { Info } from '../Playground/Info';
 import { dayLabel } from './week';
 import styles from './GenerationConfig.module.css';
@@ -14,7 +16,7 @@ export function HistoryList({ rows, today, busy, onLoad, onCancel }: {
   return (
     <section>
       <h3>Saved configs <Info k="history" /></h3>
-      {!rows.length && <Message tone="muted">Nothing saved yet: every day plays the default.</Message>}
+      {!rows.length && <Note>Nothing saved yet: every day plays the default.</Note>}
       <ul className={styles.history}>
         {rows.map(r => {
           const status = configStatus(r, rows, today);
@@ -29,8 +31,8 @@ export function HistoryList({ rows, today, busy, onLoad, onCancel }: {
               {r.note && <div className={styles.note}>{r.note}</div>}
               {broken && <div className={styles.note}><span className={styles.slow}>doesn’t parse: players get the default</span></div>}
               <div className={styles.actions}>
-                <Button size="mini" variant="secondary" disabled={broken} onClick={() => onLoad(r)}>Load</Button>
-                {status === 'scheduled' && <Button size="mini" variant="muted" disabled={busy} onClick={() => onCancel(r)}>Cancel it</Button>}
+                <Button size="xs" kind="soft" disabled={broken} onClick={() => onLoad(r)}>Load</Button>
+                {status === 'scheduled' && <Button size="xs" kind="outline" disabled={busy} onClick={() => onCancel(r)}>Cancel it</Button>}
               </div>
             </li>
           );

@@ -1,15 +1,17 @@
-import { useState } from 'react';
 import type { Level } from '../../domain/types';
-import { Board } from '../../themes/catastrophe/game/components/Board';
+import { SkyBoard } from '../../themes/stargazer/play/SkyBoard';
+import styles from './Playground.module.css';
 
-/** The level on the real board, to feel how it plays. The cats placed are
+const noop = () => {};
+
+/** The level as the game draws it, to feel how it plays. The lit stars are
     owned by the screen, so they carry over to and from the schematic. */
 export function PlayPreview({ level, placed, onTapNode }: {
   level: Level; placed: number[]; onTapNode?: (node: number) => void;
 }) {
-  const [dim, setDim] = useState(false);
   return (
-    <Board level={level} siteIdx={0} placed={placed} hint={null} focus={-1} kbd={false} dim={dim} expanded={false}
-      onTapNode={onTapNode ?? (() => {})} onToggleExpand={() => {}} onToggleDim={() => setDim(d => !d)} />
+    <div className={styles.sky}>
+      <SkyBoard level={level} placed={placed} sweep={false} ring={null} focus={null} onTapStar={onTapNode ?? noop} />
+    </div>
   );
 }

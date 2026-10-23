@@ -148,7 +148,13 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
     frame. Mounted by `app/App.tsx` over Stargazer; `?skin=catastrophe` and "Back to Stargazer" stay instant. It reads
     both themes' tokens (`.sg` scope + `:root`) and adds only `tokens.css`; neither theme imports it.
   - `src/screens/` — the admin pages only: `Playground/`, `GenerationConfig/`,
-    `LevelPools/` (below). They use the CATASTROPHE INC. board and ui kit.
+    `LevelPools/` (below). They wear Stargazer's look: `app/admin/AdminPage`
+    puts them on Stargazer's night (`.sg` tokens, starfield, the page list as a
+    pill tab bar), they build from `themes/stargazer/kit` (its `Button` has an
+    `xs` size for their dense panels, `Note`) and Stargazer's tokens only, the
+    playground's play-test view is Stargazer's `SkyBoard`, and their copy uses
+    Stargazer's words (skies, lit stars, Tonight/Voyage/Meteor Rush/Star Duel).
+    Lint forbids them `ui/` and `themes/catastrophe/`.
   - **`src/domain/generation/`** — level generation as its own module, with
     **one public API, `index.ts`**: nothing outside the folder imports its
     files (lint-enforced by `no-restricted-imports`). Inside: `options.ts`
@@ -186,8 +192,8 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
     edges, or free density/spread/edge length — max optimal covers, the
     greedy and matching-bound hardness filters, search limits) —
     and shows the result as a schematic (cover, the other optimal covers
-    one at a time, crossings) or on the real `Board` — tap nodes in either view to
-    play-test it against par (the placed cats are shared by both) — with `domain/graphStats.ts`
+    one at a time, crossings) or as the game's sky (`SkyBoard`) — tap nodes in either view to
+    play-test it against par (the lit stars are shared by both) — with `domain/graphStats.ts`
     and the generator's `GenReport` (why candidates were rejected) alongside.
     Its **Variety** panel sweeps N consecutive seeds in a second worker and
     counts distinct graphs and drawings (with Chao1 estimates of the total,
@@ -295,15 +301,15 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
     frame both admin pages render in.
   - `src/ui/` (Button, Panel/TabHeader, Tag, Logo, Screen, StaffBadge, Stat,
     Avatar, Field, ListRow/RankRow, ScopeTabs, Message, GradeBadge — the
-    CATASTROPHE INC. kit, also used by the admin pages) and
+    CATASTROPHE INC. kit) and
     `src/themes/catastrophe/sprites/` (PadSprite, CatFlipbook, ThingSprite, PathWeb/PathLit and
     the two-tone path theme): shared presentation used by the board, the
     work order and the orientation alike — never re-draw a pad, cat or path
     somewhere else. `src/hooks/` holds generic hooks (`useResource`,
     `useWindowKey`, `useClipboard`, `useCulled`).
   - `src/styles/tokens.css` — the only home of raw colours, font stacks and
-    the sticker border/shadow recipe (CATASTROPHE INC. and the admin pages);
-    Stargazer's are in `src/themes/stargazer/tokens.css`. `styles/global.css` holds the `cc-*`
+    the sticker border/shadow recipe (CATASTROPHE INC.);
+    Stargazer's (and the admin pages') are in `src/themes/stargazer/tokens.css`. `styles/global.css` holds the `cc-*`
     keyframes.
   - `src/assets/rooms/` — the drawn rooms the house is filled with, plus the
     `raw/` originals they are trimmed from. Filename is the contract and
