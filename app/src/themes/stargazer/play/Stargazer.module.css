@@ -60,9 +60,11 @@
 .eyebrowSoft { color: var(--sg-text-soft); }
 
 /* ---- desktop (1n) ---- */
+.deskFrame { height: 100%; display: flex; flex-direction: column; }
+.deskHead { position: relative; width: 100%; max-width: 1440px; margin: 0 auto; box-sizing: border-box; padding: 28px 40px 0; flex: none; }
 .grid {
-  position: relative; height: 100%; box-sizing: border-box; max-width: 1440px; margin: 0 auto;
-  display: grid; grid-template-columns: 240px minmax(0, 1fr) 320px; gap: 24px; padding: 28px 32px;
+  position: relative; flex: 1 1 0; min-height: 0; width: 100%; box-sizing: border-box; max-width: 1440px; margin: 0 auto;
+  display: grid; grid-template-columns: 240px minmax(0, 1fr) 320px; gap: 24px; padding: 20px 40px 28px;
 }
 .left { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
 .leftHead { display: flex; align-items: center; gap: 6px; margin-bottom: 12px; }

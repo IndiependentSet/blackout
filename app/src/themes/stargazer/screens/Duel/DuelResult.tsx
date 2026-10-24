@@ -7,7 +7,8 @@ import { useMyPlace } from '../../../../game/hooks/useBoard';
 import { Button } from '../../kit/Button';
 import { Figure } from '../../kit/Figure';
 import { Fit } from '../../kit/Layout';
-import { Eyebrow, Page } from '../../kit/Page';
+import { DeskPage } from '../../kit/DeskPage';
+import { Eyebrow } from '../../kit/Page';
 import { cx } from '../../kit/cx';
 import { plural } from '../../copy';
 import styles from './Duel.module.css';
@@ -52,7 +53,7 @@ export function DuelResult({ view, userId, opponentName, onOpenLobby, onOpenHub 
   const rating = ratingChange(mine);
   const place = useMyPlace('duel', userId, { enabled: match.ranked, refresh: match.id });
   return (
-    <Page tone="duel">
+    <DeskPage active="duel" tone="duel">
       <Eyebrow>Star Duel · {match.ranked ? 'ranked · ' : ''}par {match.level.k}</Eyebrow>
       <h1 className={styles.resultTitle}>{TITLE[outcome]}</h1>
       <Fit max={260}><Figure figure={match.level} mode="lit" lit={match.level.sol} /></Fit>
@@ -69,6 +70,6 @@ export function DuelResult({ view, userId, opponentName, onOpenLobby, onOpenHub 
         <Button block kind="mint" onClick={onOpenLobby}>Back to the lobby</Button>
         <Button block kind="ghost" size="md" onClick={onOpenHub}>Tonight</Button>
       </div>
-    </Page>
+    </DeskPage>
   );
 }

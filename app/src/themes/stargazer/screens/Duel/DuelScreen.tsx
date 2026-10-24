@@ -6,7 +6,8 @@ import { useMatch } from '../../../../game/match/useMatch';
 import { useMatchSession } from '../../../../game/useMatchSession';
 import type { Result } from '../../../../services/result';
 import { Button } from '../../kit/Button';
-import { Avatar, Note, Page, TopBar } from '../../kit/Page';
+import { DeskPage } from '../../kit/DeskPage';
+import { Avatar, Note, TopBar } from '../../kit/Page';
 import { SkyPlay } from '../../play/SkyPlay';
 import { plural } from '../../copy';
 import { DuelResult } from './DuelResult';
@@ -50,10 +51,10 @@ export function DuelScreen({ matchId, userId, initial, avatar, onOpenLobby, onOp
 
   if (match.loading || !view || status === null) {
     return (
-      <Page tone="duel">
+      <DeskPage active="duel" tone="duel">
         <TopBar title="Star Duel" onBack={onOpenLobby} backLabel="Lobby" />
         <Note tone={match.loading ? undefined : 'error'}>{match.loading ? 'Finding the sky…' : match.error ?? 'That duel isn’t yours to see.'}</Note>
-      </Page>
+      </DeskPage>
     );
   }
   const row = view.match;
@@ -64,7 +65,7 @@ export function DuelScreen({ matchId, userId, initial, avatar, onOpenLobby, onOp
   if (status === 'pending') {
     const sent = row.created_by === userId;
     return (
-      <Page tone="duel">
+      <DeskPage active="duel" tone="duel">
         <TopBar title="Star Duel" onBack={onOpenLobby} backLabel="Lobby" />
         <section className={styles.invite}>
           <div className={styles.who}>
@@ -82,7 +83,7 @@ export function DuelScreen({ matchId, userId, initial, avatar, onOpenLobby, onOp
                 </>}
           </div>
         </section>
-      </Page>
+      </DeskPage>
     );
   }
   if (status === 'done' || status === 'void') return result;
@@ -107,7 +108,7 @@ export function DuelScreen({ matchId, userId, initial, avatar, onOpenLobby, onOp
     : match.opponentGone ? `${them} has left the sky. The clock decides.` : null;
 
   return (
-    <SkyPlay session={session} userId={userId} locked={status !== 'live'} tone="duel" title="Star Duel" onBack={onOpenLobby} top={top}
+    <SkyPlay session={session} userId={userId} locked={status !== 'live'} tone="duel" active="duel" title="Star Duel" onBack={onOpenLobby} top={top}
       status={status_}
       primary={{ label: lockedIn ? `Locked in · ${plural(mine?.cats_used ?? 0, 'star')}` : 'Lock in my sky', disabled: true }}
       footer={(

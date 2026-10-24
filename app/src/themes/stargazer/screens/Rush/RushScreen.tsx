@@ -83,7 +83,7 @@ function RushRun({ userId, best, onFinish, onBack, onSignIn, onAgain }: Props & 
   const dark = level ? level.edges.length - coveredEdges(level, state.placed).size : 0;
   const status = level ? `${plural(dark, 'line')} still dark. Chart as many skies as you can before dawn.` : 'The first sky is rising…';
   return (
-    <SkyPlay session={session} userId={userId} tone="rush" title="Meteor Rush" onBack={leave} primary={null} status={status}
+    <SkyPlay session={session} userId={userId} active="rush" tone="rush" title="Meteor Rush" onBack={leave} primary={null} status={status}
       top={<RushTop remainingMs={remainingMs} summary={summary} best={before} onQuit={leave} />}
       footer={!userId ? <div className={styles.foot}>Sign in to rank your runs.</div> : recording === 'unsaved' ? <div className={styles.foot}>Not saved: playing on this device only.</div> : null} />
   );

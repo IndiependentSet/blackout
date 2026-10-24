@@ -23,7 +23,7 @@ export function DailySky({ session, userId, onBack, onNightDone }: Props) {
     return state.idx + 1;
   };
   return (
-    <SkyPlay session={session} userId={userId} title={`Sky ${state.idx + 1} of ${set.count}`} onBack={onBack} backLabel="Tonight"
+    <SkyPlay session={session} userId={userId} active="tonight" title={`Sky ${state.idx + 1} of ${set.count}`} onBack={onBack} backLabel="Tonight"
       skies={{ entries: skyEntries(state.results, state.idx), heading: 'Tonight', canOpen: i => !!levels[i], onOpen: goTo }}
       primary={t.done ? { label: 'See tonight’s figure', onClick: onNightDone, disabled: false }
         : levels[nextDark()] ? { label: 'Chart this sky', onClick: () => goTo(nextDark()) }
