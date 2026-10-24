@@ -1,0 +1,32 @@
+/* The hand-drawn sky editor (admin). Colours are Stargazer's tokens only. */
+.editor { display: grid; gap: 8px; }
+.tools { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.help { margin: 0; font-size: 12px; color: var(--sg-text-faint); }
+
+.canvas {
+  display: block; width: 100%; height: auto; max-height: calc(100vh - 220px); touch-action: none; user-select: none;
+  background: var(--sg-well); border-radius: 18px; box-shadow: inset 0 0 0 1px var(--sg-hairline);
+}
+.tool-draw { cursor: crosshair; }
+.tool-move { cursor: grab; }
+.tool-erase { cursor: not-allowed; }
+
+.dot { fill: var(--sg-next-ring); }
+.line { stroke: var(--sg-line-dark); stroke-width: 4; stroke-linecap: round; }
+.lineLit { stroke: var(--sg-gold-line); }
+.crossed { stroke: var(--sg-mars); stroke-dasharray: 9 6; }
+.star { fill: var(--sg-night-1); stroke: var(--sg-star-dim); stroke-width: 3; }
+.starLit { fill: var(--sg-gold); stroke: var(--sg-cream); }
+.dragging { stroke: var(--sg-mint); }
+.pending { fill: none; stroke: var(--sg-mint); stroke-width: 3; stroke-dasharray: 5 5; }
+.label { fill: var(--sg-text-soft); font-size: 12px; font-weight: 800; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.labelLit { fill: var(--sg-on-gold); }
+
+.status { display: grid; gap: 6px; font-size: 13px; }
+.facts { display: flex; flex-wrap: wrap; gap: 14px; }
+.facts b { color: var(--sg-gold); }
+.good { color: var(--sg-mint); font-weight: 800; margin: 0; }
+.bad { color: var(--sg-mars); font-weight: 800; }
+.errors, .warnings { margin: 0; padding-left: 18px; display: grid; gap: 2px; }
+.errors { color: var(--sg-mars); font-weight: 700; }
+.warnings { color: var(--sg-gold); }

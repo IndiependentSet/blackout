@@ -5,11 +5,16 @@ import { earliestEffectiveDay, resolveSchedule } from '../../domain/generationCo
 import { useResource } from '../../hooks/useResource';
 import { useUnsavedGuard } from '../../hooks/useUnsavedGuard';
 import { listConfigs } from '../../services/repositories/generationConfigs';
+import { figureOf } from '../../domain/nights';
+import { Button } from '../../themes/stargazer/kit/Button';
 import { cx } from '../../themes/stargazer/kit/cx';
 import { Num } from '../Playground/controls';
 import { Info } from '../Playground/Info';
 import { useRecipes } from '../Recipes/useRecipes';
 import { editorReducer, initialEditor } from './editor';
+import { ManualDays } from './ManualDays';
+import { newDraft, pinnedSites } from './manualDays';
+import { usePinnedSkies } from './usePinnedSkies';
 import { SavePanel } from './SavePanel';
 import { SchedulePanel } from './SchedulePanel';
 import { useConfigWrites } from './useConfigWrites';
@@ -28,9 +33,17 @@ export function GenerationConfigScreen() {
   const writes = useConfigWrites(configs.reload);
   const [state, dispatch] = useReducer(editorReducer, undefined, () => initialEditor());
   const [previewDay, setPreviewDay] = useState(() => earliestEffectiveDay(today));
-  const preview = useSchedulePreview(state.schedule, previewDay);
+  /* the week's rules, or skies drawn by hand and pinned to one night */
+  const [view, setView] = useState<'schedule' | 'drawn'>('schedule');
+  const [draft, setDraft] = useState(() => newDraft(earliestEffectiveDay(today)));
+  const pinned = usePinnedSkies();
+  /* drawing: preview the draft's night, so its generated sky can be the starting point */
+  const shownDay = view === 'drawn' ? draft.day : previewDay;
+  const preview = useSchedulePreview(state.schedule, shownDay);
   const recipes = useRecipes();
-  useUnsavedGuard(state.dirty);
+  useUnsavedGuard(state.dirty || draft.dirty);
+  const drawnHere = pinnedSites(pinned.list, previewDay);
+  const generated = preview.sites?.[draft.idx]?.level;
 
   /* the first time the list arrives, start from the newest config (what the
      days ahead will play) rather than the default, unless editing has begun */
@@ -54,12 +67,19 @@ export function GenerationConfigScreen() {
         {GAME_MODES.length > 1 && <span className={pg.toolbar}><select value={mode} aria-label="game mode" onChange={e => setMode(e.target.value as GameMode)}>
           {GAME_MODES.map(m => <option key={m} value={m}>{GAME_MODE_LABEL[m]}</option>)}
         </select></span>}
+        <span className={styles.views} role="group" aria-label="what to edit">
+          <Button size="xs" kind={view === 'schedule' ? 'primary' : 'soft'} aria-pressed={view === 'schedule'} onClick={() => setView('schedule')}>Generated week</Button>
+          <Button size="xs" kind={view === 'drawn' ? 'primary' : 'soft'} aria-pressed={view === 'drawn'} onClick={() => setView('drawn')}>Hand-drawn days</Button>
+        </span>
         <span className={styles.basis}>
-          Today is day {today}. Editing {state.basis}{state.dirty && <span className={styles.dirty}> · edited</span>}
+          Today is day {today}.{view === 'schedule' && <> Editing {state.basis}{state.dirty && <span className={styles.dirty}> · edited</span>}</>}
         </span>
         <span className={cx(pg.status, preview.running && pg.busy)}>{preview.running ? 'generating…' : preview.error ? 'error' : 'ready'}</span>
       </header>
-      <div className={pg.layout}>
+      {view === 'drawn' ? (
+        <ManualDays today={today} draft={draft} setDraft={setDraft} pinned={pinned}
+          startFrom={generated && !preview.running ? figureOf(generated) : null} />
+      ) : <div className={pg.layout}>
         <SchedulePanel state={state} dispatch={dispatch} recipes={recipes} />
         <main className={pg.main}>
           <div className={pg.toolbar}>
@@ -68,6 +88,9 @@ export function GenerationConfigScreen() {
             </label>
             <Info k="previewDay" />
             <span className={styles.basis}>{dayLabel(previewDay)}</span>
+            {drawnHere.length > 0 && <span className={styles.pinnedNote}>
+              Hand-drawn on this night: sky {drawnHere.map(i => i + 1).join(', ')} (they replace the generated ones)
+            </span>}
           </div>
           <WeekPreview sites={preview.sites} running={preview.running} error={preview.error} previewKey={preview.previewKey}
             tab={state.tab} onTab={tab => dispatch({ type: 'tab', tab })} />
@@ -76,7 +99,7 @@ export function GenerationConfigScreen() {
           <SavePanel key={mode} mode={mode} today={today} state={state} dispatch={dispatch}
             rows={configs.data ?? []} rowsError={configs.error} writes={writes} />
         </div>
-      </div>
+      </div>}
     </div>
   );
 }

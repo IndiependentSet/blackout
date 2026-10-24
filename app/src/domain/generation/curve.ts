@@ -7,10 +7,11 @@
 import type { PoolMode } from '../gameModes';
 import { shapeKey } from '../graphIdentity';
 import { rngFromSeed } from '../rng';
-import { CAMPAIGN_LEVELS, type GenOptions, type Level, type Stars } from '../types';
+import { CAMPAIGN_LEVELS, type GenOptions, type Level, type SkyFigure, type Stars } from '../types';
 import { constraintFilter, gameConstraints, type LevelConstraints } from './constraints';
 import { generateWith } from './generate';
 import { compareHardness } from './hardness';
+import { checkFigure, levelFromFigure } from './manual';
 import { MAX_LEVEL_NODES, resolveOptions } from './options';
 import { DEFAULT_SCHEDULE, type SiteOutcome } from './schedule';
 
@@ -23,6 +24,9 @@ export interface CurveTier {
   /** on top of DEFAULT_GEN */
   options: Partial<GenOptions>;
   constraints?: LevelConstraints;
+  /** hand-drawn skies: when present the tier generates nothing and plays these, one per level, in order
+      (`count` is their number); size, diff, options and constraints are kept for switching back */
+  manual?: SkyFigure[];
 }
 
 export interface LevelCurve {
@@ -37,7 +41,12 @@ export interface LevelCurve {
 }
 
 /** One level of a pool: its slot (campaign: the level number) and the tier that makes it. */
-export interface PoolSlot { slot: number; tier: number }
+export interface PoolSlot {
+  slot: number;
+  tier: number;
+  /** the level's place within its tier (poolSlots fills it in; a hand-drawn tier needs it to pick its drawing) */
+  index?: number;
+}
 
 const MAX_POOL = 400;
 
@@ -46,7 +55,7 @@ export function poolSlots(mode: PoolMode, curve: LevelCurve): PoolSlot[] {
   const first = mode === 'campaign' ? 1 : 0;
   const out: PoolSlot[] = [];
   curve.tiers.forEach((t, tier) => {
-    for (let i = 0; i < t.count; i++) out.push({ slot: first + out.length, tier });
+    for (let i = 0; i < t.count; i++) out.push({ slot: first + out.length, tier, index: i });
   });
   return out;
 }
@@ -57,7 +66,7 @@ export const poolKey = (level: Level): string => shapeKey(level).key;
 
 /** A slot's level, with its pool key, and whether it repeats a level already in the pool (only when nothing
     else could be found: every retry and the fallback came out as graphs the pool already has). */
-export interface SlotOutcome extends SiteOutcome { key: string; duplicate: boolean }
+export interface SlotOutcome extends SiteOutcome { key: string; duplicate: boolean; manual?: boolean }
 
 const NONE: ReadonlySet<string> = new Set();
 
@@ -65,9 +74,10 @@ const NONE: ReadonlySet<string> = new Set();
     (with the clock off): a pool is made once and frozen, so the clock budget does no harm here.
     `avoid` holds the keys (poolKey) of the levels already in the pool: a retry that comes out as one of them is
     passed over like a near miss, so a pool never holds the same sky twice. Built slot by slot, in order. */
-export function generateSlot(curve: LevelCurve, { slot, tier }: PoolSlot, avoid: ReadonlySet<string> = NONE): SlotOutcome {
+export function generateSlot(curve: LevelCurve, { slot, tier, index }: PoolSlot, avoid: ReadonlySet<string> = NONE): SlotOutcome {
   const rule = curve.tiers[tier];
   if (!rule) throw new RangeError(`no tier ${tier} in the curve`);
+  if (rule.manual) return manualSlot(rule.manual, { slot, tier, index }, avoid);
   const accept = constraintFilter(gameConstraints(rule.constraints));
   /* a retry only counts when it met every rule and is new to the pool; the first near miss is kept in case no
      retry is, and the first repeat in case nothing else turns up at all */
@@ -94,14 +104,25 @@ export function generateSlot(curve: LevelCurve, { slot, tier }: PoolSlot, avoid:
   throw new Error(`slot ${slot} produced no level, even with the fallback rules`);
 }
 
+/* A hand-drawn tier's level: the slot's place in its tier picks the drawing. No RNG, no retries. */
+function manualSlot(figures: readonly SkyFigure[], { slot, tier, index }: PoolSlot, avoid: ReadonlySet<string>): SlotOutcome {
+  const fig = index === undefined ? undefined : figures[index];
+  if (!fig) throw new RangeError(`tier ${tier + 1} has no hand-drawn sky for slot ${slot}`);
+  const level = levelFromFigure(fig);
+  const key = poolKey(level);
+  return { level, salt: null, key, duplicate: avoid.has(key), manual: true };
+}
+
 /** A campaign's levels laid out easiest first. The ramp aims each slot a little above the one before, but every
     level is generated on its own seed, so neighbours can land the wrong way round. This hands the generated levels
     back to the slots in order of measured hardness (domain/generation/hardness.ts), which is what makes every level
     harder than the last. A slot keeps its number and tier; the level moves, with whatever was learned about it
-    (retry, uniqueness check, time). */
-export function orderByHardness<T extends { slot: number; tier: number; level: Level }>(results: readonly T[]): T[] {
-  const ranked = results.slice().sort((a, b) => compareHardness(a.level, b.level) || a.slot - b.slot);
-  return results.map((r, i) => ({ ...ranked[i], slot: r.slot, tier: r.tier }));
+    (retry, uniqueness check, time). A hand-drawn level (`manual`) stays where the admin put it: only the generated
+    ones are re-ranked, among the slots generated levels hold. */
+export function orderByHardness<T extends { slot: number; tier: number; level: Level; manual?: boolean }>(results: readonly T[]): T[] {
+  const ranked = results.filter(r => !r.manual).sort((a, b) => compareHardness(a.level, b.level) || a.slot - b.slot);
+  let next = 0;
+  return results.map(r => (r.manual ? r : { ...ranked[next++], slot: r.slot, tier: r.tier }));
 }
 
 /** What a pool asks of a curve beyond what the generator accepts: its size for the mode, and, as for the
@@ -114,6 +135,13 @@ export function curveRuleErrors(mode: PoolMode, curve: LevelCurve): string[] {
   }
   curve.tiers.forEach((t, i) => {
     if (t.size > MAX_LEVEL_NODES) errors.push(`curve.tiers[${i}].size: the game plays at most ${MAX_LEVEL_NODES} junctions`);
+    if (!t.manual) return;
+    if (t.manual.length !== t.count) errors.push(`curve.tiers[${i}].manual: ${t.manual.length} hand-drawn skies for ${t.count} levels`);
+    t.manual.forEach((fig, j) => {
+      const c = checkFigure(fig);
+      if (c.errors.length) errors.push(`curve.tiers[${i}].manual[${j}]: ${c.errors.join(' ')}`);
+      else if (!c.playable) errors.push(`curve.tiers[${i}].manual[${j}]: ${c.optima} best answers, the game needs exactly one`);
+    });
   });
   if (total > MAX_POOL) errors.push(`curve.tiers: a pool holds at most ${MAX_POOL} levels, the tiers add up to ${total}`);
   const rules = [

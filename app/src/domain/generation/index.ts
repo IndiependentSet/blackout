@@ -11,7 +11,13 @@ export type { LevelConstraints } from './constraints';
 export {
   DEFAULT_SCHEDULE, levelForSite, levelForSiteReport, levelsForDay, type GenerationSchedule, type SiteOutcome, type SiteRule,
 } from './schedule';
-export { parseCurve, parseOptions, parseSchedule, type ParseResult } from './parse';
+export { parseCurve, parseFigure, parseOptions, parseSchedule, type ParseResult } from './parse';
+
+// hand-drawn skies: the generator's other way in
+export {
+  EMPTY_FIGURE, addStar, adjacency, checkFigure, decodeFigure, encodeFigure, figureErrors, figureWarnings, levelFromFigure,
+  moveStar, normalizeFigure, removeLine, removeStar, starAt, toggleLine, type FigureCheck,
+} from './manual';
 
 // level pools: a curve of tiers, made ahead of time
 export {

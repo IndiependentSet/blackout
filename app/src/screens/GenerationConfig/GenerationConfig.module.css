@@ -41,3 +41,15 @@
 
 .json { width: 100%; min-height: 220px; font-family: var(--sg-font-mono); font-size: 11px; box-sizing: border-box; }
 .panel summary { cursor: pointer; margin: 12px 0 6px; font-size: 12px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--sg-mint); }
+
+/* hand-drawn days: the pinned skies list */
+.pinned { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 4px; max-height: 320px; overflow: auto; }
+.pinnedRow {
+  width: 100%; text-align: left; padding: 6px 10px; border-radius: 12px; border: 2px solid transparent; cursor: pointer;
+  background: var(--sg-wash); color: var(--sg-text); font: inherit; font-size: 12.5px;
+}
+.pinnedRow b { color: var(--sg-gold); }
+.pinnedRow span { color: var(--sg-text-faint); margin-left: 6px; }
+.pinnedOpen { border-color: var(--sg-gold); }
+.views { display: inline-flex; gap: 6px; }
+.pinnedNote { color: var(--sg-gold); font-size: 12px; }

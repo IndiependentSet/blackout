@@ -37,4 +37,17 @@ describe('pool page', () => {
     fireEvent.change(screen.getByLabelText('Density', { selector: 'input' }), { target: { value: '3.4' } });
     expect(within(screen.getByRole('list', { name: 'settings that cancel out' })).getByText(/Density 3.4 can't be reached/)).toBeInTheDocument();
   });
+
+  it('switches a tier to hand-drawn skies and back', async () => {
+    render(<LevelPoolsScreen mode="survival" />);
+    await userEvent.click(screen.getByRole('button', { name: 'Draw by hand' }));
+    expect(screen.getByRole('application', { name: 'sky editor' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Strategy', { selector: 'select' })).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: '+ Add a sky' }));
+    expect(within(screen.getByRole('group', { name: 'drawings' })).getAllByRole('button')).toHaveLength(2);
+    const tiers = (await draft()).tiers as unknown as { count: number; manual?: unknown[] }[];
+    expect(tiers[0]).toMatchObject({ count: 2, manual: [{ nodes: [], edges: [] }, { nodes: [], edges: [] }] });
+    await userEvent.click(screen.getByRole('button', { name: 'Generate' }));
+    expect(strategySelect()).toBeInTheDocument();
+  });
 });

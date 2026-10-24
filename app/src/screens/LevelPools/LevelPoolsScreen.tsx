@@ -1,6 +1,7 @@
-import { useCallback, useReducer, useState } from 'react';
+import { useCallback, useMemo, useReducer, useState } from 'react';
 import { POOL_MODE_LABEL, type PoolMode } from '../../domain/gameModes';
 import { curveRuleErrors } from '../../domain/generation';
+import { figureOf } from '../../domain/nights';
 import { useResource } from '../../hooks/useResource';
 import { useUnsavedGuard } from '../../hooks/useUnsavedGuard';
 import { listPools, publishPool } from '../../services/repositories/levelPools';
@@ -10,6 +11,7 @@ import { CurvePanel } from './CurvePanel';
 import { initialPoolEditor, poolEditorReducer } from './poolEditor';
 import { PoolPreview } from './PoolPreview';
 import { PublishPanel } from './PublishPanel';
+import { TierDrawing } from './TierDrawings';
 import { TierPanel } from './TierPanel';
 import { TierStrip } from './TierStrip';
 import { usePoolBuild } from './usePoolBuild';
@@ -27,6 +29,9 @@ export function LevelPoolsScreen({ mode }: { mode: PoolMode }) {
   const { build, current, start, stop } = usePoolBuild(mode, curve);
   const [write, setWrite] = useState<{ busy: boolean; error: string | null; version: number | null }>({ busy: false, error: null, version: null });
   useUnsavedGuard(state.dirty);
+  /* the open tier's levels from the last build, as drawings (a hand-drawn tier can start from them) */
+  const built = useMemo(() => (build?.results ?? []).filter(r => r.tier === state.tab).map(r => figureOf(r.level)), [build, state.tab]);
+  const drawn = typeof state.tab === 'number' && !!curve.tiers[state.tab]?.manual;
 
   const publish = async (note: string) => {
     if (!build) return;
@@ -52,9 +57,10 @@ export function LevelPoolsScreen({ mode }: { mode: PoolMode }) {
         <span className={cx(pg.status, running && pg.busy)}>{running ? 'generating…' : build?.status === 'error' ? 'error' : 'ready'}</span>
       </header>
       <div className={pg.layout}>
-        <TierPanel state={state} dispatch={dispatch} recipes={recipes} />
+        <TierPanel state={state} dispatch={dispatch} recipes={recipes} built={built} />
         <main className={pg.main}>
           <TierStrip state={state} recipes={recipes.data ?? []} onTab={tab => dispatch({ type: 'tab', tab })} />
+          {drawn && <TierDrawing state={state} dispatch={dispatch} startFrom={built[state.drawing] ?? null} />}
           <PoolPreview build={build} current={current} onGenerate={() => void start()} onStop={stop} />
         </main>
         <div className={styles.side}>

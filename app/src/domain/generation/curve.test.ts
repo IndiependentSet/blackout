@@ -185,3 +185,43 @@ describe('parseCurve', () => {
     expect(r.ok).toBe(false);
   });
 });
+
+describe('hand-drawn tiers', () => {
+  const path3 = { nodes: [{ c: 0, r: 0 }, { c: 1, r: 0 }, { c: 2, r: 0 }], edges: [[0, 1], [1, 2]] as [number, number][] };
+  const star4 = { nodes: [{ c: 1, r: 1 }, { c: 0, r: 1 }, { c: 2, r: 1 }, { c: 1, r: 0 }], edges: [[0, 1], [0, 2], [0, 3]] as [number, number][] };
+  const drawn: LevelCurve = { ...tiny, tiers: [tiny.tiers[0], { ...tiny.tiers[1], count: 2, manual: [path3, star4] }] };
+
+  it('plays its drawings, in order, without generating', () => {
+    const slots = poolSlots('campaign', drawn);
+    const a = generateSlot(drawn, slots[2]), b = generateSlot(drawn, slots[3]);
+    expect(a).toMatchObject({ manual: true, salt: null, duplicate: false });
+    expect(a.level.nodes).toEqual(path3.nodes);
+    expect(b.level.nodes).toEqual(star4.nodes);
+    expect(generateSlot(drawn, slots[2], new Set([a.key])).duplicate).toBe(true);
+  });
+  it('needs one drawing per level, each with exactly one answer', () => {
+    expect(curveRuleErrors('survival', drawn)).toEqual([]);
+    const short: LevelCurve = { ...drawn, tiers: [tiny.tiers[0], { ...tiny.tiers[1], count: 3, manual: [path3, star4] }] };
+    expect(curveRuleErrors('survival', short).join(' ')).toMatch(/2 hand-drawn skies for 3 levels/);
+    const pair = { nodes: [{ c: 0, r: 0 }, { c: 1, r: 0 }], edges: [[0, 1]] as [number, number][] };
+    const twoAnswers: LevelCurve = { ...drawn, tiers: [tiny.tiers[0], { ...tiny.tiers[1], count: 1, manual: [pair] }] };
+    expect(curveRuleErrors('survival', twoAnswers).join(' ')).toMatch(/2 best answers/);
+  });
+  it('round-trips through parseCurve', () => {
+    const parsed = parseCurve(JSON.parse(JSON.stringify(drawn)));
+    expect(parsed).toEqual({ ok: true, value: drawn });
+  });
+  it('keeps hand-drawn levels where they are when a campaign is ordered', () => {
+    const gen = [14, 6, 10].map((size, i) => {
+      const { level } = generate({ seed: 70 + i, size, diff: 1, options: { clock: false } });
+      if (!level) throw new Error('no level');
+      return { slot: i + 1, tier: i, level, manual: false };
+    });
+    const pinned = { slot: 4, tier: 3, level: generateSlot(drawn, poolSlots('campaign', drawn)[2]).level, manual: true };
+    const mixed = [gen[0], pinned, gen[1], gen[2]].map((r, i) => ({ ...r, slot: i + 1, tier: i }));
+    const out = orderByHardness(mixed);
+    expect(out[1].level).toBe(pinned.level);
+    const rest = [out[0], out[2], out[3]];
+    for (let i = 1; i < rest.length; i++) expect(compareHardness(rest[i - 1].level, rest[i].level)).toBeLessThanOrEqual(0);
+  });
+});

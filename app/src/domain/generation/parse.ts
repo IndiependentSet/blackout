@@ -1,7 +1,7 @@
 /* Untrusted JSON (a stored or admin-edited schedule) in, a schedule the
    generator can run out — or every reason it can't. Pure. */
 import { SITE_COUNT } from '../sites';
-import type { GenOptions, Stars, Strategy } from '../types';
+import type { Edge, GenOptions, SkyFigure, Stars, Strategy } from '../types';
 import type { LevelConstraints } from './constraints';
 import { isGadget } from './gadgets';
 import { OPTION_LIMITS, STRATEGIES, resolveOptions, type Limit } from './options';
@@ -136,10 +136,45 @@ export function parseSchedule(raw: unknown): ParseResult<GenerationSchedule> {
 const MAX_TIERS = 100;
 const MAX_TIER_COUNT = 400;
 
+/** Hand-drawn stars: integer cells, a bounded board. */
+const CELL = { min: -1000, max: 1000 };
+const MAX_FIGURE_NODES = 200;
+
+function readFigure(r: Reader, path: string, raw: unknown): SkyFigure {
+  const fig: SkyFigure = { nodes: [], edges: [] };
+  if (!isObj(raw)) { r.errors.push(`${path}: expected an object`); return fig; }
+  r.unknownKeys(path, raw, ['nodes', 'edges']);
+  if (!Array.isArray(raw.nodes) || raw.nodes.length > MAX_FIGURE_NODES) r.errors.push(`${path}.nodes: expected a list of at most ${MAX_FIGURE_NODES} stars`);
+  else fig.nodes = raw.nodes.map((p: unknown, i: number) => {
+    if (!isObj(p)) { r.errors.push(`${path}.nodes[${i}]: expected {c, r}`); return { c: 0, r: 0 }; }
+    return { c: r.num(`${path}.nodes[${i}].c`, p.c, CELL, true) ?? 0, r: r.num(`${path}.nodes[${i}].r`, p.r, CELL, true) ?? 0 };
+  });
+  const n = fig.nodes.length;
+  if (!Array.isArray(raw.edges)) r.errors.push(`${path}.edges: expected a list`);
+  else fig.edges = raw.edges.map((e: unknown, i: number): Edge => {
+    if (!Array.isArray(e) || e.length !== 2) { r.errors.push(`${path}.edges[${i}]: expected [a, b]`); return [0, 0]; }
+    const lim = { min: 0, max: Math.max(0, n - 1) };
+    return [r.num(`${path}.edges[${i}][0]`, e[0], lim, true) ?? 0, r.num(`${path}.edges[${i}][1]`, e[1], lim, true) ?? 0];
+  });
+  return fig;
+}
+
+/** Check one hand-drawn sky's shape (not whether it is a good level: checkFigure says that). */
+export function parseFigure(raw: unknown): ParseResult<SkyFigure> {
+  const r = new Reader();
+  const value = readFigure(r, 'figure', raw);
+  return r.errors.length ? { ok: false, errors: r.errors } : { ok: true, value };
+}
+
 function readTier(r: Reader, path: string, raw: unknown): CurveTier {
-  const rule = readSite(r, path, raw, ['count']);
+  const rule = readSite(r, path, raw, ['count', 'manual']);
   const count = isObj(raw) ? r.num(`${path}.count`, raw.count, { min: 1, max: MAX_TIER_COUNT }, true) ?? 1 : 1;
-  return { count, ...rule };
+  const tier: CurveTier = { count, ...rule };
+  if (isObj(raw) && raw.manual !== undefined) {
+    if (!Array.isArray(raw.manual) || raw.manual.length > MAX_TIER_COUNT) r.errors.push(`${path}.manual: expected a list of hand-drawn skies`);
+    else tier.manual = raw.manual.map((f: unknown, i: number) => readFigure(r, `${path}.manual[${i}]`, f));
+  }
+  return tier;
 }
 
 /** Check a whole curve (the rules a level pool is generated from). On success the value is a clean copy holding only known fields. */

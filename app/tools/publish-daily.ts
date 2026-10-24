@@ -7,12 +7,14 @@
  *
  * Needs SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY. It never overwrites: a day that already has rows is left
  * alone (players may have cleared them), so running it twice is harmless. The schedule is the config in force on
- * that day (generation_configs), or the default. Not type-checked by `npm run check` (it lives outside src/);
+ * that day (generation_configs), or the default. A site an admin pinned a hand-drawn sky to (daily_manual_levels)
+ * plays that sky instead of a generated one. Not type-checked by `npm run check` (it lives outside src/);
  * keep it small.
  */
 import { createClient } from '@supabase/supabase-js';
 import { dayNumber, daySeed } from '../src/domain/calendar';
-import { levelForSiteReport, solve } from '../src/domain/generation';
+import { checkFigure, levelForSiteReport, solve } from '../src/domain/generation';
+import type { Level } from '../src/domain/types';
 import { resolveSchedule, type StoredConfig } from '../src/domain/generationConfig';
 import { SITE_COUNT } from '../src/domain/sites';
 
@@ -54,8 +56,21 @@ const resolved = resolveSchedule(stored);
 if (resolved.source === 'invalid') console.warn(`day ${day}: the saved config does not parse (${resolved.errors.join('; ')}), using the default week`);
 const schedule = { ...resolved.schedule, retries: Math.max(resolved.schedule.retries, JOB_MIN_RETRIES) };
 
+/* hand-drawn skies an admin pinned to this day: each replaces its site's generated level */
+const drawn = new Map((must('read daily_manual_levels', await db.from('daily_manual_levels').select('idx, level').eq('day', day)) as
+  { idx: number; level: Level }[] ?? []).map(r => [r.idx, r.level]));
+
 const entries = [];
 for (let idx = 0; idx < SITE_COUNT; idx++) {
+  const pinned = drawn.get(idx);
+  if (pinned) {
+    /* worked out again from its stars and lines alone: nothing the browser sent is trusted but the drawing */
+    const { level, playable } = checkFigure({ nodes: pinned.nodes, edges: pinned.edges });
+    if (!level || !playable || level.k !== pinned.k) throw new Error(`day ${day} site ${idx}: the hand-drawn sky does not have one best cover of ${pinned.k}`);
+    console.log(`day ${day} site ${idx}: hand-drawn, ${level.nodes.length} nodes, par ${level.k}, ${level.stars}★`);
+    entries.push({ day, idx, level });
+    continue;
+  }
   const t0 = Date.now();
   const { level, salt } = levelForSiteReport(schedule, daySeed(day), idx);
   const r = solve(level);
