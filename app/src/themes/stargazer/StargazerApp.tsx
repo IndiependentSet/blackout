@@ -88,7 +88,7 @@ export function StargazerApp({ app, onSecret }: Props) {
   };
 
   if (orientation.open) {
-    return <FirstNightScreen onStart={() => { orientation.hide(); openSky(); }} onClose={orientation.hide} />;
+    return <DeskContext.Provider value={desk}><FirstNightScreen onStart={() => { orientation.hide(); openSky(); }} onClose={orientation.hide} /></DeskContext.Provider>;
   }
 
   /* the page for the route; the pages that wear the desktop header read its props from the context below */
