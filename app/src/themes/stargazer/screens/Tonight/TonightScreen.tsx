@@ -1,8 +1,10 @@
+import type { Place } from '../../../../game/hooks/useBoard';
 import type { Night } from '../../../../domain/types';
 import { Button } from '../../kit/Button';
 import { Figure } from '../../kit/Figure';
 import { BoltIcon, MoonIcon, SwordsIcon } from '../../kit/icons';
 import { MiniStar } from '../../kit/MiniStar';
+import { PlaceLink } from '../../kit/PlaceLink';
 import { Planet } from '../../kit/Planet';
 import { Moon } from '../../kit/Moon';
 import { Avatar, Eyebrow, Page } from '../../kit/Page';
@@ -37,6 +39,9 @@ interface Props {
   voyage: ModeCard & { planet: string; art: string };
   rush: ModeCard;
   duel: ModeCard & { waiting: boolean };
+  /** where the player stands on tonight's board, once a sky is charted; null otherwise */
+  place?: Place | null;
+  onBoard?: () => void;
   onContinue: () => void;
   onTab: (tab: Tab) => void;
   /** the seventh tap on the title */
@@ -56,7 +61,7 @@ function WeekMoons({ day, week, size }: { day: number; week: Night[]; size: numb
   );
 }
 
-function NightCard({ day, tonight, skies, preview, onContinue, wide }: Pick<Props, 'day' | 'tonight' | 'skies' | 'preview' | 'onContinue'> & { wide: boolean }) {
+function NightCard({ day, tonight, skies, preview, place, onBoard, onContinue, wide }: Pick<Props, 'day' | 'tonight' | 'skies' | 'preview' | 'place' | 'onBoard' | 'onContinue'> & { wide: boolean }) {
   const label = tonight.done ? 'See tonight’s figure' : tonight.charted === 0 ? 'Start tonight' : `Continue · sky ${tonight.next + 1}`;
   const left = tonight.total - tonight.charted;
   return (
@@ -72,6 +77,7 @@ function NightCard({ day, tonight, skies, preview, onContinue, wide }: Pick<Prop
               : `${left === 1 ? 'One to go' : `${left} to go`}. Skies get busier toward ${tonight.total}. Hit par on all ${tonight.total} for a full moon and a constellation to name.`}
           </p>
         )}
+        {place && onBoard && <PlaceLink place={place} label="tonight" onOpen={onBoard} />}
         <div className={styles.stars}>{skies.map(k => <MiniStar key={k.n} state={k.state === 'cur' && !tonight.done ? 'cur' : k.state === 'cur' ? 'next' : k.state} size={wide ? 34 : 30} />)}</div>
         <Button block={!wide} onClick={onContinue} className={wide ? styles.continueWide : undefined}>{label}</Button>
       </div>

@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { CHAPTERS, chapterOf, chapterProgress, unlockedUpTo, type Chapter } from '../../domain/campaign';
 import { initial } from '../../domain/profile';
+import type { BoardKind } from '../../domain/ranking';
+import { useMyPlace } from '../../game/hooks/useBoard';
+import { useChallenge } from '../../game/match/useChallenge';
 import { useIncomingChallenges } from '../../game/hooks/useIncomingChallenges';
 import { useNights } from '../../game/hooks/useNights';
 import { useSkyNames } from '../../game/hooks/useSkyNames';
@@ -11,11 +14,13 @@ import type { Tab } from './kit/TabBar';
 import { skyEntries } from './play/sky';
 import { monthOf, planetOf, plural, weekOf } from './copy';
 import { AtlasScreen } from './screens/Atlas/AtlasScreen';
+import { BoardScreen } from './screens/Board/BoardScreen';
 import { DuelLobby } from './screens/Duel/DuelLobby';
 import { DuelScreen } from './screens/Duel/DuelScreen';
 import { FirstNightScreen } from './screens/FirstNight/FirstNightScreen';
 import { ObservatoryScreen } from './screens/Observatory/ObservatoryScreen';
 import { RushScreen } from './screens/Rush/RushScreen';
+import { StatsScreen } from './screens/Stats/StatsScreen';
 import { DailySky } from './screens/Sky/DailySky';
 import { NightChartedScreen } from './screens/Sky/NightChartedScreen';
 import { TonightScreen } from './screens/Tonight/TonightScreen';
@@ -24,7 +29,10 @@ import { VoyagePlay } from './screens/Voyage/VoyagePlay';
 import { VoyageScreen } from './screens/Voyage/VoyageScreen';
 import { VoyageTransit } from './screens/Voyage/VoyageTransit';
 
-type Route = 'tonight' | 'sky' | 'charted' | 'atlas' | 'me' | 'voyage' | 'voyagePlay' | 'rush' | 'duel' | 'duelPlay';
+type Route = 'tonight' | 'sky' | 'charted' | 'atlas' | 'me' | 'voyage' | 'voyagePlay' | 'rush' | 'duel' | 'duelPlay' | 'board' | 'stats';
+
+/** what Back reads on a board page opened from each page */
+const BACK_LABEL: Partial<Record<Route, string>> = { tonight: 'Tonight', charted: 'Night charted', voyage: 'Voyage', duel: 'Star Duel', stats: 'Stats' };
 
 interface Props {
   app: AppState;
@@ -44,6 +52,11 @@ export function StargazerApp({ app, onSecret }: Props) {
   const [openChapter, setOpenChapter] = useState<number | null>(null);
   const [matchId, setMatchId] = useState<string | null>(null);
   const [duelWith, setDuelWith] = useState<string | null>(null);
+  /** a board page open from `from`: which boards it offers, and the page its Back returns to */
+  const [boardAt, setBoardAt] = useState<{ kinds: BoardKind[]; from: Route }>({ kinds: ['night', 'week', 'alltime'], from: 'tonight' });
+  const openBoard = (kinds: BoardKind[], from: Route) => { setBoardAt({ kinds, from }); setRoute('board'); };
+  const challenger = useChallenge();
+  const ladder = boardAt.kinds.includes('duel');
   /* the last level of a world charted: the voyage screen on that world (its last stop done) with the flight to the next on top */
   const startTransit = (chapter: Chapter) => { setRoute('voyage'); setOpenChapter(chapter.index); setTransit({ from: chapter.index, to: chapter.index + 1 }); };
   const endTransit = () => { setTransit(null); setOpenChapter(null); };
@@ -62,6 +75,8 @@ export function StargazerApp({ app, onSecret }: Props) {
   const tab = (t: Tab) => setRoute(t === 'tonight' ? 'tonight' : t === 'atlas' ? 'atlas' : 'me');
   const signIn = () => setRoute('me');
   const tonight = tonightState(results, session.state.idx);
+  const nightPlace = useMyPlace('night', userId, { day, enabled: (route === 'tonight' || route === 'charted') && tonight.charted > 0, refresh: String(tonight.charted) });
+  const voyagePlace = useMyPlace('voyage', userId, { enabled: route === 'voyage', refresh: String(campaign.clears.size) });
   const openSky = () => {
     if (tonight.done) return setRoute('charted');
     if (tonight.next !== session.state.idx && session.levels[tonight.next]) session.dispatch({ type: 'go', idx: tonight.next });
@@ -79,7 +94,7 @@ export function StargazerApp({ app, onSecret }: Props) {
     case 'charted':
       return (
         <NightChartedScreen day={day} results={results} figure={session.levels[session.levels.length - 1] ?? null}
-          streak={streak.current} signedIn={!!userId} atlas={atlas}
+          streak={streak.current} signedIn={!!userId} atlas={atlas} place={nightPlace} onBoard={() => openBoard(['night', 'week', 'alltime'], 'charted')}
           onSaved={() => setRoute('atlas')} onSignIn={signIn} onBack={() => setRoute('tonight')} />
       );
 
@@ -89,7 +104,7 @@ export function StargazerApp({ app, onSecret }: Props) {
     case 'me':
       return (
         <ObservatoryScreen auth={auth} today={day} month={nights} streak={streak.current} named={atlas.names.length}
-          onTab={tab} onDuel={id => { setDuelWith(id); setRoute('duel'); }} onHowTo={orientation.show} />
+          onTab={tab} onDuel={id => { setDuelWith(id); setRoute('duel'); }} onStats={() => setRoute('stats')} onHowTo={orientation.show} />
       );
 
     case 'voyage':
@@ -97,6 +112,7 @@ export function StargazerApp({ app, onSecret }: Props) {
         <>
           <VoyageScreen key={openChapter ?? 'reach'} initialChapter={openChapter ?? undefined}
             signedIn={!!userId} clears={campaign.clears} persistence={campaign.persistence} onSignIn={signIn}
+            place={voyagePlace} onBoard={() => openBoard(['voyage'], 'voyage')}
             onBack={() => setRoute('tonight')}
             onOpenLevel={levelNo => {
               const chapter = chapterOf(levelNo);
@@ -115,14 +131,25 @@ export function StargazerApp({ app, onSecret }: Props) {
           clears={campaign.clears} record={campaign.record} saveClear={campaign.save} userId={userId} onBack={() => setRoute('voyage')} onWorldDone={startTransit} />
       );
 
+    case 'stats':
+      return <StatsScreen userId={userId} today={day} onBoard={kinds => openBoard(kinds, 'stats')} onSignIn={signIn} onBack={() => setRoute('me')} />;
+
+    case 'board':
+      return (
+        <BoardScreen kinds={boardAt.kinds} userId={userId} day={day} backLabel={BACK_LABEL[boardAt.from] ?? 'Back'} onBack={() => setRoute(boardAt.from)} onSignIn={signIn}
+          onChallenge={ladder ? id => { challenger.challenge(id).then(m => { if (m) { setMatchId(m); setRoute('duelPlay'); } }); } : undefined}
+          challengeBusy={challenger.busy} challengeError={ladder ? challenger.error : null}
+          onFindRanked={ladder ? () => setRoute('duel') : undefined} />
+      );
+
     case 'rush':
-      return <RushScreen userId={userId} best={survivalBest} onFinish={finishSurvival} onBack={() => setRoute('tonight')} />;
+      return <RushScreen userId={userId} best={survivalBest} onFinish={finishSurvival} onSignIn={signIn} onBack={() => setRoute('tonight')} />;
 
     case 'duel':
       if (!userId) break;
       return (
         <DuelLobby userId={userId} preselect={duelWith} onBack={() => { setDuelWith(null); setRoute('tonight'); }}
-          onOpenMatch={id => { setMatchId(id); setRoute('duelPlay'); }} />
+          onOpenMatch={id => { setMatchId(id); setRoute('duelPlay'); }} onLadder={() => openBoard(['duel', 'season'], 'duel')} />
       );
 
     case 'duelPlay':
@@ -152,6 +179,7 @@ export function StargazerApp({ app, onSecret }: Props) {
         stat: !userId ? 'Sign in to duel' : challenges > 0 ? `${challenges} waiting` : null, waiting: challenges > 0,
         action: !userId ? 'Sign in' : challenges > 0 ? 'Answer' : 'Open', onOpen: () => setRoute(userId ? 'duel' : 'me'),
       }}
+      place={nightPlace} onBoard={() => openBoard(['night', 'week', 'alltime'], 'tonight')}
       onContinue={openSky} onTab={tab} onSecret={onSecret} />
   );
 }

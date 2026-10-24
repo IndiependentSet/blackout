@@ -47,4 +47,12 @@ describe('NightChartedScreen', () => {
     expect(screen.getByText('The whole night is charted.')).toBeInTheDocument();
     expect(screen.getByText('1 / 2')).toBeInTheDocument();
   });
+
+  it('shows where the player stands tonight, and opens the board', async () => {
+    const onBoard = vi.fn();
+    const place = { entry: { place: 12, userId: 'me', username: 'me', avatar: null, value: 70, extra: 2, isMe: true, trend: null, versus: null }, total: 340 };
+    render(<NightChartedScreen {...base} signedIn atlas={atlas()} onSaved={vi.fn()} place={place} onBoard={onBoard} />);
+    await userEvent.click(screen.getByRole('button', { name: '#12 of 340 tonight. Open the board' }));
+    expect(onBoard).toHaveBeenCalledOnce();
+  });
 });

@@ -1,9 +1,8 @@
-import type { RunSummary, SurvivalBoardRow } from '../../../../domain/survival';
+import type { RunSummary } from '../../../../domain/survival';
 import { Button } from '../../kit/Button';
-import { Scroll } from '../../kit/Layout';
 import { Eyebrow, Note, Page } from '../../kit/Page';
 import { plural } from '../../copy';
-import { RushBoard } from './RushBoard';
+import { BoardPanel } from '../Board/BoardPanel';
 import styles from './Rush.module.css';
 
 interface Props {
@@ -12,14 +11,16 @@ interface Props {
   isRecord: boolean;
   signedIn: boolean;
   unsaved: boolean;
-  board?: SurvivalBoardRow[];
+  /** the run is banked on the server, so the board can be read without missing it */
+  recorded: boolean;
   userId: string | null;
+  onSignIn: () => void;
   onAgain: () => void;
   onBack: () => void;
 }
 
 /* Dawn: what a Meteor Rush run came to, and everyone's best runs. */
-export function RushSummary({ summary, before, isRecord, signedIn, unsaved, board, userId, onAgain, onBack }: Props) {
+export function RushSummary({ summary, before, isRecord, signedIn, unsaved, recorded, userId, onSignIn, onAgain, onBack }: Props) {
   const record = isRecord ? (signedIn ? 'A new personal best.' : 'A new best for this visit.')
     : before && before.sites > 0 ? `Your best is ${plural(before.sites, 'sky', 'skies')}.` : 'No skies charted this time.';
   return (
@@ -32,8 +33,7 @@ export function RushSummary({ summary, before, isRecord, signedIn, unsaved, boar
         <div className={styles.stat}><b>{summary.score.toLocaleString()}</b><span>points</span></div>
       </div>
       <Note>{record}</Note>
-      <Scroll>{board && board.length > 0 && <RushBoard rows={board} userId={userId} />}</Scroll>
-      {!signedIn && <Note>Sign in to rank your runs.</Note>}
+      <BoardPanel kind="rush" userId={userId} enabled={recorded || !signedIn} onSignIn={onSignIn} />
       {unsaved && <Note tone="error">This run wasn’t saved to the leaderboard.</Note>}
       <div className={styles.actions}>
         <Button block onClick={onAgain}>Rush again</Button>

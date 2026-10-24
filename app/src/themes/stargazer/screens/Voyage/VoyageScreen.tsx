@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { CHAPTERS, chapterOf, chapterProgress, unlockedUpTo, type CampaignClears } from '../../../../domain/campaign';
 import { CAMPAIGN_LEVELS } from '../../../../domain/types';
+import type { Place } from '../../../../game/hooks/useBoard';
 import type { Persistence } from '../../../../game/hooks/useCampaignClears';
 import { usePoolPublished } from '../../../../game/hooks/usePoolPublished';
 import { Button } from '../../kit/Button';
 import { Scroll } from '../../kit/Layout';
+import { PlaceLink } from '../../kit/PlaceLink';
 import { Note, Page, TopBar } from '../../kit/Page';
 import { NO_SKIES } from '../../copy';
 import { WAVE } from './wave';
@@ -15,6 +17,9 @@ interface Props {
   signedIn: boolean;
   clears: CampaignClears;
   persistence: Persistence;
+  /** where the player stands among the voyagers; null before their first level */
+  place?: Place | null;
+  onBoard?: () => void;
   onOpenLevel: (levelNo: number) => void;
   onSignIn: () => void;
   onBack: () => void;
@@ -23,7 +28,7 @@ interface Props {
 }
 
 /* Voyage (1f): the campaign, one world per chapter. A level opens once the one before it is charted. */
-export function VoyageScreen({ signedIn, clears, persistence, onOpenLevel, onSignIn, onBack, initialChapter }: Props) {
+export function VoyageScreen({ signedIn, clears, persistence, place, onBoard, onOpenLevel, onSignIn, onBack, initialChapter }: Props) {
   const pool = usePoolPublished('campaign');
   const unlocked = unlockedUpTo(clears);
   const reach = (chapterOf(unlocked) ?? CHAPTERS[0]).index;
@@ -54,6 +59,7 @@ export function VoyageScreen({ signedIn, clears, persistence, onOpenLevel, onSig
       <TopBar title="Voyage" onBack={onBack} backLabel="Tonight" right={`${cleared} / ${CAMPAIGN_LEVELS}`} />
       <WorldsRow current={ch.index} reach={reach} onPick={setOpen} />
       <ChapterCard chapter={ch} cleared={progress.cleared} />
+      {place && onBoard && <PlaceLink place={place} label="among voyagers" onOpen={onBoard} />}
       {persistence === 'memory' && <Note>Your progress isn’t saved yet; it will be once the connection is back.</Note>}
       {pool === 'empty' && <Note>{NO_SKIES}</Note>}
       <Scroll label="Levels" fade><div className={styles.path} ref={path}>

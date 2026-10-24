@@ -1,0 +1,17 @@
+.section { background: var(--sg-card); border-radius: 26px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; flex: none; }
+.tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+
+.tilesTwo { grid-template-columns: repeat(2, 1fr); }
+.tile { display: flex; flex-direction: column; min-width: 0; }
+.tile b { font-family: var(--sg-font-heading); font-weight: 400; font-size: 22px; line-height: 1.1; color: var(--sg-gold); overflow-wrap: anywhere; }
+.tile span { font-size: 12px; font-weight: 700; color: var(--sg-text-soft); }
+.line { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 12px; font-size: 13px; font-weight: 600; color: var(--sg-text-soft); }
+.line b { color: var(--sg-text); font-weight: 800; }
+.empty { margin: 0; font-size: 13px; line-height: 1.45; color: var(--sg-text-soft); }
+.form { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: var(--sg-text-soft); }
+.form span { margin-right: 4px; }
+.mark { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font: 800 12px var(--sg-font-body); font-style: normal; }
+.mark-won { background: color-mix(in srgb, var(--sg-mint) 25%, transparent); color: var(--sg-mint); }
+.mark-lost { background: color-mix(in srgb, var(--sg-mars) 22%, transparent); color: var(--sg-mars); }
+.mark-drawn { background: rgba(255, 255, 255, .1); color: var(--sg-text-soft); }
+.places { display: flex; flex-wrap: wrap; gap: 0 14px; }
