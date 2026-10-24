@@ -5,18 +5,17 @@ import { useAvatarEditor } from '../../../../game/account/useAvatarEditor';
 import type { AuthState } from '../../../../services/auth/authContext';
 import { AvatarArt } from '../../kit/AvatarArt';
 import { Button } from '../../kit/Button';
-import { Scroll } from '../../kit/Layout';
 import { Avatar, Eyebrow } from '../../kit/Page';
 import { cx } from '../../kit/cx';
 import styles from './Observatory.module.css';
 
-/* Observatory sub-page: choose the picture beside your handle: a drawn icon, a photo of your own, or your initial. */
+/* Part of the Edit profile page: choose the picture beside your handle: a drawn icon, a photo of your own, or your initial. */
 export function AvatarPicker({ userId, auth }: { userId: string; auth: AuthState }) {
   const editor = useAvatarEditor(userId, auth.setAvatar);
   const file = useRef<HTMLInputElement>(null);
   const current = parseAvatar(auth.avatar);
   return (
-    <Scroll label="Your picture">
+    <>
       <div className={styles.pickerNow}>
         <Avatar letter={initial({ username: auth.username })} avatar={auth.avatar} size={72} />
         <div className={styles.pickerActions}>
@@ -37,6 +36,6 @@ export function AvatarPicker({ userId, auth }: { userId: string; auth: AuthState
           </button>
         ))}
       </div>
-    </Scroll>
+    </>
   );
 }

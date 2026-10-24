@@ -19,6 +19,10 @@
   overflow-y: auto;   /* a safety net only: every page is laid out to fit the screen */
 }
 .column > * { flex-shrink: 0; }
+/* a phone column under the desktop header: the column takes the height the header leaves */
+.pageFramed { display: flex; flex-direction: column; }
+.frameHead { position: relative; padding: 28px 40px 0; flex: none; }
+.pageFramed > .column { flex: 1 1 0; min-height: 0; height: auto; width: 100%; padding-top: 24px; }
 
 /* the part of a page that takes whatever height is left: a drawing shrinks into it */
 .column > .fit { flex: 1 1 0; }
@@ -92,7 +96,7 @@
 .avatar-mars { background: var(--sg-mars); color: var(--sg-on-gold); }
 
 .note {
-  background: rgba(255, 255, 255, .05); border-radius: 20px; padding: 12px 16px;
+  background: rgba(255, 255, 255, .05); border-radius: var(--sg-r-inner); padding: 12px 16px;
   font-size: 14px; line-height: 1.45; color: var(--sg-text-soft); text-wrap: pretty;
 }
 .noteError { color: var(--sg-mars); }

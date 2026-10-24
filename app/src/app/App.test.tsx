@@ -110,7 +110,7 @@ describe('Stargazer, the default look, signed out', () => {
     render(<App />);
     expect(await screen.findByText('The sky is full of figures no one has named.')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'I’ve played before' }));
-    expect(screen.getByText(/of 7 skies charted/)).toBeInTheDocument();
+    expect(screen.getByText('Sky 1 of 7')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Start tonight' })).toBeInTheDocument();
   });
 

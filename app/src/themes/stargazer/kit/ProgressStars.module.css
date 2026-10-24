@@ -1,0 +1,6 @@
+.bar { display: grid; gap: 6px; }
+.seg { height: 8px; border-radius: 999px; background: rgba(255, 255, 255, .1); }
+.par { background: var(--sg-gold); }
+.over { background: var(--sg-gold-dim); }
+.cur { box-shadow: inset 0 0 0 2px var(--sg-cream); }
+.next { background: rgba(255, 255, 255, .1); }

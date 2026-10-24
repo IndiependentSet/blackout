@@ -1,0 +1,17 @@
+.head { display: flex; align-items: center; gap: 28px; }
+.brand { font-family: var(--sg-font-heading); font-size: 30px; line-height: 1; color: var(--sg-cream); }
+.nav { display: flex; gap: 4px; padding: 4px; border-radius: 999px; background: rgba(255, 255, 255, .05); }
+.item {
+  padding: 8px 16px; border: 0; border-radius: 999px; cursor: pointer; background: transparent;
+  color: var(--sg-text); font: 700 14px var(--sg-font-body);
+}
+.item:hover { background: rgba(255, 255, 255, .06); }
+.on, .on:hover { background: var(--sg-gold); color: var(--sg-on-gold); font-weight: 800; }
+.right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+.streak {
+  display: flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 999px; white-space: nowrap;
+  background: color-mix(in srgb, var(--sg-gold) 14%, transparent); color: var(--sg-gold); font-weight: 800; font-size: 14px;
+}
+.right .streak { padding: 8px 14px; }
+.me { padding: 0; border: 0; background: transparent; cursor: pointer; border-radius: 50%; }
+.meOn { box-shadow: 0 0 0 3px var(--sg-night-0), 0 0 0 5px var(--sg-gold); }

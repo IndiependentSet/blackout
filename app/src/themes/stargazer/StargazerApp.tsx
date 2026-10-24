@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactElement } from 'react';
 import { CHAPTERS, chapterOf, chapterProgress, unlockedUpTo, type Chapter } from '../../domain/campaign';
 import { initial } from '../../domain/profile';
 import type { BoardKind } from '../../domain/ranking';
@@ -10,6 +10,8 @@ import { useSkyNames } from '../../game/hooks/useSkyNames';
 import { useStreak } from '../../game/hooks/useStreak';
 import type { AppState } from '../../game/useAppState';
 import { useOrientation } from '../../game/useOrientation';
+import { DeskContext } from './kit/DeskContext';
+import type { DeskDest, DeskProps } from './kit/DeskHeader';
 import type { Tab } from './kit/TabBar';
 import { skyEntries } from './play/sky';
 import { monthOf, planetOf, plural, weekOf } from './copy';
@@ -60,7 +62,7 @@ export function StargazerApp({ app, onSecret }: Props) {
   /* the last level of a world charted: the voyage screen on that world (its last stop done) with the flight to the next on top */
   const startTransit = (chapter: Chapter) => { setRoute('voyage'); setOpenChapter(chapter.index); setTransit({ from: chapter.index, to: chapter.index + 1 }); };
   const endTransit = () => { setTransit(null); setOpenChapter(null); };
-  const home = route === 'tonight' || route === 'me' || route === 'charted';
+  const home = route === 'tonight' || route === 'me' || route === 'charted' || route === 'stats';
   const streak = useStreak(userId, home);
   const challenges = useIncomingChallenges(userId, route === 'tonight');
   const atlas = useSkyNames(userId);
@@ -74,6 +76,8 @@ export function StargazerApp({ app, onSecret }: Props) {
 
   const tab = (t: Tab) => setRoute(t === 'tonight' ? 'tonight' : t === 'atlas' ? 'atlas' : 'me');
   const signIn = () => setRoute('me');
+  const go = (d: DeskDest) => setRoute(d === 'duel' && !userId ? 'me' : d);
+  const desk: DeskProps = { streak: streak.current, initial: initial({ username: auth.username }) || '?', avatar: auth.avatar, onGo: go };
   const tonight = tonightState(results, session.state.idx);
   const nightPlace = useMyPlace('night', userId, { day, enabled: (route === 'tonight' || route === 'charted') && tonight.charted > 0, refresh: String(tonight.charted) });
   const voyagePlace = useMyPlace('voyage', userId, { enabled: route === 'voyage', refresh: String(campaign.clears.size) });
@@ -87,99 +91,106 @@ export function StargazerApp({ app, onSecret }: Props) {
     return <FirstNightScreen onStart={() => { orientation.hide(); openSky(); }} onClose={orientation.hide} />;
   }
 
-  switch (route) {
-    case 'sky':
-      return <DailySky session={session} userId={userId} onBack={() => setRoute('tonight')} onNightDone={() => setRoute('charted')} />;
+  /* the page for the route; the pages that wear the desktop header read its props from the context below */
+  const page = (): ReactElement => {
+    switch (route) {
+      case 'sky':
+        return <DailySky session={session} userId={userId} onBack={() => setRoute('tonight')} onNightDone={() => setRoute('charted')} />;
 
-    case 'charted':
-      return (
-        <NightChartedScreen day={day} results={results} figure={session.levels[session.levels.length - 1] ?? null}
-          streak={streak.current} signedIn={!!userId} atlas={atlas} place={nightPlace} onBoard={() => openBoard(['night', 'week', 'alltime'], 'charted')}
-          onSaved={() => setRoute('atlas')} onSignIn={signIn} onBack={() => setRoute('tonight')} />
-      );
+      case 'charted':
+        return (
+          <NightChartedScreen day={day} results={results} figure={session.levels[session.levels.length - 1] ?? null}
+            streak={streak.current} signedIn={!!userId} atlas={atlas} place={nightPlace} onBoard={() => openBoard(['night', 'week', 'alltime'], 'charted')}
+            onSaved={() => setRoute('atlas')} onSignIn={signIn} onBack={() => setRoute('tonight')} />
+        );
 
-    case 'atlas':
-      return <AtlasScreen today={day} signedIn={!!userId} atlas={atlas} onTab={tab} onSignIn={signIn} onTonight={() => setRoute('tonight')} />;
+      case 'atlas':
+        return <AtlasScreen today={day} signedIn={!!userId} atlas={atlas} onTab={tab} onSignIn={signIn} onTonight={() => setRoute('tonight')} />;
 
-    case 'me':
-      return (
-        <ObservatoryScreen auth={auth} today={day} month={nights} streak={streak.current} named={atlas.names.length}
-          onTab={tab} onDuel={id => { setDuelWith(id); setRoute('duel'); }} onStats={() => setRoute('stats')} onHowTo={orientation.show} />
-      );
+      case 'me':
+        return (
+          <ObservatoryScreen auth={auth} today={day} month={nights} streak={streak.current} named={atlas.names.length}
+            desk={desk} onTab={tab} onDuel={id => { setDuelWith(id); setRoute('duel'); }} onStats={() => setRoute('stats')} onHowTo={orientation.show} />
+        );
 
-    case 'voyage':
-      return (
-        <>
-          <VoyageScreen key={openChapter ?? 'reach'} initialChapter={openChapter ?? undefined}
-            signedIn={!!userId} clears={campaign.clears} persistence={campaign.persistence} onSignIn={signIn}
-            place={voyagePlace} onBoard={() => openBoard(['voyage'], 'voyage')}
-            onBack={() => setRoute('tonight')}
-            onOpenLevel={levelNo => {
-              const chapter = chapterOf(levelNo);
-              if (!chapter || campaign.persistence === 'loading' || levelNo > unlockedUpTo(campaign.clears)) return;
-              setPlaying({ chapter, levelNo });
-              setRoute('voyagePlay');
-            }} />
-          {transit && <VoyageTransit from={transit.from} to={transit.to} clears={campaign.clears} onDone={endTransit} />}
-        </>
-      );
+      case 'voyage':
+        return (
+          <>
+            <VoyageScreen key={openChapter ?? 'reach'} initialChapter={openChapter ?? undefined}
+              signedIn={!!userId} clears={campaign.clears} persistence={campaign.persistence} onSignIn={signIn}
+              place={voyagePlace} onBoard={() => openBoard(['voyage'], 'voyage')}
+              onBack={() => setRoute('tonight')}
+              onOpenLevel={levelNo => {
+                const chapter = chapterOf(levelNo);
+                if (!chapter || campaign.persistence === 'loading' || levelNo > unlockedUpTo(campaign.clears)) return;
+                setPlaying({ chapter, levelNo });
+                setRoute('voyagePlay');
+              }} />
+            {transit && <VoyageTransit from={transit.from} to={transit.to} clears={campaign.clears} onDone={endTransit} />}
+          </>
+        );
 
-    case 'voyagePlay':
-      if (!playing) break;
-      return (
-        <VoyagePlay key={playing.chapter.index + ':' + playing.levelNo} chapter={playing.chapter} startLevelNo={playing.levelNo}
-          clears={campaign.clears} record={campaign.record} saveClear={campaign.save} userId={userId} onBack={() => setRoute('voyage')} onWorldDone={startTransit} />
-      );
+      case 'voyagePlay':
+        if (!playing) break;
+        return (
+          <VoyagePlay key={playing.chapter.index + ':' + playing.levelNo} chapter={playing.chapter} startLevelNo={playing.levelNo}
+            clears={campaign.clears} record={campaign.record} saveClear={campaign.save} userId={userId} onBack={() => setRoute('voyage')} onWorldDone={startTransit} />
+        );
 
-    case 'stats':
-      return <StatsScreen userId={userId} today={day} onBoard={kinds => openBoard(kinds, 'stats')} onSignIn={signIn} onBack={() => setRoute('me')} />;
+      case 'stats':
+        return <StatsScreen userId={userId} today={day} desk={desk} onBoard={kinds => openBoard(kinds, 'stats')} onSignIn={signIn} onBack={() => setRoute('me')} />;
 
-    case 'board':
-      return (
-        <BoardScreen kinds={boardAt.kinds} userId={userId} day={day} backLabel={BACK_LABEL[boardAt.from] ?? 'Back'} onBack={() => setRoute(boardAt.from)} onSignIn={signIn}
-          onChallenge={ladder ? id => { challenger.challenge(id).then(m => { if (m) { setMatchId(m); setRoute('duelPlay'); } }); } : undefined}
-          challengeBusy={challenger.busy} challengeError={ladder ? challenger.error : null}
-          onFindRanked={ladder ? () => setRoute('duel') : undefined} />
-      );
+      case 'board':
+        return (
+          <BoardScreen kinds={boardAt.kinds} userId={userId} day={day} backLabel={BACK_LABEL[boardAt.from] ?? 'Back'} onBack={() => setRoute(boardAt.from)} onSignIn={signIn}
+            onChallenge={ladder ? id => { challenger.challenge(id).then(m => { if (m) { setMatchId(m); setRoute('duelPlay'); } }); } : undefined}
+            challengeBusy={challenger.busy} challengeError={ladder ? challenger.error : null}
+            onFindRanked={ladder ? () => setRoute('duel') : undefined} />
+        );
 
-    case 'rush':
-      return <RushScreen userId={userId} best={survivalBest} onFinish={finishSurvival} onSignIn={signIn} onBack={() => setRoute('tonight')} />;
+      case 'rush':
+        return <RushScreen userId={userId} best={survivalBest} onFinish={finishSurvival} onSignIn={signIn} onBack={() => setRoute('tonight')} />;
 
-    case 'duel':
-      if (!userId) break;
-      return (
-        <DuelLobby userId={userId} preselect={duelWith} onBack={() => { setDuelWith(null); setRoute('tonight'); }}
-          onOpenMatch={id => { setMatchId(id); setRoute('duelPlay'); }} onLadder={() => openBoard(['duel', 'season'], 'duel')} />
-      );
+      case 'duel':
+        if (!userId) break;
+        return (
+          <DuelLobby userId={userId} preselect={duelWith} onBack={() => { setDuelWith(null); setRoute('tonight'); }}
+            onOpenMatch={id => { setMatchId(id); setRoute('duelPlay'); }} onLadder={() => openBoard(['duel', 'season'], 'duel')} />
+        );
 
-    case 'duelPlay':
-      if (!userId || !matchId) break;
-      return (
-        <DuelScreen key={matchId} matchId={matchId} userId={userId} initial={initial({ username: auth.username })} avatar={auth.avatar}
-          onOpenLobby={() => setRoute('duel')} onOpenHub={() => setRoute('tonight')} />
-      );
-  }
+      case 'duelPlay':
+        if (!userId || !matchId) break;
+        return (
+          <DuelScreen key={matchId} matchId={matchId} userId={userId} initial={initial({ username: auth.username })} avatar={auth.avatar}
+            onOpenLobby={() => setRoute('duel')} onOpenHub={() => setRoute('tonight')} />
+        );
+    }
 
-  /* ---- Tonight ---- */
-  const reach = chapterOf(unlockedUpTo(campaign.clears)) ?? CHAPTERS[0];
-  const progress = chapterProgress(campaign.clears, reach);
-  const planet = planetOf(reach.index);
-  const levelInWorld = unlockedUpTo(campaign.clears) - reach.from + 1;
-  return (
-    <TonightScreen day={day} tonight={tonight} skies={skyEntries(results, tonight.done ? -1 : tonight.next)}
-      preview={previewLevel(session.levels, tonight)} streak={streak.current} week={nights}
-      initial={initial({ username: auth.username }) || '?'} avatar={auth.avatar}
-      voyage={{
-        planet: planet.name, art: planet.art,
-        stat: userId ? `${planet.name} ${progress.cleared}/${progress.total}` : 'Sign in to fly',
-        action: userId ? `Fly to ${levelInWorld}` : 'Sign in', onOpen: () => setRoute('voyage'),
-      }}
-      rush={{ stat: survivalRecord && survivalRecord.sites > 0 ? `Best ${plural(survivalRecord.sites, 'sky', 'skies')}` : null, action: 'Play', onOpen: () => setRoute('rush') }}
-      duel={{
-        stat: !userId ? 'Sign in to duel' : challenges > 0 ? `${challenges} waiting` : null, waiting: challenges > 0,
-        action: !userId ? 'Sign in' : challenges > 0 ? 'Answer' : 'Open', onOpen: () => setRoute(userId ? 'duel' : 'me'),
-      }}
-      place={nightPlace} onBoard={() => openBoard(['night', 'week', 'alltime'], 'tonight')}
-      onContinue={openSky} onTab={tab} onSecret={onSecret} />
-  );
+    /* ---- Tonight ---- */
+    const reach = chapterOf(unlockedUpTo(campaign.clears)) ?? CHAPTERS[0];
+    const progress = chapterProgress(campaign.clears, reach);
+    const planet = planetOf(reach.index);
+    const levelInWorld = unlockedUpTo(campaign.clears) - reach.from + 1;
+    return (
+      <TonightScreen day={day} tonight={tonight} skies={skyEntries(results, tonight.done ? -1 : tonight.next)}
+        preview={previewLevel(session.levels, tonight)} streak={streak.current}
+        initial={desk.initial} avatar={auth.avatar}
+        voyage={{
+          art: planet.art,
+          detail: userId ? `${planet.name} · ${progress.cleared} of ${progress.total} levels` : 'Sign in to fly',
+          action: userId ? `Fly to ${levelInWorld}` : 'Sign in', onOpen: () => setRoute('voyage'),
+        }}
+        rush={{
+          detail: survivalRecord && survivalRecord.sites > 0 ? `Best run: ${plural(survivalRecord.sites, 'sky', 'skies')}` : 'Chart skies before dawn',
+          action: 'Play', onOpen: () => setRoute('rush'),
+        }}
+        duel={{
+          detail: !userId ? 'Sign in to duel' : 'Same sky, fewest stars wins', badge: userId && challenges > 0 ? `${challenges} waiting` : null,
+          action: !userId ? 'Sign in' : 'Open', onOpen: () => setRoute(userId ? 'duel' : 'me'),
+        }}
+        place={nightPlace} onBoard={() => openBoard(['night', 'week', 'alltime'], 'tonight')}
+        onContinue={openSky} onTab={tab} onGo={go} onSecret={onSecret} />
+    );
+  };
+  return <DeskContext.Provider value={desk}>{page()}</DeskContext.Provider>;
 }

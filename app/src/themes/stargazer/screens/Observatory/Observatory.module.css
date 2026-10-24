@@ -1,37 +1,26 @@
-.page { padding-top: 40px; }
-.pageWide { max-width: 720px; padding-top: 36px; }
-.who { display: flex; align-items: center; gap: 14px; padding: 0 4px; }
-.who > :first-child { box-shadow: 0 0 0 5px rgba(255, 217, 138, .18); }
-.whoText { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.name {
-  padding: 0; border: 0; background: transparent; cursor: pointer; text-align: left;
-  font-family: var(--sg-font-heading); font-size: 26px; line-height: 1; color: var(--sg-cream);
-}
-.rank { font-size: 14px; font-weight: 700; color: var(--sg-mint); }
+.page { padding-top: 44px; gap: 12px; }
+.profile { background: var(--sg-card); border-radius: var(--sg-r-card); padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+.who { display: flex; align-items: center; gap: 12px; }
+.whoText { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.name { font-family: var(--sg-font-heading); font-weight: 400; font-size: 24px; line-height: 1.1; color: var(--sg-cream); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.code { font-size: 13px; font-weight: 700; color: var(--sg-text-faint); }
 .error { font-size: 13px; color: var(--sg-mars); }
 .edit { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-.edit .input { width: 160px; height: 38px; font-size: 15px; }
-
-.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.stat { background: var(--sg-card); border-radius: 22px; padding: 12px; display: flex; flex-direction: column; }
-.stat b { font-family: var(--sg-font-heading); font-weight: 400; font-size: 24px; color: var(--sg-gold); }
-.stat span { font-size: 12px; font-weight: 700; color: var(--sg-text-soft); }
-
-.moons { background: var(--sg-card); border-radius: 30px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
-.moonsHead { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-.moonsHead b { font-size: 15px; }
-.moonsHead span { font-size: 12px; font-weight: 700; color: var(--sg-text-soft); }
-.moonGrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px 4px; justify-items: center; }
+.edit .input { width: 180px; height: 38px; font-size: 15px; }
+.wells { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.well { background: var(--sg-well); border-radius: var(--sg-r-inner); padding: 12px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.well span { font-size: 12px; font-weight: 700; color: var(--sg-text-soft); }
+.well b { font-size: 17px; font-weight: 800; }
 
 .block { display: flex; flex-direction: column; gap: 8px; }
-.person { display: flex; align-items: center; gap: 10px; background: rgba(255, 255, 255, .05); border-radius: 24px; padding: 10px 10px 10px 12px; }
+.person { display: flex; align-items: center; gap: 10px; background: rgba(255, 255, 255, .05); border-radius: var(--sg-r-card); padding: 10px 10px 10px 12px; }
 .personText { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .personText b { font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .personText span { font-size: 12px; font-weight: 700; color: var(--sg-text-soft); }
 .searchRow { display: flex; gap: 8px; }
 .searchRow .input { flex: 1; min-width: 0; }
 
-.card { background: var(--sg-card); border-radius: 30px; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+.card { background: var(--sg-card); border-radius: var(--sg-r-card); padding: 20px; display: flex; flex-direction: column; gap: 10px; }
 .cardTitle { margin: 0; font-family: var(--sg-font-heading); font-weight: 400; font-size: 26px; line-height: 1.1; color: var(--sg-cream); }
 .copy { margin: 0; font-size: 14px; line-height: 1.5; color: var(--sg-text-soft); }
 .label { font-size: 13px; font-weight: 800; color: var(--sg-text-soft); }
@@ -44,31 +33,8 @@
 
 .adminList { display: flex; flex-wrap: wrap; gap: 8px; }
 
-.links { display: flex; flex-direction: column; gap: 8px; }
-.link {
-  position: relative; display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 14px 18px;
-  border: 0; border-radius: 22px; background: var(--sg-card); color: var(--sg-text); cursor: pointer; font: inherit; text-align: left;
-}
-.link:hover { background: var(--sg-card-hover); }
-.link b { font-size: 15px; }
-.link span { font-size: 13px; font-weight: 700; color: var(--sg-text-soft); white-space: nowrap; }
-.link::after { content: '›'; font-size: 20px; line-height: 1; color: var(--sg-text-faint); }
-.ping { position: absolute; top: 10px; left: 8px; width: 8px; height: 8px; border-radius: 50%; background: var(--sg-mint); box-shadow: 0 0 8px var(--sg-mint); }
 .footer { display: flex; justify-content: center; gap: 4px; flex-wrap: wrap; }
-.moonGrid svg { width: 100%; max-width: 30px; height: auto; }
 
-@media (max-height: 760px) {
-  .page { padding-top: 22px; }
-  .who { --avatar-size: 52px; }
-  .name { font-size: 22px; }
-  .rank { font-size: 13px; }
-  .stat { padding: 8px 10px; border-radius: 18px; }
-  .stat b { font-size: 20px; }
-  .moons { padding: 12px; gap: 8px; border-radius: 24px; }
-  .moonGrid { gap: 4px 2px; }
-  .moonGrid svg { max-width: 24px; }
-  .link { padding: 11px 16px; }
-}
 
 /* ---- choosing a picture ---- */
 .pickerNow { display: flex; align-items: center; gap: 16px; padding: 4px; }
@@ -82,4 +48,15 @@
 .iconPick:disabled { opacity: .6; cursor: default; }
 .iconPicked { border-color: var(--sg-gold); box-shadow: 0 0 0 3px rgba(255, 217, 138, .25); }
 .iconArt { display: block; width: 100%; height: 100%; border-radius: 50%; overflow: hidden; }
-.avatarButton { padding: 0; border: 0; background: transparent; border-radius: 50%; cursor: pointer; display: block; flex: none; }
+
+@media (max-height: 760px) {
+  .page { padding-top: 22px; gap: 10px; }
+  .profile { padding: 12px 14px; gap: 10px; }
+  .well { padding: 8px 12px; }
+}
+
+/* ---- desktop ---- */
+.desk { height: 100%; display: flex; flex-direction: column; gap: 28px; padding: 28px 40px 36px; box-sizing: border-box; }
+.deskGrid { flex: 1; min-height: 0; display: grid; grid-template-columns: 380px minmax(0, 1fr); gap: 24px; }
+.deskLeft { display: flex; flex-direction: column; gap: 16px; min-height: 0; }
+.deskNarrow { display: flex; flex-direction: column; gap: 14px; max-width: 720px; min-height: 0; }

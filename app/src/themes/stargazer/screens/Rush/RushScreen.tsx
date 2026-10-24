@@ -6,7 +6,8 @@ import { useServerBest } from '../../../../game/hooks/useSurvivalRanking';
 import { useSurvivalSession } from '../../../../game/useSurvivalSession';
 import { Button } from '../../kit/Button';
 import { CloseIcon } from '../../kit/icons';
-import { Note, Page, TopBar } from '../../kit/Page';
+import { DeskPage } from '../../kit/DeskPage';
+import { Note, TopBar } from '../../kit/Page';
 import { cx } from '../../kit/cx';
 import { SkyPlay } from '../../play/SkyPlay';
 import { NO_SKIES, plural } from '../../copy';
@@ -96,11 +97,11 @@ export function RushScreen(props: Props) {
   const pool = usePoolPublished('survival');
   if (pool === 'empty') {
     return (
-      <Page tone="rush">
+      <DeskPage active="rush" tone="rush">
         <TopBar title="Meteor Rush" onBack={props.onBack} backLabel="Tonight" />
         <Note>{NO_SKIES}</Note>
         <Button block onClick={props.onBack}>Back to tonight</Button>
-      </Page>
+      </DeskPage>
     );
   }
   if (!started) return <RushLobby userId={props.userId} best={props.best} onStart={() => setStarted(true)} onBack={props.onBack} onSignIn={props.onSignIn} />;

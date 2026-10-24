@@ -11,7 +11,8 @@ import { useMatchmaking } from '../../../../game/match/useMatchmaking';
 import { UNPUBLISHED_COPY } from '../../../../services/repositories/levelPools';
 import { Button } from '../../kit/Button';
 import { Scroll } from '../../kit/Layout';
-import { Avatar, Eyebrow, Note, Page, TopBar } from '../../kit/Page';
+import { DeskPage } from '../../kit/DeskPage';
+import { Avatar, Eyebrow, Note, TopBar } from '../../kit/Page';
 import { PlaceLink } from '../../kit/PlaceLink';
 import { NO_SKIES, ladderProgressText } from '../../copy';
 import styles from './Duel.module.css';
@@ -57,7 +58,7 @@ export function DuelLobby({ userId, preselect, onOpenMatch, onLadder, onBack }: 
   const rating = ladder.mine ? ladder.mine.rating : RATING_START;
 
   return (
-    <Page tone="duel">
+    <DeskPage active="duel" tone="duel">
       <TopBar title="Star Duel" onBack={onBack} backLabel="Tonight" />
       <p className={styles.lead}>You both get the same sky. Fewer stars wins. If you tie, the faster one wins.</p>
       <div className={styles.record}>
@@ -135,6 +136,6 @@ export function DuelLobby({ userId, preselect, onOpenMatch, onLadder, onBack }: 
           : <Button block kind="outline" size="md" tone="mint" disabled={lobby.busy} onClick={() => start(0)}>Duel a random stargazer</Button>}
         <span className={styles.hint}>A random duel is ranked and moves your rating.</span>
       </div>
-    </Page>
+    </DeskPage>
   );
 }

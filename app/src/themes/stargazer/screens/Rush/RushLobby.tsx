@@ -1,6 +1,7 @@
 import { SURVIVAL_LIMIT_MS, formatClock, type RunSummary } from '../../../../domain/survival';
 import { Button } from '../../kit/Button';
-import { Eyebrow, Note, Page, TopBar } from '../../kit/Page';
+import { DeskPage } from '../../kit/DeskPage';
+import { Eyebrow, Note, TopBar } from '../../kit/Page';
 import { plural } from '../../copy';
 import { BoardPanel } from '../Board/BoardPanel';
 import styles from './Rush.module.css';
@@ -16,7 +17,7 @@ interface Props {
 /* Before a Rush: the leaderboard, and a button that starts the clock (a run's clock starts when it mounts). */
 export function RushLobby({ userId, best, onStart, onBack, onSignIn }: Props) {
   return (
-    <Page tone="rush">
+    <DeskPage active="rush" tone="rush">
       <TopBar title="Meteor Rush" onBack={onBack} backLabel="Tonight" />
       <Eyebrow tone="mars">Leaderboard</Eyebrow>
       <Note>
@@ -27,6 +28,6 @@ export function RushLobby({ userId, best, onStart, onBack, onSignIn }: Props) {
       <div className={styles.actions}>
         <Button block onClick={onStart}>Start rush</Button>
       </div>
-    </Page>
+    </DeskPage>
   );
 }

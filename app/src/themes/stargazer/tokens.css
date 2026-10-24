@@ -77,6 +77,10 @@
   --sg-wash: rgba(255, 255, 255, .05);
   --sg-hairline: rgba(255, 255, 255, .1);
   --sg-scrim: rgba(5, 7, 20, .6);
+  /* one radius scale: cards and panels, tiles inside a card; pills and buttons are 999px */
+  --sg-r-card: 24px;
+  --sg-r-inner: 16px;
+  --sg-divider: rgba(255, 255, 255, .08);
   --sg-font-mono: ui-monospace, "SF Mono", Menlo, monospace;
 }
 
