@@ -21,7 +21,7 @@
 .column > * { flex-shrink: 0; }
 /* a phone column under the desktop header: the column takes the height the header leaves */
 .pageFramed { display: flex; flex-direction: column; }
-.frameHead { position: relative; padding: 28px 40px 0; flex: none; }
+.frameHead { position: relative; width: 100%; max-width: 1440px; margin: 0 auto; box-sizing: border-box; padding: 28px 40px 0; flex: none; }
 .pageFramed > .column { flex: 1 1 0; min-height: 0; height: auto; width: 100%; padding-top: 24px; }
 
 /* the part of a page that takes whatever height is left: a drawing shrinks into it */
