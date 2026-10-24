@@ -1,8 +1,10 @@
-import { useCallback, useReducer, useState } from 'react';
+import { useCallback, useEffect, useReducer, useState } from 'react';
 import { dayNumber, daySeed } from '../domain/calendar';
-import { DAILY_SET } from '../domain/sites';
+import { resultsFromClears } from '../domain/scoring';
+import { DAILY_SET, SITE_COUNT } from '../domain/sites';
 import type { PlayFeatures } from '../domain/types';
-import { recordClear } from '../services/repositories/siteClears';
+import { useAuth } from '../services/auth/authContext';
+import { getDayClears, recordClear } from '../services/repositories/siteClears';
 import { prefersMoreContrast } from './env';
 import { useDailyLevels } from './hooks/useDailyLevels';
 import { useDailySchedule } from './hooks/useDailySchedule';
@@ -23,6 +25,7 @@ export interface GameSession extends PlaySession {
    the work order, the game and the account screens so none of them loses it. */
 export function useGameSession(): GameSession {
   const [day] = useState(() => dayNumber());
+  const { userId } = useAuth();
   const published = useDailyLevels(day);
   const { schedule } = useDailySchedule(day);
   /* The published week is the game. Only when it isn't there does the device build one from the saved config
@@ -31,6 +34,19 @@ export function useGameSession(): GameSession {
   const levels = published.levels ?? built;
   const onSchedule = published.status !== 'missing';
   const [state, dispatch] = useReducer(gameReducer, undefined, initialGameState);
+
+  /* The board lives in memory, so a reload (or another device) would show tonight as untouched. Read the day's saved
+     clears back once the published week is known: only those clears are recorded, so they are the ones that match it. */
+  const restorable = published.status === 'published' && userId !== null;
+  useEffect(() => {
+    if (!restorable) return;
+    let live = true;
+    getDayClears(userId, day).then(r => {
+      if (live && r.ok) dispatch({ type: 'restore', results: resultsFromClears(r.data, SITE_COUNT) });
+    });
+    return () => { live = false; };
+  }, [restorable, userId, day]);
+
   const [expanded, setExpanded] = useState(false);
   /* someone who has asked their system for more contrast gets the house
      turned down from the start; everyone else can hit DIM */

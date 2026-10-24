@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { newDraft, openSlot, pinnedAt, pinnedSites } from './manualDays';
+import { newDraft, openSlot, pinnedAt, pinnedSites } from './pinnedDays';
 
 const fig = { nodes: [{ c: 0, r: 0 }, { c: 1, r: 0 }, { c: 2, r: 0 }], edges: [[0, 1], [1, 2]] as [number, number][] };
 const list = [{ day: 9, idx: 4, figure: fig, note: '' }, { day: 9, idx: 1, figure: fig, note: '' }, { day: 10, idx: 0, figure: fig, note: '' }];

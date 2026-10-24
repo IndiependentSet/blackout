@@ -13,7 +13,7 @@ import { Info } from '../Playground/Info';
 import { useRecipes } from '../Recipes/useRecipes';
 import { editorReducer, initialEditor } from './editor';
 import { ManualDays } from './ManualDays';
-import { newDraft, pinnedSites } from './manualDays';
+import { newDraft, pinnedSites } from './pinnedDays';
 import { usePinnedSkies } from './usePinnedSkies';
 import { SavePanel } from './SavePanel';
 import { SchedulePanel } from './SchedulePanel';

@@ -33,3 +33,17 @@ export async function getClearsBetween(userId: string | null, fromDay: number, t
   const res = toResult('getClearsBetween', (data ?? []) as NightRow[], error);
   return res.ok ? ok(res.data.map(r => ({ day: r.day_number, site: r.site_index, perfect: !!r.on_budget }))) : res;
 }
+
+/** A stored clear: what scoreRun needs to rebuild the result. */
+export interface StoredClear { site: number; used: number; par: number; stars: number }
+
+interface StoredRow { site_index: number; cats_used: number; par: number; stars: number }
+
+/** The player's clears for one day, to put tonight's board back after a reload. */
+export async function getDayClears(userId: string | null, day: number): Promise<Result<StoredClear[]>> {
+  if (!userId) return ok([]);
+  const { data, error } = await supabase.from('site_clears')
+    .select('site_index, cats_used, par, stars').eq('user_id', userId).eq('day_number', day);
+  const res = toResult('getDayClears', (data ?? []) as StoredRow[], error);
+  return res.ok ? ok(res.data.map(r => ({ site: r.site_index, used: r.cats_used, par: r.par, stars: r.stars }))) : res;
+}

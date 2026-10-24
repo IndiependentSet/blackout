@@ -249,7 +249,7 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
     come from `OPTION_LIMITS` and `DEFAULT_SCHEDULE`. A **Generate | Draw by hand** switch swaps the settings
     for the sky editor (`DrawStage`; the drawing rides in the hash as `sky=`, `drawHash.ts`), play-testable as
     the game's sky, and can start from the last generated sky.
-  - **Sky editor** (`screens/SkyEditor/`): the one hand-drawing UI every admin page uses. `skyEditor.ts` is the
+  - **Sky editor** (`screens/SkyEditor/`): the one hand-drawing UI every admin page uses. `editorState.ts` is the
     pure part (tools draw/move/erase, the line being drawn, undo, `hitTest`, `gridBounds`); `SkyEditor` is
     controlled (`figure` in, `onChange` out; remount with `key` for a fresh undo history), `FigureStatus` shows
     par/stars/answers and the errors and warnings, `useFigureCheck` memoizes `checkFigure`.
