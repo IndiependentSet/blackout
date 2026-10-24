@@ -7,7 +7,7 @@ import { playStatus } from '../Playground/play';
 import { PlayBar } from '../Playground/PlayBar';
 import { SchematicView } from '../Playground/SchematicView';
 import { usePlacement } from '../Playground/usePlacement';
-import type { Build } from './usePoolBuild';
+import { repeatOf, type Build } from './usePoolBuild';
 import pg from '../Playground/Playground.module.css';
 import styles from './LevelPools.module.css';
 
@@ -42,17 +42,20 @@ export function PoolPreview({ build, current, onGenerate, onStop }: Props) {
       </div>
       {build && (
         <div className={cx(styles.grid, !current && pg.stale)} aria-label="the pool">
-          {build.results.map((r, i) => (
-            <button key={r.slot} type="button" className={cx(styles.cell, i === open && styles.cellOpen, (!r.unique || r.duplicate) && styles.bad)}
+          {build.results.map((r, i) => {
+            const repeats = repeatOf(build.results, i);
+            return (
+            <button key={r.slot} type="button" className={cx(styles.cell, i === open && styles.cellOpen, (!r.unique || repeats !== null) && styles.bad)}
               onClick={() => setOpen(i)}>
               <b>#{r.slot}</b>
               <span>tier {r.tier + 1} · {r.level.nodes.length} nodes</span>
               <span>par {r.level.k} · {'★'.repeat(r.level.stars)}</span>
-              <span className={cx((r.salt === null || !r.unique || r.duplicate) && styles.slow)}>
-                {!r.unique ? 'NOT UNIQUE' : r.duplicate ? 'REPEAT' : r.salt === null ? 'fallback' : 'retry ' + r.salt} · {r.ms} ms
+              <span className={cx((r.salt === null || !r.unique || repeats !== null) && styles.slow)}>
+                {!r.unique ? 'NOT UNIQUE' : repeats !== null ? `SAME SKY AS #${repeats}` : r.salt === null ? 'fallback' : 'retry ' + r.salt} · {r.ms} ms
               </span>
             </button>
-          ))}
+            );
+          })}
         </div>
       )}
       <div className={cx(pg.stage, !current && pg.stale)}>

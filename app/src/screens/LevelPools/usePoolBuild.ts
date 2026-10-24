@@ -59,9 +59,16 @@ export function publishBlockers(build: Build | null, current: boolean): string[]
   if (!current) return ['The curve changed after this build: generate again.'];
   if (build.status !== 'done') return ['The build is not finished.'];
   const bad = build.results.filter(r => !r.unique).length;
-  const repeats = build.results.filter(r => r.duplicate).length;
+  const tiers = [...new Set(build.results.filter(r => r.duplicate).map(r => r.tier + 1))];
   return [
     ...(bad ? [`${bad} level${bad === 1 ? '' : 's'} do not have a unique best cover: change the curve or its seed.`] : []),
-    ...(repeats ? [`${repeats} sk${repeats === 1 ? 'y repeats' : 'ies repeat'} one already in the pool: give the tier fewer levels, more retries or more room.`] : []),
+    ...(tiers.length ? [`Tier ${tiers.join(', ')} ask${tiers.length === 1 ? 's' : ''} for more skies than ${tiers.length === 1 ? 'its' : 'their'} rules can make: fewer levels, or looser rules.`] : []),
   ];
+}
+
+/** The slot an earlier level of the build shares its sky with, or null when the level at `index` is new. */
+export function repeatOf(results: readonly Pick<SlotResult, 'slot' | 'key'>[], index: number): number | null {
+  const key = results[index]?.key;
+  const first = results.findIndex(r => r.key === key);
+  return first >= 0 && first < index ? results[first].slot : null;
 }

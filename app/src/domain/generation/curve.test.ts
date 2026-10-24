@@ -144,6 +144,21 @@ describe('generateSlot', () => {
     const out = generateSlot(one, { slot: 1, tier: 0 }, new Set([a.key, fb.key]));
     expect(out.duplicate).toBe(true);
   });
+  it('asks the default Meteor Rush opener for no more skies than its rules can make', () => {
+    const rush = DEFAULT_CURVES.survival;
+    const curve: LevelCurve = { ...rush, tiers: rush.tiers.map(t => ({ ...t, options: { ...t.options, clock: false } })) };
+    const keys = new Set<string>();
+    for (const s of poolSlots('survival', curve).filter(s => s.tier === 0)) {
+      const o = generateSlot(curve, s, keys);
+      expect(o.duplicate).toBe(false);
+      /* new, and an opener by its own rules: a near miss that breaks them does not count */
+      const rule = curve.tiers[0].constraints!;
+      expect(o.level.nodes.length).toBeGreaterThanOrEqual(rule.minNodes!);
+      expect(o.level.k).toBeLessThanOrEqual(rule.maxK!);
+      expect(o.level.adj.some(a => a.length === rule.hasDegree)).toBe(true);
+      keys.add(o.key);
+    }
+  });
   it('builds a pool with no sky in it twice', () => {
     const curve: LevelCurve = { ...tiny, retries: 8, tiers: [{ count: 8, size: 10, diff: 1, options: { clock: false } }] };
     const keys = new Set<string>();

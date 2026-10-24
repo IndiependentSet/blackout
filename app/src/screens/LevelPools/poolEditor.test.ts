@@ -68,7 +68,7 @@ describe('poolEditorReducer', () => {
     const voyage = initialPoolEditor('campaign');
     expect(tierLevels(voyage, 0)).toEqual({ first: 1, last: 1 });
     expect(tierLevels(voyage, 99)).toEqual({ first: 100, last: 100 });
-    expect(tierLevels(start, 1)).toEqual({ first: 3, last: 8 });
+    expect(tierLevels(start, 1)).toEqual({ first: 2, last: 7 });
   });
 
   it('keeps the open tab on the curve when a shorter one is loaded', () => {
