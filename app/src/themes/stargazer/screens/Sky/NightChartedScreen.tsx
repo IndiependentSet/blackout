@@ -8,7 +8,8 @@ import { Button } from '../../kit/Button';
 import { Figure } from '../../kit/Figure';
 import { ShareIcon } from '../../kit/icons';
 import { Fit } from '../../kit/Layout';
-import { Eyebrow, Note, Page, TopBar } from '../../kit/Page';
+import { DeskPage } from '../../kit/DeskPage';
+import { Eyebrow, Note, TopBar } from '../../kit/Page';
 import { PlaceLink } from '../../kit/PlaceLink';
 import { nameIdeas, nightShareText } from '../../copy';
 import styles from './NightCharted.module.css';
@@ -51,7 +52,7 @@ export function NightChartedScreen({ day, results, figure, streak, signedIn, atl
   };
 
   return (
-    <Page tone="result" className={styles.page}>
+    <DeskPage active="tonight" tone="result" className={styles.page}>
       <TopBar onBack={onBack} backLabel="Tonight" />
       <Eyebrow>Night No. {day} · {perfect ? 'Perfect night' : `${results.length} of ${results.length} charted`}</Eyebrow>
       <h1 className={styles.title}>{perfect ? 'You found a new constellation.' : 'The whole night is charted.'}</h1>
@@ -82,6 +83,6 @@ export function NightChartedScreen({ day, results, figure, streak, signedIn, atl
           <ShareIcon />{copied ? 'Copied — paste it anywhere' : 'Share my sky'}
         </Button>
       </div>
-    </Page>
+    </DeskPage>
   );
 }

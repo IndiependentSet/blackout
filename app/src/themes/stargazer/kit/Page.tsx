@@ -13,16 +13,19 @@ interface Props {
   tone?: Tone;
   /** a full-height desktop layout instead of the phone column */
   wide?: boolean;
+  /** a bar above the phone column, for the desktop header (see `DeskPage`) */
+  header?: ReactNode;
   children: ReactNode;
   className?: string;
 }
 
 /** Every Stargazer page: its sky, the starfield, and a phone-width column (or the full width on desktop). */
-export function Page({ tone = 'night', wide = false, children, className }: Props) {
+export function Page({ tone = 'night', wide = false, header, children, className }: Props) {
   return (
-    <div className={cx('sg', styles.page, styles['tone-' + tone], wide && styles.pageWide)}>
-      <Starfield wide={wide} />
+    <div className={cx('sg', styles.page, styles['tone-' + tone], wide && styles.pageWide, !!header && styles.pageFramed)}>
+      <Starfield wide={wide || !!header} />
       {tone === 'rush' && <Meteors />}
+      {header && <div className={styles.frameHead}>{header}</div>}
       <div className={cx(wide ? styles.wideInner : styles.column, className)}>{children}</div>
     </div>
   );

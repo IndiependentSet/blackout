@@ -2,7 +2,8 @@ import type { SkyNames } from '../../../../game/hooks/useSkyNames';
 import { Button } from '../../kit/Button';
 import { Figure } from '../../kit/Figure';
 import { Scroll } from '../../kit/Layout';
-import { Note, Page, TopBar } from '../../kit/Page';
+import { DeskPage } from '../../kit/DeskPage';
+import { Note, TopBar } from '../../kit/Page';
 import { useWide } from '../../kit/useWide';
 import { TabBar, type Tab } from '../../kit/TabBar';
 import { plural, whenNamed } from '../../copy';
@@ -22,8 +23,8 @@ export function AtlasScreen({ today, signedIn, atlas, onTab, onSignIn, onTonight
   const wide = useWide();
   const { names } = atlas;
   return (
-    <Page tone="night" className={wide ? styles.pageWide : styles.page}>
-      <TopBar title="Atlas" onBack={wide ? () => onTab('tonight') : undefined} backLabel="Tonight"
+    <DeskPage active="atlas" tone="night" className={wide ? styles.pageWide : styles.page}>
+      <TopBar title="Atlas"
         right={signedIn ? `${plural(names.length, 'named', 'named')}` : null} />
       {!signedIn && (
         <div className={styles.empty}>
@@ -47,6 +48,6 @@ export function AtlasScreen({ today, signedIn, atlas, onTab, onSignIn, onTonight
         ))}
       </div></Scroll>
       {!wide && <TabBar active="atlas" onOpen={onTab} />}
-    </Page>
+    </DeskPage>
   );
 }

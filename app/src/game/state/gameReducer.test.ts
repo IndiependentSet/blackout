@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { scoreRun } from '../../domain/scoring';
 import type { Hint, HintTier, Level } from '../../domain/types';
 import { gameReducer, initialGameState, isLastSite, REFUSED_MSG, type GameState } from './gameReducer';
 
@@ -151,5 +152,25 @@ describe('consulted', () => {
     const s = [1, 2].reduce(tap, consult(initialGameState(), 3));
     expect(s.event).toMatchObject({ kind: 'cleared', consulted: 3 });
     expect([1, 2].reduce(tap, initialGameState()).event).toMatchObject({ kind: 'cleared', consulted: 0 });
+  });
+});
+
+describe('restore', () => {
+  const back = scoreRun({ stars: 2, k: 3 }, 3);
+  it('fills the sites the server remembers, without an event or moving the open site', () => {
+    const s0 = { ...initialGameState(3), idx: 1 };
+    const s = gameReducer(s0, { type: 'restore', results: [back, null, null] });
+    expect(s.results[0]).toBe(back);
+    expect(s.idx).toBe(1);
+    expect(s.event).toBe(s0.event);
+  });
+  it('keeps a better result already on the board', () => {
+    const better = scoreRun({ stars: 3, k: 3 }, 3);
+    const s0 = { ...initialGameState(3), results: [better, null, null] };
+    expect(gameReducer(s0, { type: 'restore', results: [back, null, null] }).results[0]).toBe(better);
+  });
+  it('returns the same state when nothing changes', () => {
+    const s0 = initialGameState(3);
+    expect(gameReducer(s0, { type: 'restore', results: [null, null, null] })).toBe(s0);
   });
 });

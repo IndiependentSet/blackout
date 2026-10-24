@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { keepBest, scoreRun, siteBest, siteGrade, siteScore, totalScore } from './scoring';
+import { keepBest, resultsFromClears, scoreRun, siteBest, siteGrade, siteScore, totalScore } from './scoring';
 
 describe('siteScore', () => {
   it('pays stars x 10 on budget', () => expect(siteScore(3, 5, 5)).toBe(30));
@@ -35,4 +35,18 @@ describe('keepBest / totalScore', () => {
     expect(keepBest(null, lo)).toBe(lo);
   });
   it('sums scored sites only', () => expect(totalScore([hi, null, lo])).toBe(35));
+});
+
+describe('resultsFromClears', () => {
+  it('puts each stored clear back in its site, scored as it was', () => {
+    const out = resultsFromClears([{ site: 2, used: 4, par: 3, stars: 2 }, { site: 0, used: 3, par: 3, stars: 1 }], 7);
+    expect(out).toHaveLength(7);
+    expect(out[0]).toEqual(scoreRun({ stars: 1, k: 3 }, 3));
+    expect(out[2]).toEqual(scoreRun({ stars: 2, k: 3 }, 4));
+    expect(out[1]).toBeNull();
+  });
+  it('ignores sites outside the day and star counts the game never plays', () => {
+    const out = resultsFromClears([{ site: 9, used: 3, par: 3, stars: 1 }, { site: 1, used: 3, par: 3, stars: 5 }], 7);
+    expect(out.every(r => r === null)).toBe(true);
+  });
 });

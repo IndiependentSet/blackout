@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { SkyFigure } from '../../domain/types';
-import { editStep, gridBounds, hitTest, initialUi, type EditorAction, type EditorStep } from './skyEditor';
+import { editStep, gridBounds, hitTest, initialUi, type EditorAction, type EditorStep } from './editorState';
 
 const run = (actions: EditorAction[], start: EditorStep = { figure: { nodes: [], edges: [] }, ui: initialUi }) =>
   actions.reduce((s, a) => editStep(s.figure, s.ui, a), start);

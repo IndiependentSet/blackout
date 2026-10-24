@@ -1,6 +1,7 @@
 import type { RunSummary } from '../../../../domain/survival';
 import { Button } from '../../kit/Button';
-import { Eyebrow, Note, Page } from '../../kit/Page';
+import { DeskPage } from '../../kit/DeskPage';
+import { Eyebrow, Note } from '../../kit/Page';
 import { plural } from '../../copy';
 import { BoardPanel } from '../Board/BoardPanel';
 import styles from './Rush.module.css';
@@ -24,7 +25,7 @@ export function RushSummary({ summary, before, isRecord, signedIn, unsaved, reco
   const record = isRecord ? (signedIn ? 'A new personal best.' : 'A new best for this visit.')
     : before && before.sites > 0 ? `Your best is ${plural(before.sites, 'sky', 'skies')}.` : 'No skies charted this time.';
   return (
-    <Page tone="rush" className={styles.summary}>
+    <DeskPage active="rush" tone="rush" className={styles.summary}>
       <Eyebrow tone="mars">Meteor Rush · dawn</Eyebrow>
       <h1 className={styles.summaryTitle}>{summary.sites === 0 ? 'The sun came up.' : `${plural(summary.sites, 'sky', 'skies')} before dawn.`}</h1>
       <div className={styles.stats}>
@@ -39,6 +40,6 @@ export function RushSummary({ summary, before, isRecord, signedIn, unsaved, reco
         <Button block onClick={onAgain}>Rush again</Button>
         <Button block kind="ghost" size="md" onClick={onBack}>Back to tonight</Button>
       </div>
-    </Page>
+    </DeskPage>
   );
 }

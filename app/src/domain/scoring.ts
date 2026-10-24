@@ -40,3 +40,17 @@ export function keepBest(prev: SiteResult | null | undefined, run: SiteResult): 
 
 export const totalScore = (results: (SiteResult | null)[]) =>
   results.reduce((sum, r) => sum + (r ? r.score : 0), 0);
+
+/** Rebuild a day's results from what was stored (used, par, stars), one slot per site; rows outside the day's sites,
+    or with a star count the game never plays, are left out. */
+export function resultsFromClears(
+  rows: readonly { site: number; used: number; par: number; stars: number }[], count: number,
+): (SiteResult | null)[] {
+  const out: (SiteResult | null)[] = Array(count).fill(null);
+  for (const r of rows) {
+    if (!Number.isInteger(r.site) || r.site < 0 || r.site >= count) continue;
+    if (r.stars !== 1 && r.stars !== 2 && r.stars !== 3) continue;
+    out[r.site] = scoreRun({ stars: r.stars, k: r.par }, r.used);
+  }
+  return out;
+}

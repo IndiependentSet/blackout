@@ -17,6 +17,7 @@ describe('calendars', () => {
     expect(m.name).toBe('October');
     expect(m.days).toHaveLength(31);
     expect(m.days[19]).toBe(day);
+    expect(m.lead).toBe(3);   // 1 Oct 2026 is a Thursday: Mon, Tue, Wed come first
   });
   it('says tonight and yesterday in the atlas', () => {
     expect(whenNamed(day, day)).toBe(`No. ${day} · tonight`);

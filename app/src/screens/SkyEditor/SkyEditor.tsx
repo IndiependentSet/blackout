@@ -5,7 +5,7 @@ import type { Cell, SkyFigure } from '../../domain/types';
 import { useWindowKey } from '../../hooks/useWindowKey';
 import { Button } from '../../themes/stargazer/kit/Button';
 import { cx } from '../../themes/stargazer/kit/cx';
-import { editStep, gridBounds, hitTest, initialUi, TOOLS, type EditorAction, type EditorUi, type Tool } from './skyEditor';
+import { editStep, gridBounds, hitTest, initialUi, TOOLS, type EditorAction, type EditorUi, type Tool } from './editorState';
 import styles from './SkyEditor.module.css';
 
 const U = 48;   // px per lattice step

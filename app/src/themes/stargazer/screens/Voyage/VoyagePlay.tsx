@@ -25,7 +25,7 @@ export function VoyagePlay({ chapter, startLevelNo, clears, record, saveClear, u
   const last = nextIdx >= levels.length;
   const flyOn = last && !!onWorldDone && !!CHAPTERS[chapter.index + 1];
   return (
-    <SkyPlay session={session} userId={userId} title={`${planetOf(chapter.index).name} · level ${state.idx + 1}`} onBack={onBack} backLabel="Voyage"
+    <SkyPlay session={session} userId={userId} active="voyage" title={`${planetOf(chapter.index).name} · level ${state.idx + 1}`} onBack={onBack} backLabel="Voyage"
       primary={canFly
         ? { label: `Fly to ${nextIdx + 1}`, onClick: () => dispatch({ type: 'go', idx: nextIdx }) }
         : { label: last ? 'World charted · back to the voyage' : 'Back to the voyage', onClick: flyOn ? () => onWorldDone(chapter) : onBack }} />

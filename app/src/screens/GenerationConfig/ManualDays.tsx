@@ -5,7 +5,7 @@ import { cx } from '../../themes/stargazer/kit/cx';
 import { FigureStatus } from '../SkyEditor/FigureStatus';
 import { SkyEditor } from '../SkyEditor/SkyEditor';
 import { useFigureCheck } from '../SkyEditor/useFigureCheck';
-import { newDraft, openSlot, pinnedAt, type ManualDraft } from './manualDays';
+import { newDraft, openSlot, pinnedAt, type ManualDraft } from './pinnedDays';
 import type { usePinnedSkies } from './usePinnedSkies';
 import { dayLabel } from './week';
 import pg from '../Playground/Playground.module.css';

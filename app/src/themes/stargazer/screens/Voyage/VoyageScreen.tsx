@@ -7,7 +7,8 @@ import { usePoolPublished } from '../../../../game/hooks/usePoolPublished';
 import { Button } from '../../kit/Button';
 import { Scroll } from '../../kit/Layout';
 import { PlaceLink } from '../../kit/PlaceLink';
-import { Note, Page, TopBar } from '../../kit/Page';
+import { DeskPage } from '../../kit/DeskPage';
+import { Note, TopBar } from '../../kit/Page';
 import { NO_SKIES } from '../../copy';
 import { WAVE } from './wave';
 import { ChapterCard, NextWorld, Stop, WorldsRow } from './VoyageView';
@@ -46,16 +47,16 @@ export function VoyageScreen({ signedIn, clears, persistence, place, onBoard, on
 
   if (!signedIn) {
     return (
-      <Page tone="night">
+      <DeskPage active="voyage" tone="night">
         <TopBar title="Voyage" onBack={onBack} backLabel="Tonight" />
         <Note>The voyage keeps your record from world to world, so it needs you signed in. Tonight’s skies are open to everyone.</Note>
         <Button block onClick={onSignIn}>Sign in</Button>
-      </Page>
+      </DeskPage>
     );
   }
 
   return (
-    <Page tone="night" className={styles.page}>
+    <DeskPage active="voyage" tone="night" className={styles.page}>
       <TopBar title="Voyage" onBack={onBack} backLabel="Tonight" right={`${cleared} / ${CAMPAIGN_LEVELS}`} />
       <WorldsRow current={ch.index} reach={reach} onPick={setOpen} />
       <ChapterCard chapter={ch} cleared={progress.cleared} />
@@ -72,6 +73,6 @@ export function VoyageScreen({ signedIn, clears, persistence, place, onBoard, on
         })}
       </div></Scroll>
       <NextWorld next={next} locked={!!next && next.index > reach} />
-    </Page>
+    </DeskPage>
   );
 }

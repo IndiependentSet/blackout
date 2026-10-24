@@ -3,9 +3,9 @@
 .steps { margin: 6px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; }
 .step {
   display: grid; grid-template-columns: 96px 1fr; gap: 14px; align-items: center;
-  background: rgba(255, 255, 255, .05); border-radius: 28px; padding: 10px 16px 10px 10px;
+  background: rgba(255, 255, 255, .05); border-radius: var(--sg-r-card); padding: 10px 16px 10px 10px;
 }
-.thumb { background: var(--sg-well); border-radius: 22px; padding: 6px; }
+.thumb { background: var(--sg-well); border-radius: var(--sg-r-inner); padding: 6px; }
 .text { display: flex; flex-direction: column; gap: 2px; }
 .text > b { font-size: 16px; color: var(--sg-text); }
 .text > span { font-size: 14px; line-height: 1.4; color: var(--sg-text-soft); }
@@ -16,7 +16,7 @@
   .page { padding: 26px 20px 16px; gap: 12px; }
   .title { font-size: 30px; }
   .steps { gap: 8px; margin: 0; }
-  .step { grid-template-columns: 72px 1fr; padding: 8px 12px 8px 8px; border-radius: 24px; }
+  .step { grid-template-columns: 72px 1fr; padding: 8px 12px 8px 8px; border-radius: var(--sg-r-card); }
   .text > b { font-size: 15px; }
   .text > span { font-size: 13px; }
   .actions { gap: 4px; }

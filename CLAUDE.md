@@ -113,9 +113,13 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
     - `themes/stargazer/` — **the game.** `StargazerApp.tsx` (page routing),
       `tokens.css` (the theme's only raw colours/fonts, scoped to `.sg`),
       `copy.ts` (planet names, name ideas, share text, week/month calendars),
-      `kit/` (Page and its skies, Starfield, Button, TabBar, Moon, MiniStar,
+      `kit/` (Page and its skies — `Page` takes a `header` slot, `DeskPage` fills it with the shared desktop header —, Starfield, Button, TabBar, Moon, MiniStar,
       Planet, Figure — a still sky for previews, results and the atlas —,
-      icons, `Leaderboard`/`Pills`/`PlaceLink`/`Sparkline` — a board drawn, its switches, the one-line "#12 of 340 tonight · Board ›"), `play/` (`SkyPlay` — the one board screen every mode uses, phone
+      icons, `Leaderboard`/`Pills`/`PlaceLink`/`Sparkline` — a board drawn, its switches, the one-line "#12 of 340 tonight · Board ›"; `ListCard`/`ListRow` — one card of tappable rows split by hairlines, with a
+      detail, a mint badge or an action label in place of the chevron —; `ProgressStars` — tonight's skies as a bar —;
+      `DeskHeader`/`DeskContext`/`DeskPage` — the one desktop header every page shares: brand, Tonight · Atlas · Voyage · Rush ·
+      Duel, streak pill, avatar to Me; `StargazerApp` provides its props through `DeskContext`, a phone-column page wears it with
+      `DeskPage active=…`, the wide pages (Tonight, Me, Stats) render `DeskHeader` themselves), `play/` (`SkyPlay` — the one board screen every mode uses, phone
       column or desktop three-column —, `SkyBoard`, the telescope, `sky.ts`, and `warp.ts` — where each
       star is drawn: the lattice taken off the grid with a seeded tilt,
       stretch, slant, slow drift, per-star nudge and longer/shorter tails, plus
@@ -133,7 +137,14 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
       a list that can grow without limit (voyage path, atlas, friends, boards)
       scrolls inside its own `Scroll` panel, and `@media (max-height: 760px)`
       tightens spacing. A page with more than a screen of sections splits into
-      sub-pages instead (the Observatory's friends and weekly board).
+      sub-pages instead (Me's friends, leaderboard and Edit profile).
+      **One radius scale** (`tokens.css`): `--sg-r-card` (24px) for every card and panel, `--sg-r-inner` (16px) for wells and
+      tiles inside a card, 999px for pills and buttons; `--sg-divider` for hairlines. Don't add other card radii.
+      **Me, Stats and Tonight** (the simplified layouts): Me is a profile card (`Edit` opens the Edit profile sub-page: handle +
+      picture), the month calendar (`MonthCard`, Monday first, `monthOf().lead` blank cells) and a `ListCard` of Friends /
+      Leaderboard / All my stats. Stats shows one mode at a time (`Pills stretch` on a phone, mode cards on desktop); what each
+      mode says is the pure `screens/Stats/statsView.ts`. Tonight's card is "Sky N of 7" over a `ProgressStars` bar, with one
+      "More ways to play" `ListCard` (each `ModeCard` carries its `detail`, `badge` and desktop `action`).
     - `themes/catastrophe/` — the hidden CATASTROPHE INC. look, unchanged:
       `CatastropheApp.tsx`, `game/` (`GameScreen`, `components/` — Board,
       which owns the camera, its layers, HUD, score card, side rails —,
@@ -238,7 +249,7 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
     come from `OPTION_LIMITS` and `DEFAULT_SCHEDULE`. A **Generate | Draw by hand** switch swaps the settings
     for the sky editor (`DrawStage`; the drawing rides in the hash as `sky=`, `drawHash.ts`), play-testable as
     the game's sky, and can start from the last generated sky.
-  - **Sky editor** (`screens/SkyEditor/`): the one hand-drawing UI every admin page uses. `skyEditor.ts` is the
+  - **Sky editor** (`screens/SkyEditor/`): the one hand-drawing UI every admin page uses. `editorState.ts` is the
     pure part (tools draw/move/erase, the line being drawn, undo, `hitTest`, `gridBounds`); `SkyEditor` is
     controlled (`figure` in, `onChange` out; remount with `key` for a fresh undo history), `FigureStatus` shows
     par/stars/answers and the errors and warnings, `useFigureCheck` memoizes `checkFigure`.

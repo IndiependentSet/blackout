@@ -38,6 +38,7 @@ export type GameAction =
   | { type: 'reset' }
   | { type: 'go'; idx: number }
   | { type: 'restart'; count: number }
+  | { type: 'restore'; results: (SiteResult | null)[] }
   | { type: 'consult'; tier: HintTier; lv: Level }
   | { type: 'focus'; node: number }
   | { type: 'keyboard' }
@@ -100,6 +101,14 @@ export function gameReducer(s: GameState, a: GameAction): GameState {
     case 'restart':
       /* keeps `seq` climbing so a consumer never mistakes the new run's first event for one it already handled */
       return { ...initialGameState(a.count), event: { seq: nextSeq(s), kind: 'entered', idx: 0 } };
+    case 'restore': {
+      /* the day's clears read back from the server: merged under whatever was cleared since, and no event, so nothing replays */
+      const results = s.results.map((r, i) => {
+        const back = a.results[i] ?? null;
+        return back ? keepBest(r, back) : r;
+      });
+      return results.every((r, i) => r === s.results[i]) ? s : { ...s, results };
+    }
     case 'consult': {
       const { hint, msg } = consult(a.lv, s.placed, a.tier);
       return { ...s, hint, msg, consulted: Math.max(s.consulted, a.tier) as HintTier };

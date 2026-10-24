@@ -6,7 +6,8 @@ import { useServerBest } from '../../../../game/hooks/useSurvivalRanking';
 import { useSurvivalSession } from '../../../../game/useSurvivalSession';
 import { Button } from '../../kit/Button';
 import { CloseIcon } from '../../kit/icons';
-import { Note, Page, TopBar } from '../../kit/Page';
+import { DeskPage } from '../../kit/DeskPage';
+import { Note, TopBar } from '../../kit/Page';
 import { cx } from '../../kit/cx';
 import { SkyPlay } from '../../play/SkyPlay';
 import { NO_SKIES, plural } from '../../copy';
@@ -82,7 +83,7 @@ function RushRun({ userId, best, onFinish, onBack, onSignIn, onAgain }: Props & 
   const dark = level ? level.edges.length - coveredEdges(level, state.placed).size : 0;
   const status = level ? `${plural(dark, 'line')} still dark. Chart as many skies as you can before dawn.` : 'The first sky is rising…';
   return (
-    <SkyPlay session={session} userId={userId} tone="rush" title="Meteor Rush" onBack={leave} primary={null} status={status}
+    <SkyPlay session={session} userId={userId} active="rush" tone="rush" title="Meteor Rush" onBack={leave} primary={null} status={status}
       top={<RushTop remainingMs={remainingMs} summary={summary} best={before} onQuit={leave} />}
       footer={!userId ? <div className={styles.foot}>Sign in to rank your runs.</div> : recording === 'unsaved' ? <div className={styles.foot}>Not saved: playing on this device only.</div> : null} />
   );
@@ -96,11 +97,11 @@ export function RushScreen(props: Props) {
   const pool = usePoolPublished('survival');
   if (pool === 'empty') {
     return (
-      <Page tone="rush">
+      <DeskPage active="rush" tone="rush">
         <TopBar title="Meteor Rush" onBack={props.onBack} backLabel="Tonight" />
         <Note>{NO_SKIES}</Note>
         <Button block onClick={props.onBack}>Back to tonight</Button>
-      </Page>
+      </DeskPage>
     );
   }
   if (!started) return <RushLobby userId={props.userId} best={props.best} onStart={() => setStarted(true)} onBack={props.onBack} onSignIn={props.onSignIn} />;

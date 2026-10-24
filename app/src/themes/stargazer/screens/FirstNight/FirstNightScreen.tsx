@@ -1,7 +1,8 @@
 import type { SkyFigure } from '../../../../domain/types';
 import { Button } from '../../kit/Button';
 import { Figure } from '../../kit/Figure';
-import { Eyebrow, Page } from '../../kit/Page';
+import { DeskPage } from '../../kit/DeskPage';
+import { Eyebrow } from '../../kit/Page';
 import styles from './FirstNight.module.css';
 
 /* The little sky the three steps are drawn on (the design's own example). */
@@ -25,7 +26,7 @@ interface Props {
 /* First night (1a): how to play, in three pictures. Replaces the old orientation and work order. */
 export function FirstNightScreen({ onStart, onClose }: Props) {
   return (
-    <Page tone="night" className={styles.page}>
+    <DeskPage active="tonight" tone="night" className={styles.page}>
       <Eyebrow>Your first night watch</Eyebrow>
       <h1 className={styles.title}>The sky is full of figures no one has named.</h1>
       <ol className={styles.steps}>
@@ -43,6 +44,6 @@ export function FirstNightScreen({ onStart, onClose }: Props) {
         <Button block onClick={onStart}>Start my first sky</Button>
         <Button block kind="ghost" size="md" onClick={onClose}>I’ve played before</Button>
       </div>
-    </Page>
+    </DeskPage>
   );
 }

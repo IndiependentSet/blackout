@@ -11,6 +11,9 @@ import { SAVE_FAILED } from '../../../game/state/scoreCopy';
 import { Button } from '../kit/Button';
 import { cx } from '../kit/cx';
 import { BackIcon, ResetIcon } from '../kit/icons';
+import { DeskHeader, type DeskDest } from '../kit/DeskHeader';
+import { useDesk } from '../kit/DeskContext';
+import { DeskPage } from '../kit/DeskPage';
 import { Page, type Tone } from '../kit/Page';
 import { useWide } from '../kit/useWide';
 import { SkyBoard } from './SkyBoard';
@@ -29,6 +32,8 @@ interface Props {
   /** taps and keys are ignored (before a duel starts, once Rush's clock is out) */
   locked?: boolean;
   tone?: Tone;
+  /** the place of the desktop header this mode belongs to */
+  active: DeskDest;
   /** "Sky 3 of 7", "Mars · level 15" */
   title: string;
   onBack: () => void;
@@ -50,10 +55,11 @@ interface Props {
 /* Stargazer's board, in every mode (1c phone, 1n desktop): the sky, the lit count against par, the telescope when the
    mode allows hints, a message and one action. The rules, the hints and saving are the game's own: the reducer in
    the session, and `session.save` for a clear (the daily week, a voyage level, a duel's cover). */
-export function SkyPlay({ session, userId, locked = false, tone = 'night', title, onBack, backLabel = 'Back', top, skies, primary, status, footer, onEvent }: Props) {
+export function SkyPlay({ session, userId, locked = false, tone = 'night', active, title, onBack, backLabel = 'Back', top, skies, primary, status, footer, onEvent }: Props) {
   const { level, state, features } = session;
   const dispatch = useCallback<typeof session.dispatch>(a => { if (!locked || a.type === 'keyboard') session.dispatch(a); }, [locked, session]);
   const wide = useWide() && !top;
+  const desk = useDesk();
   const onSaveError = useCallback((error: string) => session.dispatch({ type: 'notice', msg: SAVE_FAILED + error }), [session]);
   const { saveClear } = useClearSaver(userId, session.save, onSaveError, session.onSchedule ?? true);
 
@@ -131,6 +137,8 @@ export function SkyPlay({ session, userId, locked = false, tone = 'night', title
   if (wide) {
     return (
       <Page tone="deep" wide>
+        <div className={styles.deskFrame}>
+        {desk && <div className={styles.deskHead}><DeskHeader active={active} {...desk} /></div>}
         <div className={styles.grid}>
           <nav className={styles.left}>
             <div className={styles.leftHead}>
@@ -152,12 +160,13 @@ export function SkyPlay({ session, userId, locked = false, tone = 'night', title
             {footer}
           </aside>
         </div>
+        </div>
       </Page>
     );
   }
 
   return (
-    <Page tone={tone} className={styles.col}>
+    <DeskPage active={active} tone={tone} className={styles.col}>
       {top ?? (
         <>
           <div className={styles.top}>
@@ -176,6 +185,6 @@ export function SkyPlay({ session, userId, locked = false, tone = 'night', title
       <div className={styles.msg} role="status">{msg}</div>
       {button}
       {footer}
-    </Page>
+    </DeskPage>
   );
 }

@@ -10,7 +10,7 @@
 .input:focus { border-color: var(--sg-gold); }
 .ideas { display: flex; gap: 6px; flex-wrap: wrap; }
 .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 4px; }
-.stat { background: rgba(255, 255, 255, .05); border-radius: 20px; padding: 10px 12px; display: flex; flex-direction: column; }
+.stat { background: rgba(255, 255, 255, .05); border-radius: var(--sg-r-inner); padding: 10px 12px; display: flex; flex-direction: column; }
 .stat b { font-family: var(--sg-font-heading); font-weight: 400; font-size: 22px; color: var(--sg-gold); }
 .stat span { font-size: 12px; font-weight: 700; color: var(--sg-text-soft); }
 .actions { display: flex; flex-direction: column; gap: 6px; }

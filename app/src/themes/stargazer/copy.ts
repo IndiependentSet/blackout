@@ -56,12 +56,15 @@ export function weekOf(day: number): { day: number; label: string }[] {
   return Array.from({ length: 7 }, (_, i) => ({ day: monday + i, label: WEEKDAYS[(i + 1) % 7] }));
 }
 
-/** Every night of the month a night falls in, and the month's name. */
-export function monthOf(day: number): { name: string; days: number[] } {
+/** One-letter weekday labels, Monday first. */
+export const WEEK_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+
+/** Every night of the month a night falls in, the month's name, and how many blank cells put day 1 under its weekday (Monday first). */
+export function monthOf(day: number): { name: string; days: number[]; lead: number } {
   const d = dateOf(day);
   const first = day - (d.getUTCDate() - 1);
   const length = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
-  return { name: MONTHS[d.getUTCMonth()], days: Array.from({ length }, (_, i) => first + i) };
+  return { name: MONTHS[d.getUTCMonth()], days: Array.from({ length }, (_, i) => first + i), lead: (dateOf(first).getUTCDay() + 6) % 7 };
 }
 
 /** How the atlas dates a figure. */

@@ -1,0 +1,17 @@
+.card { background: var(--sg-card); border-radius: var(--sg-r-card); overflow: hidden; display: flex; flex-direction: column; }
+.row {
+  position: relative; display: flex; align-items: center; gap: 12px; padding: 13px 16px; border: 0; background: transparent;
+  color: var(--sg-text); cursor: pointer; font: inherit; text-align: left;
+}
+.row:hover { background: var(--sg-card-hover); }
+.row + .row::before { content: ''; position: absolute; top: 0; left: 16px; right: 16px; height: 1px; background: var(--sg-divider); }
+.text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.text b { font-size: 15px; font-weight: 800; }
+.description { font-size: 13px; font-weight: 600; color: var(--sg-text-soft); }
+.detail { font-size: 13px; font-weight: 700; color: var(--sg-text-soft); white-space: nowrap; }
+.badge { padding: 3px 8px; border-radius: 999px; background: var(--sg-mint); color: var(--sg-on-mint); font-size: 12px; font-weight: 800; white-space: nowrap; }
+.chevron { display: flex; color: var(--sg-text-faint); flex: none; }
+.action { font-weight: 800; font-size: 14px; white-space: nowrap; }
+.action-gold { color: var(--sg-gold); }
+.action-mars { color: var(--sg-mars); }
+.action-mint { color: var(--sg-mint); }

@@ -1,6 +1,7 @@
 import type { BoardKind } from '../../../../domain/ranking';
 import { Button } from '../../kit/Button';
-import { Page, TopBar, Note } from '../../kit/Page';
+import { DeskPage } from '../../kit/DeskPage';
+import { TopBar, Note } from '../../kit/Page';
 import { BOARDS } from '../../copy';
 import { BoardView } from './BoardView';
 import styles from './BoardScreen.module.css';
@@ -25,11 +26,11 @@ interface Props {
    in play: the player opens it, reads it and goes back to where they were. */
 export function BoardScreen({ kinds, userId, day, backLabel, onBack, onSignIn, onChallenge, challengeBusy, challengeError, onFindRanked }: Props) {
   return (
-    <Page tone={kinds[0] === 'duel' ? 'duel' : kinds[0] === 'rush' ? 'rush' : 'night'}>
+    <DeskPage active={kinds[0] === 'duel' || kinds[0] === 'season' ? 'duel' : kinds[0] === 'rush' ? 'rush' : kinds[0] === 'voyage' ? 'voyage' : 'tonight'} tone={kinds[0] === 'duel' ? 'duel' : kinds[0] === 'rush' ? 'rush' : 'night'}>
       <TopBar title={kinds.length > 1 ? 'Leaderboard' : BOARDS[kinds[0]].title} onBack={onBack} backLabel={backLabel} />
       {challengeError && <Note tone="error">{challengeError}</Note>}
       <BoardView kinds={kinds} userId={userId} day={day} onSignIn={onSignIn} onChallenge={onChallenge} challengeBusy={challengeBusy} />
       {onFindRanked && userId && <Button kind="mint" size="md" block className={styles.find} onClick={onFindRanked}>Find a ranked duel</Button>}
-    </Page>
+    </DeskPage>
   );
 }

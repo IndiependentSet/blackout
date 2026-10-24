@@ -1,10 +1,10 @@
 .page { padding-top: 56px; }
 @media (max-height: 760px) { .page { padding-top: 22px; } }
-.pageWide { max-width: 1100px; padding-top: 36px; }
+.pageWide { max-width: 1440px; padding: 24px 40px 28px; }
 .empty { display: flex; flex-direction: column; gap: 12px; }
 .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .gridWide { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
-.card { background: var(--sg-card); border-radius: 26px; padding: 12px; display: flex; flex-direction: column; gap: 6px; }
+.card { background: var(--sg-card); border-radius: var(--sg-r-card); padding: 12px; display: flex; flex-direction: column; gap: 6px; }
 .thumb { display: block; width: 100%; aspect-ratio: 10 / 7; overflow: visible; }
 .cardText { display: flex; flex-direction: column; gap: 1px; }
 .cardText b { font-family: var(--sg-font-heading); font-weight: 400; font-size: 16px; line-height: 1.15; color: var(--sg-cream); }

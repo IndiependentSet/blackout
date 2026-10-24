@@ -29,7 +29,7 @@
 @media (max-height: 760px) { .summary { padding-top: 26px; } .summaryTitle { font-size: 30px; } .hud { gap: 12px; } }
 .summaryTitle { margin: 0; font-family: var(--sg-font-heading); font-weight: 400; font-size: 38px; line-height: 1.04; color: var(--sg-cream); }
 .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.stat { background: rgba(255, 255, 255, .05); border-radius: 20px; padding: 10px 12px; display: flex; flex-direction: column; }
+.stat { background: rgba(255, 255, 255, .05); border-radius: var(--sg-r-inner); padding: 10px 12px; display: flex; flex-direction: column; }
 .stat b { font-family: var(--sg-font-heading); font-weight: 400; font-size: 22px; color: var(--sg-mars); }
 .stat span { font-size: 12px; font-weight: 700; color: var(--sg-text-soft); }
 .actions { display: flex; flex-direction: column; gap: 6px; }
