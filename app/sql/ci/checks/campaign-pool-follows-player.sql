@@ -17,6 +17,18 @@ insert into public.profiles (id, username) values
   ('f2000000-0000-0000-0000-000000000003', 'ci_pool_new');
 insert into public.admins (user_id) values ('f2000000-0000-0000-0000-000000000001');
 
+-- a player's own first clear must work: the insert trigger runs as them, and campaign_pool_version is not theirs to
+-- call. This has to be the first time the trigger fires in this transaction: plpgsql caches a simple expression, and
+-- a cached one skips the privilege check, so a first fire as the owner would hide the bug.
+insert into auth.users (id) values ('f2000000-0000-0000-0000-000000000004');
+insert into public.profiles (id, username) values ('f2000000-0000-0000-0000-000000000004', 'ci_pool_first');
+set local role authenticated;
+select public.act_as('f2000000-0000-0000-0000-000000000004');
+insert into public.campaign_clears (user_id, level_no, cats_used, par, stars, campaign_stars)
+  values ('f2000000-0000-0000-0000-000000000004', 1, 1, 1, 3, 3);
+reset role;
+delete from public.campaign_clears where user_id = 'f2000000-0000-0000-0000-000000000004';
+
 do $$
 declare
   mk jsonb := '{"nodes":[{"c":0,"r":0},{"c":1,"r":0},{"c":2,"r":0}],"edges":[[0,1],[1,2]],"k":1,"sol":[1],"stars":1}';
