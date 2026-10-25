@@ -432,7 +432,7 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
     config saved, `DEFAULT_SCHEDULE` *is* the schedule and clears count.
   - **Installable app (PWA)**: `index.html` links `public/manifest.webmanifest` (standalone, Stargazer's night colours)
     and the iOS `apple-*` tags; `viewport-fit=cover`, so `kit/kit.module.css`'s `.column` pads by
-    `env(safe-area-inset-*)` (0 in a browser tab). Icons: `public/icon.svg` (art inside the central 80%, so it is also
+    `env(safe-area-inset-*)` (0 in a browser tab). Icons: `public/icon.svg` (the Big Dipper, inside the central 80%, so it is also
     the maskable icon) rendered to `icon-192.png`, `icon-512.png`, `apple-touch-icon.png` — re-render them if it
     changes. `public/sw.js` is the service worker, registered in production only by
     `services/pwa/registerServiceWorker.ts` as `/sw.js?v=<main bundle name>`, so every deploy gets a fresh worker and
