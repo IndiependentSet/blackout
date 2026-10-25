@@ -127,7 +127,14 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
       preview and its atlas page match for every player; stars that would cross
       a line, crowd another star, sit on a line not theirs or fold two lines
       together are calmed one by one, then put back on their cells. Drawing
-      only: the puzzle is untouched, and arrow keys move by the drawn positions)
+      only: the puzzle is untouched, and arrow keys move by the drawn positions;
+      `SkyStage` — where the board sits, and the **telescope slew** between skies: whenever `SkyPlay`'s slot
+      (`siteOffset + idx`) changes, in any mode, the view closes to an eyepiece with a reticle (the rest of the page
+      dark around it), the sky just charted slides away while faint stars streak past and the `ScopeArt` telescope in
+      the corner swings, the next sky drifts in out of focus and is racked sharp, then the eyepiece opens. `slew.ts`
+      is the pure timeline (`slewFrame(T)`, `slewHeading`, seeded `fieldStars`), `useSlew` starts it in a layout
+      effect and runs the clock; ~1.85 s, twice as fast in Meteor Rush (`pace="brisk"`, its clock is running), a tap
+      skips it and never reaches the new sky, none for reduced motion or the first sky on a screen. Drawing only)
       and `screens/` (Tonight, FirstNight, Sky — daily play and Night
       charted —, Atlas, Voyage, Rush, Duel, Observatory, Stats, Board — the leaderboard pages, below). It never imports
       `src/ui/` (that kit is CATASTROPHE INC.'s).
@@ -161,7 +168,7 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
     `StargazerApp` sets `route 'voyage'`, `openChapter` (seeds `VoyageScreen`'s `initialChapter`, keyed so it resets) and
     `transit`; `VoyageTransit` (`{from, to, onDone, startAt = 1.2, clears?}`) overlays the real screen, which already shows the
     world just charted. Every frame is a pure function of T: `timeline.ts` (`CUES`, `TOTAL`, `skip`: a tap between Liftoff and
-    Approach jumps to Arrival), `frame.ts` (`frameAt`), `motion.ts` (easings, `animate`, `alpha`/`mix` over theme CSS variables
+    Approach jumps to Arrival), `frame.ts` (`frameAt`), `kit/motion.ts` (shared with the slew: easings, `animate`, `alpha`/`mix` over theme CSS variables
     — no hex), `Hero`, `Motif` (per-world surroundings), `Route`, seeded particles in `flightParticles.ts`. The screen under and
     inside the flight is drawn from the same parts (`VoyageView`: `Stop`, `WorldsRow`, `ChapterCard`, `NextWorld`;
     `FlightScreen` assembles them), so the two match. Purely visual: it never touches clears or persistence. Reduced motion shows

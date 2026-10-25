@@ -17,6 +17,8 @@ import { DeskPage } from '../kit/DeskPage';
 import { Page, type Tone } from '../kit/Page';
 import { useWide } from '../kit/useWide';
 import { SkyBoard } from './SkyBoard';
+import { SkyStage } from './SkyStage';
+import type { Pace } from './slew';
 import { skyLayout } from './warp';
 import { LitCount, ParPill, SkyDots, SkyList, Telescope } from './StargazerParts';
 import { SCOPE_TIER, activeScope, darkLabel, scopeForKey, skyMessage, type Scope, type SkyEntry } from './sky';
@@ -50,12 +52,14 @@ interface Props {
   footer?: ReactNode;
   /** told about every board event once, after the sound and the save */
   onEvent?: (e: GameEvent) => void;
+  /** how fast the telescope slews to the next sky: Meteor Rush's clock is running, so it hurries */
+  pace?: Pace;
 }
 
 /* Stargazer's board, in every mode (1c phone, 1n desktop): the sky, the lit count against par, the telescope when the
    mode allows hints, a message and one action. The rules, the hints and saving are the game's own: the reducer in
    the session, and `session.save` for a clear (the daily week, a voyage level, a duel's cover). */
-export function SkyPlay({ session, userId, locked = false, tone = 'night', active, title, onBack, backLabel = 'Back', top, skies, primary, status, footer, onEvent }: Props) {
+export function SkyPlay({ session, userId, locked = false, tone = 'night', active, title, onBack, backLabel = 'Back', top, skies, primary, status, footer, onEvent, pace = 'full' }: Props) {
   const { level, state, features } = session;
   const dispatch = useCallback<typeof session.dispatch>(a => { if (!locked || a.type === 'keyboard') session.dispatch(a); }, [locked, session]);
   const wide = useWide() && !top;
@@ -124,12 +128,18 @@ export function SkyPlay({ session, userId, locked = false, tone = 'night', activ
   const notice = state.msg === REFUSED_MSG ? OUT_OF_POWER : state.msg.startsWith(SAVE_FAILED) ? state.msg : '';
   const msg = notice || (scope ? skyMessage(level, state.placed, state.hint, scope, '') : status || skyMessage(level, state.placed, state.hint, null, ''));
   const telescope = features.hints && <Telescope wide={wide} active={scope} onUse={point} />;
-  const board = level ? (
-    <SkyBoard level={level} placed={state.placed} sweep={scope === 'sweep'}
-      ring={scope === 'spot' && state.hint?.kind === 'reveal' ? state.hint.node : null}
-      focus={state.kbd ? state.focus : null}
-      onTapStar={node => dispatch({ type: 'tap', node, lv: level })} />
-  ) : <div className={styles.waiting}>Scanning the sky…</div>;
+  /* which sky of the mode is up: a new one is reached by slewing the telescope (SkyStage) */
+  const slot = (session.siteOffset ?? 0) + state.idx;
+  const board = (
+    <SkyStage level={level} placed={state.placed} slot={slot} pace={pace} wide={wide}>
+      {level ? (
+        <SkyBoard level={level} placed={state.placed} sweep={scope === 'sweep'}
+          ring={scope === 'spot' && state.hint?.kind === 'reveal' ? state.hint.node : null}
+          focus={state.kbd ? state.focus : null}
+          onTapStar={node => dispatch({ type: 'tap', node, lv: level })} />
+      ) : <div className={styles.waiting}>Scanning the sky…</div>}
+    </SkyStage>
+  );
   const button = primary && (
     <Button block disabled={primary.disabled ?? !cleared} onClick={act}>{primary.label}</Button>
   );

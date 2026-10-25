@@ -10,7 +10,7 @@ import { frameAt } from './frame';
 import { STREAKS, tones } from './flightParticles';
 import { Hero } from './Hero';
 import { Motif, type MotifProps } from './Motif';
-import { animate, Easing, lerp, MOTION, mix } from './motion';
+import { animate, Easing, lerp, MOTION, mix } from '../../kit/motion';
 import { Route } from './Route';
 import { H, W } from './stage';
 import { advance, CUES, isOver, skip, START_AT, TOTAL } from './timeline';

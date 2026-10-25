@@ -1,0 +1,34 @@
+/* The board's frame, and the telescope's slew between skies (SkyStage.tsx). */
+.stage { position: relative; width: 100%; height: 100%; min-width: 0; min-height: 0; }
+.wide { max-width: 640px; }
+
+.view { position: absolute; inset: 0; }
+/* only while slewing: the skies slide past the board's edges, and the eyepiece's dark hides the cut */
+.moving { overflow: hidden; }
+
+.layer { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+.moving .layer { will-change: transform, opacity; }
+.outgoing { pointer-events: none; }
+
+.field { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.fieldStar { fill: var(--sg-star-dim); }
+
+/* The eyepiece: a clear circle with the rest of the page dark around it, a thin rim and a soft inner falloff. */
+.eyepiece {
+  position: absolute; left: 50%; top: 50%; z-index: 2; border-radius: 50%; pointer-events: none;
+  box-shadow:
+    0 0 0 1.5px color-mix(in srgb, var(--sg-mint) 40%, transparent),
+    0 0 0 200vmax color-mix(in srgb, var(--sg-night-0) 88%, transparent),
+    inset 0 0 36px 10px color-mix(in srgb, var(--sg-night-0) 80%, transparent);
+}
+.reticle { display: block; width: 100%; height: 100%; overflow: visible; }
+.reticle line, .reticle circle {
+  fill: none; stroke: color-mix(in srgb, var(--sg-mint) 38%, transparent); stroke-width: 1; vector-effect: non-scaling-stroke;
+}
+
+/* The telescope in the corner, in front of the dark. */
+.scope { position: absolute; left: 0; bottom: 0; z-index: 3; pointer-events: none; overflow: visible; }
+.scopeLegs line { stroke: color-mix(in srgb, var(--sg-cream) 70%, transparent); stroke-width: 3; stroke-linecap: round; }
+.scopeBody { fill: var(--sg-night-2); stroke: var(--sg-cream); stroke-width: 2; stroke-linejoin: round; }
+.scopeLens { fill: var(--sg-mint); opacity: .85; }
+.scopeHead { fill: var(--sg-cream); }

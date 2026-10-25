@@ -2,7 +2,7 @@ import { memo } from 'react';
 import { Planet } from '../../kit/Planet';
 import { CHAPTERS } from '../../../../domain/campaign';
 import { planetOf } from '../../copy';
-import { alpha, lerp } from './motion';
+import { alpha, lerp } from '../../kit/motion';
 import { W } from './stage';
 
 const X0 = 40;

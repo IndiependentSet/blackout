@@ -1,5 +1,5 @@
 import { memo, type CSSProperties, type ReactNode } from 'react';
-import { alpha, clamp, lerp } from './motion';
+import { alpha, clamp, lerp } from '../../kit/motion';
 import { PTS, tones } from './flightParticles';
 import { H, W } from './stage';
 
