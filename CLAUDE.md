@@ -141,8 +141,10 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
       **One radius scale** (`tokens.css`): `--sg-r-card` (24px) for every card and panel, `--sg-r-inner` (16px) for wells and
       tiles inside a card, 999px for pills and buttons; `--sg-divider` for hairlines. Don't add other card radii.
       **Me, Stats and Tonight** (the simplified layouts): Me is a profile card (`Edit` opens the Edit profile sub-page: handle +
-      picture), the month calendar (`MonthCard`, Monday first, `monthOf().lead` blank cells) and a `ListCard` of Friends /
-      Leaderboard / All my stats. Stats shows one mode at a time (`Pills stretch` on a phone, mode cards on desktop); what each
+      picture + Sign out), the month calendar (`MonthCard`, Monday first, `monthOf().lead` blank cells; on a phone `fill`
+      makes it the part that takes the leftover height, its moons sized to it by a container query) and a `ListCard` of
+      Friends / Leaderboard / All my stats (/ Admin, a sub-page listing the admin pages, for admins). On a phone "How to
+      play" sits in the title bar; the desktop keeps the streak/week wells, the admin buttons and the footer. Stats shows one mode at a time (`Pills stretch` on a phone, mode cards on desktop); what each
       mode says is the pure `screens/Stats/statsView.ts`. Tonight's card is "Sky N of 7" over a `ProgressStars` bar, with one
       "More ways to play" `ListCard` (each `ModeCard` carries its `detail`, `badge` and desktop `action`).
     - `themes/catastrophe/` — the hidden CATASTROPHE INC. look, unchanged:

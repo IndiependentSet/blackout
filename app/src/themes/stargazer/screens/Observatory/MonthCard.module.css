@@ -23,3 +23,13 @@
   .grid svg { max-width: 24px; }
   .legend { padding-top: 6px; }
 }
+
+/* a phone's Me page: the card takes the leftover height and the moons grow or shrink to fill it, never past 40px */
+.fill { flex: 1 1 0; min-height: 0; }
+.fill .moons { flex: 1 1 0; min-height: 0; container-type: size; }
+.fill .grid {
+  height: 100%; row-gap: 4px; align-content: space-evenly;
+  --moon: min(40px, calc((100cqw - 12px) / 7), calc((100cqh - 14px - var(--weeks) * 4px) / var(--weeks)));
+}
+.fill .letter { line-height: 14px; }
+.fill .grid svg { width: var(--moon); height: var(--moon); max-width: none; }
