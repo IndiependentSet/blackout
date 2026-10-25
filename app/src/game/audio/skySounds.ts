@@ -26,27 +26,38 @@ export function spaceBus(ac: AudioContext): AudioNode {
   return input;
 }
 
-/** Major pentatonic from G4: whatever order the stars are lit in, the notes never clash. */
+/** Major pentatonic from G4 up two octaves to G6: whatever happens, the notes never clash. */
 const PENTATONIC = [0, 2, 4, 7, 9];
 const ROOT = 392;
-/** The note of the `n`th lit star: each one a step up, two and a half octaves, then round again. */
-export function starNote(n: number): number {
-  const i = (Math.max(1, n) - 1) % 12;
-  const semis = 12 * Math.floor(i / PENTATONIC.length) + PENTATONIC[i % PENTATONIC.length];
-  return ROOT * Math.pow(2, semis / 12);
+/** The scale's steps, from G4 (nothing lit) to G6 (the whole figure). */
+export const STEPS = 2 * PENTATONIC.length;
+
+/** The note of the step `i` (0..STEPS) up the scale. */
+const stepNote = (i: number): number =>
+  ROOT * Math.pow(2, (12 * Math.floor(i / PENTATONIC.length) + PENTATONIC[i % PENTATONIC.length]) / 12);
+
+/* The note for how much of the figure is lit (0..1). The pitch follows progress, not the number of stars: every sky
+   climbs the same two octaves whatever its size, never wraps round, and the last line lit always lands on the top G.
+   A star that lights many lines jumps further up than one that lights a single line. */
+export function progressNote(progress: number): number {
+  const p = Number.isFinite(progress) ? Math.min(1, Math.max(0, progress)) : 0;
+  return stepNote(Math.round(p * STEPS));
 }
 
-/** A star lit: a glassy bell (a few inharmonic partials) on the `n`th star's note, with a little sparkle above it. */
-export function twinkle(ac: AudioContext, out: AudioNode, n: number): void {
-  const t = take(ac, out), f = starNote(n);
+/** A star lit, `progress` of the figure now glowing: a glassy bell (a few inharmonic partials) on its note, with a
+    little sparkle above it. */
+export function twinkle(ac: AudioContext, out: AudioNode, progress: number): void {
+  const t = take(ac, out), f = progressNote(progress);
   ([[1, 0.075, 1.3], [2, 0.03, 0.8], [2.76, 0.018, 0.5], [5.4, 0.007, 0.25]] as const)
     .forEach(([k, peak, decay]) => tone(t, 'sine', f * k, 0, 0.004, decay, peak));
   [4, 6, 8].forEach((k, i) => tone(t, 'sine', f * k, 0.03 + i * 0.028, 0.003, 0.12, 0.009));
 }
 
-/** A star dimmed: the `n`th star's note sinking an octave and fading behind a closing filter. */
-export function fade(ac: AudioContext, out: AudioNode, n: number): void {
-  const t = take(ac, out), f = starNote(n);
+/** A star dimmed: the note slides down from where the figure stood (`from`) to where it stands now (`to`), a fifth
+    down if nothing went dark, fading behind a closing filter. */
+export function fade(ac: AudioContext, out: AudioNode, from: number, to: number): void {
+  const t = take(ac, out), f = progressNote(from);
+  const g = Math.min(progressNote(to), f / 1.5);
   const lp = ac.createBiquadFilter();
   lp.type = 'lowpass';
   lp.frequency.setValueAtTime(3200, t.t0);
@@ -56,28 +67,25 @@ export function fade(ac: AudioContext, out: AudioNode, n: number): void {
     const o = ac.createOscillator();
     o.type = type;
     o.frequency.setValueAtTime(f * (i ? 1.003 : 1), t.t0);
-    o.frequency.exponentialRampToValueAtTime(f / 2, t.t0 + 0.4);
+    o.frequency.exponentialRampToValueAtTime(g * (i ? 1.003 : 1), t.t0 + 0.4);
     o.connect(lp);
     play(t, o, 0, 0.52);
   });
 }
 
-/** How many of the figure's notes the completion runs up through, at most. */
-const RUN_NOTES = 8;
 /** The chord a finished figure blooms into: G major with the sixth and ninth, all inside the stars' scale. */
 const BLOOM = [392, 493.88, 587.33, 659.25, 880];
 
-/* A figure complete: the stars' notes run up quickly, one bell each, then bloom into a soft, slow chord over a low
+/* A figure complete: the whole scale runs up quickly to the top G, one bell each, then blooms into a soft, slow chord over a low
    swell, with glitter scattered above it as it fades into the echo. Replaces the old fanfare in Stargazer. */
-export function constellation(ac: AudioContext, out: AudioNode, n: number): void {
+export function constellation(ac: AudioContext, out: AudioNode): void {
   const t = take(ac, out);
-  const run = Math.max(1, Math.min(n, RUN_NOTES));
-  for (let i = 1; i <= run; i++) {
-    const at = (i - 1) * 0.07, f = starNote(i);
+  for (let i = 0; i <= STEPS; i++) {
+    const at = i * 0.05, f = stepNote(i);
     tone(t, 'sine', f, at, 0.004, 0.6, 0.04);
     tone(t, 'sine', f * 2.76, at, 0.003, 0.2, 0.008);
   }
-  const bloom = (run - 1) * 0.07 + 0.09;
+  const bloom = STEPS * 0.05 + 0.09;
 
   /* the chord: each note a sine and a slightly detuned triangle, under a filter that opens as it swells */
   const lp = ac.createBiquadFilter();
@@ -94,7 +102,7 @@ export function constellation(ac: AudioContext, out: AudioNode, n: number): void
   /* glitter: tiny high notes of the scale, scattered as the chord rings */
   for (let i = 0; i < 9; i++) {
     const at = bloom + 0.12 + Math.random() * 1.4;
-    tone(t, 'sine', starNote(1 + Math.floor(Math.random() * 10)) * 4, at, 0.003, 0.18, 0.006 + Math.random() * 0.006);
+    tone(t, 'sine', stepNote(Math.floor(Math.random() * STEPS)) * 4, at, 0.003, 0.18, 0.006 + Math.random() * 0.006);
   }
 }
 

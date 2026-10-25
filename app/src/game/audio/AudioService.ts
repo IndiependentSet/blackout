@@ -136,19 +136,19 @@ export class AudioService {
     });
   }
 
-  /** Stargazer: the `n`th star lit, a bell a step up a pentatonic scale for each star in the figure. */
-  twinkle(n: number): void {
-    const ac = this.awake(); if (ac) twinkle(ac, this.space(ac), n);
+  /** Stargazer: a star lit, `progress` (0..1) of the figure now glowing: higher the more of it shines. */
+  twinkle(progress: number): void {
+    const ac = this.awake(); if (ac) twinkle(ac, this.space(ac), progress);
   }
 
-  /** Stargazer: a star dimmed, so `n` were lit before: that star's note sinking away. */
-  fade(n: number): void {
-    const ac = this.awake(); if (ac) fade(ac, this.space(ac), n);
+  /** Stargazer: a star dimmed, the figure's progress falling `from` → `to`: the note slides down with it. */
+  fade(from: number, to: number): void {
+    const ac = this.awake(); if (ac) fade(ac, this.space(ac), from, to);
   }
 
-  /** Stargazer: a figure complete, `n` stars lit: their notes run up and bloom into a chord. */
-  constellation(n: number): void {
-    const ac = this.awake(); if (ac) constellation(ac, this.space(ac), n);
+  /** Stargazer: a figure complete: the scale runs up to the top and blooms into a chord. */
+  constellation(): void {
+    const ac = this.awake(); if (ac) constellation(ac, this.space(ac));
   }
 
   /** Stargazer: the telescope is out of power. */

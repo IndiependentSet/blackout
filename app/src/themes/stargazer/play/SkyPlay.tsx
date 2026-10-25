@@ -21,7 +21,7 @@ import { SkyStage } from './SkyStage';
 import type { Pace } from './slew';
 import { skyLayout } from './warp';
 import { LitCount, ParPill, SkyDots, SkyList, Telescope } from './StargazerParts';
-import { SCOPE_TIER, activeScope, darkLabel, scopeForKey, skyMessage, type Scope, type SkyEntry } from './sky';
+import { SCOPE_TIER, activeScope, darkLabel, scopeForKey, skyMessage, skyProgress, type Scope, type SkyEntry } from './sky';
 import styles from './Stargazer.module.css';
 
 const OUT_OF_POWER = 'The telescope is out of power. Dim a star first.';
@@ -81,11 +81,17 @@ export function SkyPlay({ session, userId, locked = false, tone = 'night', activ
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reacts once per event, with the state it happened in
   }, [state.event]);
 
+  /* how much of the figure glows, and how much did before this commit: a dimmed star's note slides from one to the
+     other. Updated after the event above has read it. */
+  const progress = skyProgress(level, state.placed);
+  const shown = useRef(progress);
+  useEffect(() => { shown.current = progress; }, [progress]);
+
   function react(e: GameEvent) {
     switch (e.kind) {
-      case 'hired': audio.twinkle(e.count); break;
-      case 'cleared': audio.constellation(e.count); saveClear(state.idx, e.run, e.consulted); break;
-      case 'recalled': audio.fade(e.count); break;
+      case 'hired': audio.twinkle(progress); break;
+      case 'cleared': audio.constellation(); saveClear(state.idx, e.run, e.consulted); break;
+      case 'recalled': audio.fade(shown.current, progress); break;
       case 'refused': audio.fizzle(); break;
     }
     onEvent?.(e);
