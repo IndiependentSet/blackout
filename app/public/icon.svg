@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Stargazer's app icon: a small lit constellation on the night. The art sits inside the central 80%,
+       so the same picture works as a maskable icon (Android crops it to a circle or squircle). -->
+  <defs>
+    <linearGradient id="night" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0a0e27"/>
+      <stop offset=".6" stop-color="#141a40"/>
+      <stop offset="1" stop-color="#2a2452"/>
+    </linearGradient>
+    <radialGradient id="halo">
+      <stop offset="0" stop-color="#ffe2a0" stop-opacity=".75"/>
+      <stop offset="1" stop-color="#ffb867" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#night)"/>
+  <g fill="#fff6e0" opacity=".55">
+    <circle cx="96" cy="120" r="3"/><circle cx="420" cy="96" r="2.5"/><circle cx="440" cy="300" r="3"/>
+    <circle cx="70" cy="330" r="2.5"/><circle cx="160" cy="440" r="2"/><circle cx="380" cy="430" r="2.5"/>
+    <circle cx="250" cy="70" r="2"/>
+  </g>
+  <g stroke-linecap="round" stroke-width="9">
+    <path d="M148 196 L256 150 L356 214 L318 340 L186 348 Z" fill="none" stroke="#ffe6a8"/>
+    <path d="M256 150 L256 262" stroke="#ffe6a8"/>
+    <path d="M256 262 L318 340" stroke="#5a64a8"/>
+  </g>
+  <g>
+    <circle cx="256" cy="150" r="48" fill="url(#halo)"/>
+    <circle cx="356" cy="214" r="44" fill="url(#halo)"/>
+    <circle cx="186" cy="348" r="44" fill="url(#halo)"/>
+  </g>
+  <g fill="#ffd98a">
+    <circle cx="256" cy="150" r="22"/>
+    <circle cx="356" cy="214" r="20"/>
+    <circle cx="186" cy="348" r="20"/>
+  </g>
+  <g fill="#7d86c4">
+    <circle cx="148" cy="196" r="13"/>
+    <circle cx="318" cy="340" r="13"/>
+    <circle cx="256" cy="262" r="12"/>
+  </g>
+</svg>

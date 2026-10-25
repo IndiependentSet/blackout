@@ -430,6 +430,16 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
     schedule doesn't parse, the game plays `DEFAULT_SCHEDULE` and **doesn't
     record clears** (`skipSave`: they may not be everyone's puzzles); with no
     config saved, `DEFAULT_SCHEDULE` *is* the schedule and clears count.
+  - **Installable app (PWA)**: `index.html` links `public/manifest.webmanifest` (standalone, Stargazer's night colours)
+    and the iOS `apple-*` tags; `viewport-fit=cover`, so `kit/kit.module.css`'s `.column` pads by
+    `env(safe-area-inset-*)` (0 in a browser tab). Icons: `public/icon.svg` (art inside the central 80%, so it is also
+    the maskable icon) rendered to `icon-192.png`, `icon-512.png`, `apple-touch-icon.png` — re-render them if it
+    changes. `public/sw.js` is the service worker, registered in production only by
+    `services/pwa/registerServiceWorker.ts` as `/sw.js?v=<main bundle name>`, so every deploy gets a fresh worker and
+    cache (the old one is deleted). It keeps same-origin files as they load (pages network first, `/assets/` cache
+    first), never touches Supabase or Google Fonts, and the page hands it what loaded before it took over plus
+    `scheduleWorkerUrl`, so the game opens and plays the on-device week offline after one visit (those clears are not
+    recorded, as with any on-device week).
   - `src/app/` — `App.tsx` (the providers, the shared `useAppState()`, and
     which theme draws it) and `useTheme.ts` (Stargazer unless the URL says
     `?skin=catastrophe`; kept in the URL, not storage); `admin/` is the

@@ -15,13 +15,17 @@
 .page:not(.pageWide) { min-height: 0; height: 100vh; height: 100dvh; overflow: hidden; }
 .column {
   position: relative; max-width: 560px; height: 100vh; height: 100dvh; margin: 0 auto; box-sizing: border-box;
-  display: flex; flex-direction: column; gap: 14px; padding: 50px 20px 18px;
+  display: flex; flex-direction: column; gap: 14px;
+  /* installed as an app the page runs under the status bar and the home bar: keep clear of the notch (the safe-area
+     insets are 0 in a browser tab, so nothing moves there) */
+  padding: max(50px, calc(env(safe-area-inset-top) + 12px)) max(20px, env(safe-area-inset-right))
+    max(18px, calc(env(safe-area-inset-bottom) + 6px)) max(20px, env(safe-area-inset-left));
   overflow-y: auto;   /* a safety net only: every page is laid out to fit the screen */
 }
 .column > * { flex-shrink: 0; }
 /* a phone column under the desktop header: the column takes the height the header leaves */
 .pageFramed { display: flex; flex-direction: column; }
-.frameHead { position: relative; width: 100%; max-width: 1440px; margin: 0 auto; box-sizing: border-box; padding: 28px 40px 0; flex: none; }
+.frameHead { position: relative; width: 100%; max-width: 1440px; margin: 0 auto; box-sizing: border-box; padding: max(28px, env(safe-area-inset-top)) 40px 0; flex: none; }
 .pageFramed > .column { flex: 1 1 0; min-height: 0; height: auto; width: 100%; padding-top: 24px; }
 
 /* the part of a page that takes whatever height is left: a drawing shrinks into it */
@@ -35,7 +39,11 @@
 
 /* short phones: tighter spacing and smaller headings */
 @media (max-height: 760px) {
-  .column { padding: 22px 16px 12px; gap: 10px; }
+  .column {
+    padding: max(22px, calc(env(safe-area-inset-top) + 10px)) max(16px, env(safe-area-inset-right))
+      max(12px, calc(env(safe-area-inset-bottom) + 4px)) max(16px, env(safe-area-inset-left));
+    gap: 10px;
+  }
   .heading { font-size: 26px; }
   .btn-lg { height: 48px; font-size: 16px; }
   .btn-md { height: 42px; }

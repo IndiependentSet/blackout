@@ -5,12 +5,15 @@ import type { Level } from '../../domain/types';
 import { fail, ok, type Result } from '../result';
 import type { PreviewRequest, SitePreview } from './schedulePreview';
 import { workerCall, type WorkerLike } from './workerCall';
+import scheduleWorkerUrl from './schedule.worker.ts?worker&url';
 
 export type { SitePreview } from './schedulePreview';
 export type PreviewWorker = WorkerLike<PreviewRequest, SitePreview[]>;
 
-const spawnWorker = (): PreviewWorker =>
-  new Worker(new URL('./schedule.worker.ts', import.meta.url), { type: 'module' });
+/** The built worker's address: the game also hands it to the service worker, so a week can be made offline. */
+export { scheduleWorkerUrl };
+
+const spawnWorker = (): PreviewWorker => new Worker(scheduleWorkerUrl, { type: 'module' });
 
 export function previewDayAsync(schedule: GenerationSchedule, daySeed: number,
   { signal, spawn = spawnWorker }: { signal?: AbortSignal; spawn?: () => PreviewWorker } = {}): Promise<Result<SitePreview[]>> {
