@@ -1,27 +1,13 @@
 import { CRACKLES } from '../../assets/sfx';
+import { fade, fizzle, slew, spaceBus, twinkle, type SlewBeats } from './skySounds';
+import { noiseBuffer } from './synth';
 
 /** Recorded takes are normalised hot; this sits them alongside the synthesised chirps and crashes. */
 const CRACKLE_GAIN = 0.3;
 
 type Ctor = typeof AudioContext;
 
-/** When the telescope's slew does each thing, in seconds from now (the theme's timeline, at its pace). */
-export interface SlewBeats {
-  /** the view starts moving */
-  move: number;
-  /** it has arrived and the focus is being racked */
-  focus: number;
-  /** the sky is sharp and the eyepiece opens */
-  sharp: number;
-}
-
-/** White noise `dur` seconds long, shaped by `env` (0..1 through the buffer). */
-function noiseBuffer(ac: AudioContext, dur: number, env: (x: number) => number): AudioBuffer {
-  const buf = ac.createBuffer(1, Math.max(1, Math.round(ac.sampleRate * dur)), ac.sampleRate);
-  const d = buf.getChannelData(0);
-  for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * env(i / d.length);
-  return buf;
-}
+export type { SlewBeats } from './skySounds';
 
 export interface AudioOptions {
   enabled?: boolean;
@@ -31,7 +17,9 @@ export interface AudioOptions {
 }
 
 /* Game sound: crackle on hire, chirp on recall, crash on smash, fanfare on a
-   clear, and the telescope slewing between skies. All but the crackles are
+   clear (CATASTROPHE INC.), and Stargazer's own (skySounds.ts): a bell for a
+   star lit, a falling note for one dimmed, a hum when the telescope is out of
+   power, the telescope slewing between skies. All but the crackles are
    synthesised in the Web Audio graph; the crackles are recordings. The
    context is built lazily and left suspended — nothing is ever started before
    a tap — so the takes are decoded and waiting by the time the first cat is
@@ -42,6 +30,7 @@ export class AudioService {
   private readonly createContext: () => AudioContext | null;
   private ac: AudioContext | null = null;
   private crackles: (AudioBuffer | undefined)[] | null = null;
+  private echo: AudioNode | null = null;
 
   constructor({ enabled = true, crackleUrls = CRACKLES, createContext }: AudioOptions = {}) {
     this.enabled = enabled;
@@ -57,6 +46,12 @@ export class AudioService {
     if (!this.enabled) return null;
     if (!this.ac) this.ac = this.createContext();
     return this.ac;
+  }
+
+  /** Stargazer's echo, built once on the context it belongs to. */
+  private space(ac: AudioContext): AudioNode {
+    if (!this.echo) this.echo = spaceBus(ac);
+    return this.echo;
   }
 
   /** The context, resumed: only called from a gesture. */
@@ -140,97 +135,25 @@ export class AudioService {
     });
   }
 
-  /* The telescope slewing to the next sky: the eyepiece clicks shut, the mount's motor whirs up and down with the
-     swing under a soft rush of air, the focus knob ticks as the sky is racked in, and a quiet bell rings as it lands
-     sharp. Everything runs through one bus, so the returned stop (a tap that skips the slew, leaving the screen) can
-     fade it all out at once; calling it again does nothing. */
-  slew({ move, focus, sharp }: SlewBeats): () => void {
-    const ac = this.awake(); if (!ac) return () => {};
-    const t0 = ac.currentTime;
-    const bus = ac.createGain();
-    bus.gain.value = 1;
-    bus.connect(ac.destination);
-    const sources: AudioScheduledSourceNode[] = [];
-    const play = (src: AudioScheduledSourceNode, at: number, until: number) => { src.start(t0 + at); src.stop(t0 + until); sources.push(src); };
-    /** a gain that rises from silence to `peak` at `top` and falls back by `end` */
-    const swell = (start: number, top: number, end: number, peak: number) => {
-      const g = ac.createGain();
-      g.gain.setValueAtTime(0.0001, t0 + start);
-      g.gain.exponentialRampToValueAtTime(peak, t0 + top);
-      g.gain.exponentialRampToValueAtTime(0.0001, t0 + end);
-      g.connect(bus);
-      return g;
-    };
+  /** Stargazer: the `n`th star lit, a bell a step up a pentatonic scale for each star in the figure. */
+  twinkle(n: number): void {
+    const ac = this.awake(); if (ac) twinkle(ac, this.space(ac), n);
+  }
 
-    /* the eyepiece closing: a low thump with a small click on top */
-    const thump = ac.createOscillator();
-    thump.type = 'sine';
-    thump.frequency.setValueAtTime(150, t0);
-    thump.frequency.exponentialRampToValueAtTime(65, t0 + 0.12);
-    thump.connect(swell(0, 0.008, 0.16, 0.12));
-    play(thump, 0, 0.18);
-    const click = ac.createBufferSource(), clickHp = ac.createBiquadFilter();
-    click.buffer = noiseBuffer(ac, 0.02, x => 1 - x);
-    clickHp.type = 'highpass'; clickHp.frequency.value = 2600;
-    click.connect(clickHp); clickHp.connect(swell(0, 0.002, 0.03, 0.05));
-    play(click, 0, 0.03);
+  /** Stargazer: a star dimmed, so `n` were lit before: that star's note sinking away. */
+  fade(n: number): void {
+    const ac = this.awake(); if (ac) fade(ac, this.space(ac), n);
+  }
 
-    /* the motor: two detuned buzzes under a lowpass, pitched by how fast the mount is turning */
-    const mid = (move + focus) / 2;
-    const motorLp = ac.createBiquadFilter();
-    motorLp.type = 'lowpass'; motorLp.frequency.value = 900;
-    motorLp.connect(swell(move, mid, focus + 0.05, 0.04));
-    ([['sawtooth', 1], ['triangle', 1.51]] as const).forEach(([type, k]) => {
-      const o = ac.createOscillator();
-      o.type = type;
-      o.frequency.setValueAtTime(70 * k, t0 + move);
-      o.frequency.exponentialRampToValueAtTime(175 * k, t0 + mid);
-      o.frequency.exponentialRampToValueAtTime(70 * k, t0 + focus);
-      o.connect(motorLp);
-      play(o, move, focus + 0.08);
-    });
+  /** Stargazer: the telescope is out of power. */
+  fizzle(): void {
+    const ac = this.awake(); if (ac) fizzle(ac, this.space(ac));
+  }
 
-    /* the sky rushing past: noise through a band that sweeps up and back */
-    const air = ac.createBufferSource(), band = ac.createBiquadFilter();
-    air.buffer = noiseBuffer(ac, focus - move + 0.1, () => 1);
-    band.type = 'bandpass'; band.Q.value = 0.9;
-    band.frequency.setValueAtTime(380, t0 + move);
-    band.frequency.exponentialRampToValueAtTime(1700, t0 + mid);
-    band.frequency.exponentialRampToValueAtTime(520, t0 + focus);
-    air.connect(band); band.connect(swell(move, mid, focus + 0.05, 0.1));
-    play(air, move, focus + 0.1);
-
-    /* the focus knob: three small ticks while the sky is racked in */
-    [0, 0.3, 0.55].forEach((k, i) => {
-      const at = focus + (sharp - focus) * k;
-      const o = ac.createOscillator();
-      o.type = 'triangle'; o.frequency.setValueAtTime(2300 + i * 140, t0 + at);
-      o.connect(swell(at, at + 0.004, at + 0.03, 0.03));
-      play(o, at, at + 0.04);
-    });
-
-    /* sharp: a soft two-note bell with a faint octave above */
-    ([[1318.5, 0, 0.035], [1975.5, 0.06, 0.03], [2637, 0.06, 0.01]] as const).forEach(([hz, delay, peak]) => {
-      const at = sharp + delay;
-      const o = ac.createOscillator();
-      o.type = 'sine'; o.frequency.setValueAtTime(hz, t0 + at);
-      o.connect(swell(at, at + 0.01, at + 1.1, peak));
-      play(o, at, at + 1.15);
-    });
-
-    /* the bell rings last: once it has, the bus goes too */
-    sources[sources.length - 1].onended = () => bus.disconnect();
-
-    let stopped = false;
-    return () => {
-      if (stopped) return;
-      stopped = true;
-      const now = ac.currentTime;
-      bus.gain.cancelScheduledValues(now);
-      bus.gain.setValueAtTime(bus.gain.value, now);
-      bus.gain.linearRampToValueAtTime(0, now + 0.08);
-      for (const src of sources) { try { src.stop(now + 0.1); } catch { /* already stopped */ } }
-    };
+  /** Stargazer: the telescope slewing to the next sky, on `beats`; the returned stop fades it out early. */
+  slew(beats: SlewBeats): () => void {
+    const ac = this.awake();
+    return ac ? slew(ac, this.space(ac), beats) : () => {};
   }
 
   /** The tick as each line of the score card lands. */

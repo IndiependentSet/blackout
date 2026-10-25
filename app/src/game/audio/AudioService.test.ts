@@ -7,7 +7,7 @@ function fakeContext() {
   return {
     state: 'suspended', currentTime: 0, sampleRate: 8000, destination: {},
     resume: vi.fn(), createOscillator: vi.fn(node), createGain: vi.fn(node), createBiquadFilter: vi.fn(node),
-    createBufferSource: vi.fn(node),
+    createBufferSource: vi.fn(node), createDelay: vi.fn(() => ({ ...node(), delayTime: param() })),
     createBuffer: vi.fn(() => ({ getChannelData: () => new Float32Array(10) })),
     decodeAudioData: vi.fn(),
   };
@@ -65,14 +65,23 @@ describe('AudioService', () => {
     const starts = sources.map(s => s.start.mock.calls[0][0] as number);
     expect(Math.min(...starts)).toBe(0);
     expect(Math.max(...starts)).toBeCloseTo(1.51);   // the bell's second note, just after sharp
-    const bus = ctx.createGain.mock.results[0].value;
-    expect(bus.connect).toHaveBeenCalledWith(ctx.destination);
     stop(); stop();
-    expect(bus.gain.linearRampToValueAtTime).toHaveBeenCalledTimes(1);
+    const faded = ctx.createGain.mock.results.map(r => r.value).filter(g => g.gain.linearRampToValueAtTime.mock.calls.length);
+    expect(faded).toHaveLength(1);
+    expect(faded[0].gain.linearRampToValueAtTime).toHaveBeenCalledTimes(1);
     expect(sources.every(s => s.stop.mock.calls.length === 2)).toBe(true);
   });
 
-  it('a slew is silent, and stopping it harmless, without Web Audio', () => {
-    expect(() => new AudioService({ createContext: () => null }).slew({ move: 0.3, focus: 1, sharp: 1.4 })()).not.toThrow();
+  it('plays the star sounds through one echo, built once', () => {
+    const ctx = fakeContext();
+    const a = new AudioService({ createContext: () => ctx as unknown as AudioContext });
+    a.twinkle(1); a.twinkle(2); a.fade(2); a.fizzle();
+    expect(ctx.createDelay).toHaveBeenCalledOnce();
+    expect(ctx.createOscillator.mock.calls.length).toBeGreaterThan(10);
+  });
+
+  it('a slew and the star sounds are silent, and harmless, without Web Audio', () => {
+    const a = new AudioService({ createContext: () => null });
+    expect(() => { a.slew({ move: 0.3, focus: 1, sharp: 1.4 })(); a.twinkle(3); a.fade(3); a.fizzle(); }).not.toThrow();
   });
 });

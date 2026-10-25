@@ -96,8 +96,11 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
   - `src/game/` — everything about play that both themes share, and no
     drawing: `state/` (pure reducer that turns taps into numbered events,
     selectors, hints, score-card copy), `input/keymap.ts`, `audio/`
-    (`AudioService`: Web Audio chirps/crashes/fanfare/the telescope's slew plus the recorded
-    crackles in `src/assets/sfx/`), `hooks/` (`useDailySchedule` — today's
+    (`AudioService`: Web Audio chirps/crashes/fanfare plus the recorded
+    crackles in `src/assets/sfx/` for CATASTROPHE INC.; Stargazer's own in `skySounds.ts` — `twinkle(n)` a glassy bell
+    a pentatonic step up for each star lit (`starNote`), `fade(n)` that note sinking away when one is dimmed, `fizzle()`
+    when the telescope is out of power, and the slew — all through one small echo, `spaceBus`; `synth.ts` is the
+    toolkit they share), `hooks/` (`useDailySchedule` — today's
     saved generation config —, the levels queue that generates the week from
     it, score card, streak, `useNights` — each night's charted/at-par count
     from `site_clears`, for the moon calendars —, `useSkyNames`,
