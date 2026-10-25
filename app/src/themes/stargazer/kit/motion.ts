@@ -1,4 +1,4 @@
-/* The small animation toolkit the voyage flight runs on: every frame is a pure function of the time T. */
+/* The small animation toolkit the voyage flight and the telescope's slew run on: every frame is a pure function of the time T. */
 
 export const clamp = (v: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, v));
 export const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;

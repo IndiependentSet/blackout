@@ -1,4 +1,4 @@
-import { clamp, Easing, lerp, animate, MOTION } from './motion';
+import { clamp, Easing, lerp, animate, MOTION } from '../../kit/motion';
 import { CUES } from './timeline';
 
 /* Everything on screen in the flight, worked out from the clock alone. */

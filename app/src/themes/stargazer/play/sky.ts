@@ -61,6 +61,12 @@ function closest(pos: readonly { c: number; r: number }[]): number {
 
 const plural = (n: number, word: string) => n + ' ' + word + (n === 1 ? '' : 's');
 
+/** How much of the figure glows, 0..1: the share of its lines lit. What the stars' notes climb by. */
+export function skyProgress(lv: Level | null, placed: number[]): number {
+  if (!lv || !lv.edges.length) return 0;
+  return coveredEdges(lv, placed).size / lv.edges.length;
+}
+
 /** "3 lines dark" under the big count, or "whole figure shows". */
 export function darkLabel(lv: Level | null, placed: number[]): string {
   if (!lv) return 'scanning the sky…';

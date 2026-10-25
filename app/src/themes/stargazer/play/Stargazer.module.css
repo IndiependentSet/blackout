@@ -86,7 +86,6 @@
 .miniStar.next { stroke: var(--sg-next-ring); }
 
 .boardWide { display: flex; align-items: center; justify-content: center; min-width: 0; min-height: 0; }
-.boardWide > svg { max-width: 640px; max-height: 100%; }
 
 .right { display: flex; flex-direction: column; gap: 14px; padding-top: 8px; min-height: 0; }
 .rightHead { display: flex; align-items: center; justify-content: space-between; }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Level, SiteResult } from '../../../domain/types';
 import { skyLayout } from './warp';
-import { SKY_STEP, activeScope, darkLabel, scopeForKey, skyEntries, skyMessage, skyOf, starfield } from './sky';
+import { SKY_STEP, activeScope, darkLabel, scopeForKey, skyEntries, skyMessage, skyOf, skyProgress, starfield } from './sky';
 
 /* a path of three stars, 0 - 1 - 2: par is the middle one */
 const path: Level = {
@@ -22,6 +22,15 @@ describe('skyOf', () => {
     expect(sky.lines.map(l => l.lit)).toEqual([true, false]);
     expect(sky.dark).toBe(1);
     expect(sky.scale).toBe(1);
+  });
+});
+
+describe('skyProgress', () => {
+  it('is the share of the lines lit', () => {
+    expect(skyProgress(path, [])).toBe(0);
+    expect(skyProgress(path, [0])).toBe(0.5);
+    expect(skyProgress(path, [1])).toBe(1);
+    expect(skyProgress(null, [1])).toBe(0);
   });
 });
 

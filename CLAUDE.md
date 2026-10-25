@@ -97,7 +97,14 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
     drawing: `state/` (pure reducer that turns taps into numbered events,
     selectors, hints, score-card copy), `input/keymap.ts`, `audio/`
     (`AudioService`: Web Audio chirps/crashes/fanfare plus the recorded
-    crackles in `src/assets/sfx/`), `hooks/` (`useDailySchedule` — today's
+    crackles in `src/assets/sfx/` for CATASTROPHE INC.; Stargazer's own in `skySounds.ts` — `twinkle(progress)` a glassy bell
+    whose pitch follows how much of the figure glows (`SkyPlay` passes `play/sky.ts` `skyProgress`, the share of lines lit;
+    `progressNote` maps 0..1 onto two octaves of G major pentatonic, G4 to G6, so any size of sky climbs the same range,
+    never wraps, and the last line lit lands on the top G), `fade(from, to)` the note sliding down to where the figure
+    now stands when one is dimmed, `constellation()` for a figure complete (the scale runs up, then blooms into a soft
+    chord with glitter — Stargazer's in place of the fanfare), `fizzle()`
+    when the telescope is out of power, and the slew — all through one small echo, `spaceBus`; `synth.ts` is the
+    toolkit they share), `hooks/` (`useDailySchedule` — today's
     saved generation config —, the levels queue that generates the week from
     it, score card, streak, `useNights` — each night's charted/at-par count
     from `site_clears`, for the moon calendars —, `useSkyNames`,
@@ -127,7 +134,16 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
       preview and its atlas page match for every player; stars that would cross
       a line, crowd another star, sit on a line not theirs or fold two lines
       together are calmed one by one, then put back on their cells. Drawing
-      only: the puzzle is untouched, and arrow keys move by the drawn positions)
+      only: the puzzle is untouched, and arrow keys move by the drawn positions;
+      `SkyStage` — where the board sits, and the **telescope slew** between skies: whenever `SkyPlay`'s slot
+      (`siteOffset + idx`) changes, in any mode, the view closes to an eyepiece with a reticle (the rest of the page
+      dark around it), the sky just charted slides away while faint stars streak past and the `ScopeArt` telescope in
+      the corner swings, the next sky drifts in out of focus and is racked sharp, then the eyepiece opens. `slew.ts`
+      is the pure timeline (`slewFrame(T)`, `slewHeading`, seeded `fieldStars`), `useSlew` starts it in a layout
+      effect and runs the clock; ~1.85 s, twice as fast in Meteor Rush (`pace="brisk"`, its clock is running), a tap
+      skips it and never reaches the new sky, none for reduced motion or the first sky on a screen. Its sound is
+      `audio.slew(slewBeats(pace))` (synthesised: eyepiece click, motor whir and whoosh, focus ticks, a bell when sharp;
+      the returned stop cuts it on a skip or unmount). Drawing and sound only)
       and `screens/` (Tonight, FirstNight, Sky — daily play and Night
       charted —, Atlas, Voyage, Rush, Duel, Observatory, Stats, Board — the leaderboard pages, below). It never imports
       `src/ui/` (that kit is CATASTROPHE INC.'s).
@@ -161,7 +177,7 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
     `StargazerApp` sets `route 'voyage'`, `openChapter` (seeds `VoyageScreen`'s `initialChapter`, keyed so it resets) and
     `transit`; `VoyageTransit` (`{from, to, onDone, startAt = 1.2, clears?}`) overlays the real screen, which already shows the
     world just charted. Every frame is a pure function of T: `timeline.ts` (`CUES`, `TOTAL`, `skip`: a tap between Liftoff and
-    Approach jumps to Arrival), `frame.ts` (`frameAt`), `motion.ts` (easings, `animate`, `alpha`/`mix` over theme CSS variables
+    Approach jumps to Arrival), `frame.ts` (`frameAt`), `kit/motion.ts` (shared with the slew: easings, `animate`, `alpha`/`mix` over theme CSS variables
     — no hex), `Hero`, `Motif` (per-world surroundings), `Route`, seeded particles in `flightParticles.ts`. The screen under and
     inside the flight is drawn from the same parts (`VoyageView`: `Stop`, `WorldsRow`, `ChapterCard`, `NextWorld`;
     `FlightScreen` assembles them), so the two match. Purely visual: it never touches clears or persistence. Reduced motion shows

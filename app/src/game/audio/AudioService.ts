@@ -1,9 +1,13 @@
 import { CRACKLES } from '../../assets/sfx';
+import { constellation, fade, fizzle, slew, spaceBus, twinkle, type SlewBeats } from './skySounds';
+import { noiseBuffer } from './synth';
 
 /** Recorded takes are normalised hot; this sits them alongside the synthesised chirps and crashes. */
 const CRACKLE_GAIN = 0.3;
 
 type Ctor = typeof AudioContext;
+
+export type { SlewBeats } from './skySounds';
 
 export interface AudioOptions {
   enabled?: boolean;
@@ -13,16 +17,21 @@ export interface AudioOptions {
 }
 
 /* Game sound: crackle on hire, chirp on recall, crash on smash, fanfare on a
-   clear. Chirps, crashes and the fanfare are synthesised in the Web Audio
-   graph; the crackles are recordings. The context is built lazily and left
-   suspended — nothing is ever started before a tap — so the takes are decoded
-   and waiting by the time the first cat is hired. */
+   clear (CATASTROPHE INC.), and Stargazer's own (skySounds.ts): a bell for a
+   star lit, a falling note for one dimmed, a run and a chord for a figure
+   complete, a hum when the telescope is out of power, the telescope slewing
+   between skies. All but the crackles are
+   synthesised in the Web Audio graph; the crackles are recordings. The
+   context is built lazily and left suspended — nothing is ever started before
+   a tap — so the takes are decoded and waiting by the time the first cat is
+   hired. */
 export class AudioService {
   private readonly enabled: boolean;
   private readonly crackleUrls: string[];
   private readonly createContext: () => AudioContext | null;
   private ac: AudioContext | null = null;
   private crackles: (AudioBuffer | undefined)[] | null = null;
+  private echo: AudioNode | null = null;
 
   constructor({ enabled = true, crackleUrls = CRACKLES, createContext }: AudioOptions = {}) {
     this.enabled = enabled;
@@ -38,6 +47,12 @@ export class AudioService {
     if (!this.enabled) return null;
     if (!this.ac) this.ac = this.createContext();
     return this.ac;
+  }
+
+  /** Stargazer's echo, built once on the context it belongs to. */
+  private space(ac: AudioContext): AudioNode {
+    if (!this.echo) this.echo = spaceBus(ac);
+    return this.echo;
   }
 
   /** The context, resumed: only called from a gesture. */
@@ -97,10 +112,8 @@ export class AudioService {
   /** The noise of `count` fixtures going at once. */
   crash(count: number): void {
     const ac = this.awake(); if (!ac || !count) return;
-    const t = ac.currentTime, dur = 0.28;
-    const buf = ac.createBuffer(1, ac.sampleRate * dur, ac.sampleRate);
-    const d = buf.getChannelData(0);
-    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 2.4);
+    const t = ac.currentTime;
+    const buf = noiseBuffer(ac, 0.28, x => Math.pow(1 - x, 2.4));
     const src = ac.createBufferSource(), g = ac.createGain(), hp = ac.createBiquadFilter();
     src.buffer = buf; hp.type = 'highpass'; hp.frequency.value = 1400;
     g.gain.value = Math.min(0.13, 0.05 + count * 0.02);
@@ -121,6 +134,32 @@ export class AudioService {
       o.connect(g); g.connect(ac.destination);
       o.start(t); o.stop(t + 0.46);
     });
+  }
+
+  /** Stargazer: a star lit, `progress` (0..1) of the figure now glowing: higher the more of it shines. */
+  twinkle(progress: number): void {
+    const ac = this.awake(); if (ac) twinkle(ac, this.space(ac), progress);
+  }
+
+  /** Stargazer: a star dimmed, the figure's progress falling `from` → `to`: the note slides down with it. */
+  fade(from: number, to: number): void {
+    const ac = this.awake(); if (ac) fade(ac, this.space(ac), from, to);
+  }
+
+  /** Stargazer: a figure complete: the scale runs up to the top and blooms into a chord. */
+  constellation(): void {
+    const ac = this.awake(); if (ac) constellation(ac, this.space(ac));
+  }
+
+  /** Stargazer: the telescope is out of power. */
+  fizzle(): void {
+    const ac = this.awake(); if (ac) fizzle(ac, this.space(ac));
+  }
+
+  /** Stargazer: the telescope slewing to the next sky, on `beats`; the returned stop fades it out early. */
+  slew(beats: SlewBeats): () => void {
+    const ac = this.awake();
+    return ac ? slew(ac, this.space(ac), beats) : () => {};
   }
 
   /** The tick as each line of the score card lands. */
