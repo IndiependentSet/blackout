@@ -1,4 +1,4 @@
-/* Stargazer's sounds: a star lit, a star dimmed, the telescope out of power, and the telescope slewing between skies.
+/* Stargazer's sounds: a star lit, a star dimmed, a figure complete, the telescope out of power, and the telescope slewing between skies.
    They play through a small echo (`spaceBus`), so they ring out as if in open space. */
 import { noiseBuffer, play, swell, take, tone, type Take } from './synth';
 
@@ -60,6 +60,42 @@ export function fade(ac: AudioContext, out: AudioNode, n: number): void {
     o.connect(lp);
     play(t, o, 0, 0.52);
   });
+}
+
+/** How many of the figure's notes the completion runs up through, at most. */
+const RUN_NOTES = 8;
+/** The chord a finished figure blooms into: G major with the sixth and ninth, all inside the stars' scale. */
+const BLOOM = [392, 493.88, 587.33, 659.25, 880];
+
+/* A figure complete: the stars' notes run up quickly, one bell each, then bloom into a soft, slow chord over a low
+   swell, with glitter scattered above it as it fades into the echo. Replaces the old fanfare in Stargazer. */
+export function constellation(ac: AudioContext, out: AudioNode, n: number): void {
+  const t = take(ac, out);
+  const run = Math.max(1, Math.min(n, RUN_NOTES));
+  for (let i = 1; i <= run; i++) {
+    const at = (i - 1) * 0.07, f = starNote(i);
+    tone(t, 'sine', f, at, 0.004, 0.6, 0.04);
+    tone(t, 'sine', f * 2.76, at, 0.003, 0.2, 0.008);
+  }
+  const bloom = (run - 1) * 0.07 + 0.09;
+
+  /* the chord: each note a sine and a slightly detuned triangle, under a filter that opens as it swells */
+  const lp = ac.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.frequency.setValueAtTime(900, t.t0 + bloom);
+  lp.frequency.exponentialRampToValueAtTime(3800, t.t0 + bloom + 0.5);
+  lp.connect(t.out);
+  BLOOM.forEach(f => {
+    tone(t, 'sine', f, bloom, 0.28, 2.2, 0.022, lp);
+    tone(t, 'triangle', f * 1.004, bloom, 0.32, 2, 0.012, lp);
+  });
+  tone(t, 'sine', 196, bloom, 0.25, 1.9, 0.05);
+
+  /* glitter: tiny high notes of the scale, scattered as the chord rings */
+  for (let i = 0; i < 9; i++) {
+    const at = bloom + 0.12 + Math.random() * 1.4;
+    tone(t, 'sine', starNote(1 + Math.floor(Math.random() * 10)) * 4, at, 0.003, 0.18, 0.006 + Math.random() * 0.006);
+  }
 }
 
 /** The telescope out of power: a low, muffled hum that sags. */

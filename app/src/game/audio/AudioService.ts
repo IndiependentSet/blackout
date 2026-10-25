@@ -1,5 +1,5 @@
 import { CRACKLES } from '../../assets/sfx';
-import { fade, fizzle, slew, spaceBus, twinkle, type SlewBeats } from './skySounds';
+import { constellation, fade, fizzle, slew, spaceBus, twinkle, type SlewBeats } from './skySounds';
 import { noiseBuffer } from './synth';
 
 /** Recorded takes are normalised hot; this sits them alongside the synthesised chirps and crashes. */
@@ -18,8 +18,9 @@ export interface AudioOptions {
 
 /* Game sound: crackle on hire, chirp on recall, crash on smash, fanfare on a
    clear (CATASTROPHE INC.), and Stargazer's own (skySounds.ts): a bell for a
-   star lit, a falling note for one dimmed, a hum when the telescope is out of
-   power, the telescope slewing between skies. All but the crackles are
+   star lit, a falling note for one dimmed, a run and a chord for a figure
+   complete, a hum when the telescope is out of power, the telescope slewing
+   between skies. All but the crackles are
    synthesised in the Web Audio graph; the crackles are recordings. The
    context is built lazily and left suspended — nothing is ever started before
    a tap — so the takes are decoded and waiting by the time the first cat is
@@ -143,6 +144,11 @@ export class AudioService {
   /** Stargazer: a star dimmed, so `n` were lit before: that star's note sinking away. */
   fade(n: number): void {
     const ac = this.awake(); if (ac) fade(ac, this.space(ac), n);
+  }
+
+  /** Stargazer: a figure complete, `n` stars lit: their notes run up and bloom into a chord. */
+  constellation(n: number): void {
+    const ac = this.awake(); if (ac) constellation(ac, this.space(ac), n);
   }
 
   /** Stargazer: the telescope is out of power. */

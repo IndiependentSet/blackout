@@ -75,13 +75,23 @@ describe('AudioService', () => {
   it('plays the star sounds through one echo, built once', () => {
     const ctx = fakeContext();
     const a = new AudioService({ createContext: () => ctx as unknown as AudioContext });
-    a.twinkle(1); a.twinkle(2); a.fade(2); a.fizzle();
+    a.twinkle(1); a.twinkle(2); a.fade(2); a.fizzle(); a.constellation(5);
     expect(ctx.createDelay).toHaveBeenCalledOnce();
     expect(ctx.createOscillator.mock.calls.length).toBeGreaterThan(10);
   });
 
   it('a slew and the star sounds are silent, and harmless, without Web Audio', () => {
     const a = new AudioService({ createContext: () => null });
-    expect(() => { a.slew({ move: 0.3, focus: 1, sharp: 1.4 })(); a.twinkle(3); a.fade(3); a.fizzle(); }).not.toThrow();
+    expect(() => { a.slew({ move: 0.3, focus: 1, sharp: 1.4 })(); a.twinkle(3); a.fade(3); a.fizzle(); a.constellation(3); }).not.toThrow();
+  });
+
+  it('runs a completed figure up through its own notes, at most eight, then the chord', () => {
+    for (const [n, run] of [[1, 1], [5, 5], [14, 8]] as const) {
+      const ctx = fakeContext();
+      new AudioService({ createContext: () => ctx as unknown as AudioContext }).constellation(n);
+      const starts = ctx.createOscillator.mock.results.map(r => r.value.start.mock.calls[0][0] as number);
+      const bloom = (run - 1) * 0.07 + 0.09;
+      expect(new Set(starts.filter(at => at < bloom - 1e-9)).size).toBe(run);
+    }
   });
 });

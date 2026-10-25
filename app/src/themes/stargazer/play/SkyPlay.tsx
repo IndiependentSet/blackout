@@ -84,7 +84,7 @@ export function SkyPlay({ session, userId, locked = false, tone = 'night', activ
   function react(e: GameEvent) {
     switch (e.kind) {
       case 'hired': audio.twinkle(e.count); break;
-      case 'cleared': audio.twinkle(e.count); audio.fanfare(); saveClear(state.idx, e.run, e.consulted); break;
+      case 'cleared': audio.constellation(e.count); saveClear(state.idx, e.run, e.consulted); break;
       case 'recalled': audio.fade(e.count); break;
       case 'refused': audio.fizzle(); break;
     }

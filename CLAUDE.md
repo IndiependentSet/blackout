@@ -98,7 +98,8 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
     selectors, hints, score-card copy), `input/keymap.ts`, `audio/`
     (`AudioService`: Web Audio chirps/crashes/fanfare plus the recorded
     crackles in `src/assets/sfx/` for CATASTROPHE INC.; Stargazer's own in `skySounds.ts` — `twinkle(n)` a glassy bell
-    a pentatonic step up for each star lit (`starNote`), `fade(n)` that note sinking away when one is dimmed, `fizzle()`
+    a pentatonic step up for each star lit (`starNote`), `fade(n)` that note sinking away when one is dimmed, `constellation(n)` for a figure complete (the
+    stars' notes run up, then bloom into a soft chord with glitter — Stargazer's in place of the fanfare), `fizzle()`
     when the telescope is out of power, and the slew — all through one small echo, `spaceBus`; `synth.ts` is the
     toolkit they share), `hooks/` (`useDailySchedule` — today's
     saved generation config —, the levels queue that generates the week from
