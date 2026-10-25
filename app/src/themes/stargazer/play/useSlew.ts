@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
 import type { Level } from '../../../domain/types';
+import { audio } from '../../../game/audio/AudioService';
 import { useMediaQuery } from '../../../hooks/useMediaQuery';
-import { advance, fieldStars, isOver, slewFrame, slewHeading, TOTAL, type FieldStar, type Heading, type Pace, type SlewFrame } from './slew';
+import { advance, fieldStars, isOver, slewBeats, slewFrame, slewHeading, TOTAL, type FieldStar, type Heading, type Pace, type SlewFrame } from './slew';
 
 /** A sky as it was last on the board. */
 export interface Shown { level: Level; placed: number[]; slot: number }
@@ -47,6 +48,15 @@ export function useSlew(level: Level | null, placed: number[], slot: number, pac
     return () => cancelAnimationFrame(id);
   }, [running, pace]);
 
-  const skip = useCallback(() => setT(TOTAL), []);
+  /* its sound, from the start of each run; a skip or leaving the screen cuts it short */
+  const hush = useRef<(() => void) | null>(null);
+  useEffect(() => {
+    if (!run) return;
+    const stop = audio.slew(slewBeats(pace));
+    hush.current = stop;
+    return () => { stop(); hush.current = null; };
+  }, [run, pace]);
+
+  const skip = useCallback(() => { hush.current?.(); setT(TOTAL); }, []);
   return { slew: run && running ? { run, frame: slewFrame(T) } : null, skip };
 }

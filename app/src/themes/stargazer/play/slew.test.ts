@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { advance, CUES, fieldStars, isOver, slewDistance, slewFrame, slewHeading, TOTAL } from './slew';
+import { advance, CUES, fieldStars, isOver, slewBeats, slewDistance, slewFrame, slewHeading, TOTAL } from './slew';
 
 describe('slewFrame', () => {
   it('starts and ends on the board as it is: no eyepiece, the new sky centred, sharp and whole', () => {
@@ -49,6 +49,11 @@ describe('the slew clock', () => {
     expect(advance(TOTAL - 0.1, 1, 'full')).toBe(TOTAL);
     expect(isOver(TOTAL)).toBe(true);
     expect(isOver(TOTAL - 0.01)).toBe(false);
+  });
+
+  it('times the sound to the beats, at the pace', () => {
+    expect(slewBeats('full')).toEqual({ move: CUES.slew, focus: CUES.focus, sharp: CUES.open });
+    expect(slewBeats('brisk').sharp).toBeCloseTo(CUES.open / 2);
   });
 });
 

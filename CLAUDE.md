@@ -96,7 +96,7 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
   - `src/game/` — everything about play that both themes share, and no
     drawing: `state/` (pure reducer that turns taps into numbered events,
     selectors, hints, score-card copy), `input/keymap.ts`, `audio/`
-    (`AudioService`: Web Audio chirps/crashes/fanfare plus the recorded
+    (`AudioService`: Web Audio chirps/crashes/fanfare/the telescope's slew plus the recorded
     crackles in `src/assets/sfx/`), `hooks/` (`useDailySchedule` — today's
     saved generation config —, the levels queue that generates the week from
     it, score card, streak, `useNights` — each night's charted/at-par count
@@ -134,7 +134,9 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
       the corner swings, the next sky drifts in out of focus and is racked sharp, then the eyepiece opens. `slew.ts`
       is the pure timeline (`slewFrame(T)`, `slewHeading`, seeded `fieldStars`), `useSlew` starts it in a layout
       effect and runs the clock; ~1.85 s, twice as fast in Meteor Rush (`pace="brisk"`, its clock is running), a tap
-      skips it and never reaches the new sky, none for reduced motion or the first sky on a screen. Drawing only)
+      skips it and never reaches the new sky, none for reduced motion or the first sky on a screen. Its sound is
+      `audio.slew(slewBeats(pace))` (synthesised: eyepiece click, motor whir and whoosh, focus ticks, a bell when sharp;
+      the returned stop cuts it on a skip or unmount). Drawing and sound only)
       and `screens/` (Tonight, FirstNight, Sky — daily play and Night
       charted —, Atlas, Voyage, Rush, Duel, Observatory, Stats, Board — the leaderboard pages, below). It never imports
       `src/ui/` (that kit is CATASTROPHE INC.'s).

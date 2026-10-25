@@ -77,6 +77,10 @@ export function slewFrame(T: number): SlewFrame {
 export const advance = (T: number, dt: number, pace: Pace): number => Math.min(TOTAL, T + dt * PACE[pace]);
 export const isOver = (T: number): boolean => T >= TOTAL;
 
+/** The beats the slew's sound follows, in real seconds from the start at `pace`. */
+export const slewBeats = (pace: Pace): { move: number; focus: number; sharp: number } =>
+  ({ move: CUES.slew / PACE[pace], focus: CUES.focus / PACE[pace], sharp: CUES.open / PACE[pace] });
+
 export interface Heading {
   /** the way the view travels, as a unit vector on screen (y down): the new sky comes in from there */
   dx: number;

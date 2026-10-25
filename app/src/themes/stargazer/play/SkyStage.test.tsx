@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Level } from '../../../domain/types';
+import { audio } from '../../../game/audio/AudioService';
 import { SkyBoard } from './SkyBoard';
 import { SkyStage } from './SkyStage';
 
@@ -53,6 +54,17 @@ describe('SkyStage', () => {
     expect(skies()[0].querySelectorAll('[aria-pressed="true"]')).toHaveLength(1);   // the old sky keeps its lit star
     for (let i = 0; i < 30; i++) run(i * 100, 0.1);
     expect(skies()).toHaveLength(1);
+  });
+
+  it('plays the slew sound once, and a skip cuts it short', () => {
+    const stop = vi.fn();
+    const slew = vi.spyOn(audio, 'slew').mockReturnValue(stop);
+    const { rerender } = render(<Stage level={path} slot={0} />);
+    expect(slew).not.toHaveBeenCalled();
+    rerender(<Stage level={star} slot={1} />);
+    expect(slew).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Star 1' }).at(-1)!);
+    expect(stop).toHaveBeenCalled();
   });
 
   it('a tap mid-slew skips to the end and never reaches the new sky', () => {
