@@ -132,7 +132,8 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
       blossom in `domain/matching.ts`, of the lines with no lit star — drawn on `SkyBoard` as `counted` lines inside the
       art group, so the loupe shows them too; it stays on for the sky and recounts on every tap, `sky.ts` `countMessage`
       says "at least N more" and only claims par is out of reach when lit + N passes it; generation's `matchingBound`
-      and CATASTROPHE INC.'s ESTIMATE keep the greedy `hintMatching`), `sky.ts`, and `warp.ts` — where each
+      and CATASTROPHE INC.'s ESTIMATE keep the greedy `hintMatching`; `app/tools/measure-count.ts` prints Count
+      against par over ten nights), `sky.ts`, and `warp.ts` — where each
       star is drawn: the lattice taken off the grid with a seeded tilt,
       stretch, slant, slow drift, per-star nudge and longer/shorter tails, plus
       a size per star; seeded by the figure itself (`skySeed`), so a sky, its

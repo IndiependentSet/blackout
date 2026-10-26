@@ -1,23 +1,18 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { DEFAULT_SCHEDULE, levelForSite, levelsForDay, solve } from './generation';
+import { DEFAULT_SCHEDULE, levelForSite, solve } from './generation';
 import { hintDarkMatching, hintMatching } from './hints';
 import { coveredEdges } from './cover';
 import type { Level } from './types';
 
-/* Stargazer's Count against par on the same 70 skies the old count was measured on (DEFAULT_SCHEDULE, days 190–199).
-   The clock is frozen for the same reason as determinism.test.ts: generation has a wall-clock budget.
-   A whole day takes ~20 s to generate, so by default only the four smaller skies of each night are checked (40 skies);
-   MEASURE=1 runs all 70 and prints the before/after table. */
+/* Stargazer's Count against par on real skies: the four smaller skies of each night of DEFAULT_SCHEDULE, days 190–199
+   (the big ones take minutes to generate). The clock is frozen for the same reason as determinism.test.ts: generation
+   has a wall-clock budget. The full before/after table over all seven skies is `npx tsx tools/measure-count.ts`. */
 beforeAll(() => { vi.spyOn(Date, 'now').mockReturnValue(0); });
 afterAll(() => { vi.restoreAllMocks(); });
 
 const DAYS = Array.from({ length: 10 }, (_, i) => 190 + i);
-const MEASURE = !!import.meta.env.MEASURE;
 let skies: Level[] = [];
-beforeAll(() => {
-  skies = MEASURE ? DAYS.flatMap(d => levelsForDay(DEFAULT_SCHEDULE, d))
-    : DAYS.flatMap(d => [0, 1, 2, 3].map(i => levelForSite(DEFAULT_SCHEDULE, d, i)));
-}, 600_000);
+beforeAll(() => { skies = DAYS.flatMap(d => [0, 1, 2, 3].map(i => levelForSite(DEFAULT_SCHEDULE, d, i))); }, 60_000);
 
 /* the fewest more stars that light every dark line, exactly */
 function stillNeeded(lv: Level, placed: number[]): number {
@@ -33,7 +28,7 @@ function stillNeeded(lv: Level, placed: number[]): number {
 }
 
 describe('the telescope counts', () => {
-  it('measures the skies', () => expect(skies).toHaveLength(MEASURE ? 70 : 40));
+  it('measures 40 skies', () => expect(skies).toHaveLength(40));
 
   it('counts at least as many as the greedy count, never more than par, and only dark lines', () => {
     const rows = skies.map(lv => {
@@ -44,11 +39,6 @@ describe('the telescope counts', () => {
     });
     const below = (key: 'greedy' | 'max') => rows.filter(r => r[key] < r.par).length;
     const gap = (key: 'greedy' | 'max') => rows.reduce((s, r) => s + r.par - r[key], 0) / rows.length;
-    if (MEASURE) {
-      console.table(rows);
-      console.log(`below par: greedy ${below('greedy')}/${rows.length}, maximum ${below('max')}/${rows.length}; ` +
-        `mean gap: greedy ${gap('greedy').toFixed(2)}, maximum ${gap('max').toFixed(2)}`);
-    }
     expect(below('max')).toBeLessThanOrEqual(below('greedy'));
     expect(gap('max')).toBeLessThan(gap('greedy'));
   });
@@ -69,7 +59,7 @@ describe('the telescope counts', () => {
       expect(m.every(i => !lit.has(i))).toBe(true);
       if (placed.length + m.length > lv.k) overPar++;
     });
-    if (MEASURE) console.log(`two wrong stars lit: the count shows par out of reach on ${overPar}/${skies.length}`);
+    expect(overPar).toBeGreaterThan(0);   // the "out of reach" message does come up
   });
 
   it('counts nothing once the figure is complete', () => {
