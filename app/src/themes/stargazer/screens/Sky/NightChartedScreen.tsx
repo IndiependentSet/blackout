@@ -7,7 +7,7 @@ import { useClipboard } from '../../../../hooks/useClipboard';
 import { Button } from '../../kit/Button';
 import { Figure } from '../../kit/Figure';
 import { ShareIcon } from '../../kit/icons';
-import { Fit } from '../../kit/Layout';
+import { Fit, Split } from '../../kit/Layout';
 import { DeskPage } from '../../kit/DeskPage';
 import { Eyebrow, Note, TopBar } from '../../kit/Page';
 import { PlaceLink } from '../../kit/PlaceLink';
@@ -54,35 +54,39 @@ export function NightChartedScreen({ day, results, figure, streak, signedIn, atl
   return (
     <DeskPage active="tonight" tone="result" className={styles.page}>
       <TopBar onBack={onBack} backLabel="Tonight" />
-      <Eyebrow>Night No. {day} · {perfect ? 'Perfect night' : `${results.length} of ${results.length} charted`}</Eyebrow>
-      <h1 className={styles.title}>{perfect ? 'You found a new constellation.' : 'The whole night is charted.'}</h1>
-      <Fit max={290}>{figure && <Figure figure={figure} mode="lit" lit={figure.sol} />}</Fit>
+      <Split
+        before={<>
+          <Eyebrow>Night No. {day} · {perfect ? 'Perfect night' : `${results.length} of ${results.length} charted`}</Eyebrow>
+          <h1 className={styles.title}>{perfect ? 'You found a new constellation.' : 'The whole night is charted.'}</h1>
+        </>}
+        lead={<Fit max={290}>{figure && <Figure figure={figure} mode="lit" lit={figure.sol} />}</Fit>}
+        after={<>
+          <div className={styles.naming}>
+            <label className={styles.label} htmlFor="sky-name">Name it</label>
+            <input id="sky-name" className={styles.input} value={name} maxLength={MAX_NAME} onChange={e => setName(e.target.value)} />
+            <div className={styles.ideas}>
+              {ideas.filter(i => i !== name).map(i => <Button key={i} kind="soft" size="sm" onClick={() => setName(i)}>{i}</Button>)}
+            </div>
+          </div>
 
-      <div className={styles.naming}>
-        <label className={styles.label} htmlFor="sky-name">Name it</label>
-        <input id="sky-name" className={styles.input} value={name} maxLength={MAX_NAME} onChange={e => setName(e.target.value)} />
-        <div className={styles.ideas}>
-          {ideas.filter(i => i !== name).map(i => <Button key={i} kind="soft" size="sm" onClick={() => setName(i)}>{i}</Button>)}
-        </div>
-      </div>
+          <div className={styles.stats}>
+            <div className={styles.stat}><b>{atPar} / {results.length}</b><span>at par</span></div>
+            <div className={styles.stat}><b>{lit}</b><span>stars lit</span></div>
+            <div className={styles.stat}><b>{streak}</b><span>night streak</span></div>
+          </div>
+          {place && onBoard && <PlaceLink place={place} label="tonight" onOpen={onBoard} />}
+          {error && <Note tone="error">{error}</Note>}
+          {named && !error && <Note>In your atlas as “{named.name}”. Save again to rename it.</Note>}
 
-      <div className={styles.stats}>
-        <div className={styles.stat}><b>{atPar} / {results.length}</b><span>at par</span></div>
-        <div className={styles.stat}><b>{lit}</b><span>stars lit</span></div>
-        <div className={styles.stat}><b>{streak}</b><span>night streak</span></div>
-      </div>
-      {place && onBoard && <PlaceLink place={place} label="tonight" onOpen={onBoard} />}
-      {error && <Note tone="error">{error}</Note>}
-      {named && !error && <Note>In your atlas as “{named.name}”. Save again to rename it.</Note>}
-
-      <div className={styles.actions}>
-        {signedIn
-          ? <Button block disabled={!clean || atlas.saving || !figure} onClick={save}>{atlas.saving ? 'Adding…' : named ? 'Rename in my atlas' : 'Add to my atlas'}</Button>
-          : <Button block onClick={onSignIn}>Sign in to keep it</Button>}
-        <Button block kind="ghost" size="md" onClick={() => copy(nightShareText(day, results))}>
-          <ShareIcon />{copied ? 'Copied — paste it anywhere' : 'Share my sky'}
-        </Button>
-      </div>
+          <div className={styles.actions}>
+            {signedIn
+              ? <Button block disabled={!clean || atlas.saving || !figure} onClick={save}>{atlas.saving ? 'Adding…' : named ? 'Rename in my atlas' : 'Add to my atlas'}</Button>
+              : <Button block onClick={onSignIn}>Sign in to keep it</Button>}
+            <Button block kind="ghost" size="md" onClick={() => copy(nightShareText(day, results))}>
+              <ShareIcon />{copied ? 'Copied — paste it anywhere' : 'Share my sky'}
+            </Button>
+          </div>
+        </>} />
     </DeskPage>
   );
 }
