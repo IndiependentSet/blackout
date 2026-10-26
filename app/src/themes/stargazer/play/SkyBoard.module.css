@@ -11,6 +11,8 @@
   stroke: var(--sg-mint); stroke-linecap: round; stroke-dasharray: 6 5;
   animation: sweep 1s linear infinite;
 }
+.counted { stroke: var(--sg-mars); stroke-linecap: round; animation: counted .35s ease-out; }
+@keyframes counted { from { opacity: 0; } to { opacity: 1; } }
 .lineGlow { stroke: var(--sg-gold); stroke-linecap: round; opacity: .16; }
 .lineLit { stroke: var(--sg-gold-line); stroke-linecap: round; }
 
@@ -33,5 +35,5 @@
 @keyframes light { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: scale(1); } }
 
 @media (prefers-reduced-motion: reduce) {
-  .lineHot, .ring, .litStar { animation: none; }
+  .lineHot, .ring, .litStar, .counted { animation: none; }
 }

@@ -146,32 +146,40 @@ export type Scope = 'spot' | 'sweep' | 'count';
 export const SCOPES: { scope: Scope; key: string; short: string; long: string }[] = [
   { scope: 'spot', key: '1', short: 'Spot', long: 'Spot a par star' },
   { scope: 'sweep', key: '2', short: 'Sweep', long: 'Sweep dark lines' },
-  { scope: 'count', key: '3', short: 'Count', long: 'Count the minimum' },
+  { scope: 'count', key: '3', short: 'Count', long: "Count what's left" },
 ];
-/** Spot and Count are the game's own INSIDER and ESTIMATE hints (so a clear scores the same); Sweep only
-    highlights the dark lines already on the board, so it asks the reducer for nothing. */
+/** Spot and Count are the game's own INSIDER and ESTIMATE hint tiers (so a clear scores the same); Sweep only
+    highlights the dark lines already on the board, so it asks the reducer for nothing. Count draws its own proof
+    (`hintDarkMatching` over the lines still dark), not the reducer's: it recounts as stars change. */
 export const SCOPE_TIER: Record<Scope, HintTier | null> = { spot: 3, sweep: null, count: 2 };
 /** The board keys 1/2/3 pick the telescope in the order its buttons show. */
 export const scopeForKey = (tier: HintTier): Scope => SCOPES[tier - 1].scope;
 
-/** Which telescope view is showing. `chosen` is what was picked for the board as it stands now (null once a
-    star changes); Spot and Count also need the reducer to have answered with their hint. */
+/** Which telescope view is showing. `chosen` is what was picked and still stands (Spot and Sweep are put away when a
+    star changes, Count stays on for the sky); Spot also needs the reducer to have answered with its star. */
 export function activeScope(chosen: Scope | null, hint: Hint | null): Scope | null {
   if (chosen === 'spot') return hint?.kind === 'reveal' ? 'spot' : null;
-  if (chosen === 'count') return hint?.kind === 'proof' ? 'count' : null;
   return chosen;
 }
 
+/** Count's message: N marked dark lines share no star, so at least N more stars must be lit. A lower bound only: par
+    may need more, unless the lit stars plus N already pass it. */
+export function countMessage(k: number, lit: number, n: number): string {
+  const head = n === 1 ? '1 marked line is still dark' : `${n} marked lines share no star`;
+  if (lit + n > k) return `${head}: at least ${n} more, so par (${k}) is out of reach with these stars lit. Dim one.`;
+  if (!lit) return `${head}: this sky needs at least ${plural(n, 'star')}. Par may need more.`;
+  if (lit + n === k) return `${head}: at least ${plural(n, 'more star')} — all that par has left.`;
+  return `${head}: you need at least ${plural(n, 'more star')}. Par may need more.`;
+}
+
 /** The message panel: what the telescope found, a notice, or a nudge for where the sky stands. `turnHint`: a big sky on a
-    phone held upright, where turning it sideways gives the board more room. */
+    phone held upright, where turning it sideways gives the board more room. `counted`: Count's marked lines. */
 export function skyMessage(lv: Level | null, placed: number[], hint: Hint | null, scope: Scope | null, notice: string,
-  { turnHint = false }: { turnHint?: boolean } = {}): string {
+  { turnHint = false, counted = null }: { turnHint?: boolean; counted?: number[] | null } = {}): string {
   if (!lv) return 'Scanning the sky…';
   if (notice) return notice;
   const dark = lv.edges.length - coveredEdges(lv, placed).size;
-  if (scope === 'count' && hint?.kind === 'proof') {
-    return `The telescope counts: this sky can't be shown with fewer than ${plural(hint.edges.length, 'star')}.`;
-  }
+  if (scope === 'count' && counted && dark) return countMessage(lv.k, placed.length, counted.length);
   if (scope === 'spot' && hint?.kind === 'reveal') return 'The ringed star is part of a par answer.';
   if (scope === 'sweep' && dark) return `${plural(dark, 'dark line')} highlighted. Each needs a lit star at one end.`;
   if (!placed.length) return turnHint ? 'Turn your phone sideways for a bigger sky.' : 'Tap a star to light it. Every line it touches will glow.';

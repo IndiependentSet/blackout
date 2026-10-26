@@ -41,7 +41,8 @@ History (see `git log --oneline`):
    (one world per chapter), Survival → **Meteor Rush**, 1vs1 → **Star Duel**,
    Staff office → **Observatory** (Me), How to play + Work order → **First
    night**, the three consultants → the **Telescope** (Spot = INSIDER, Count =
-   ESTIMATE, Sweep only highlights dark lines). **Stargazer is the current,
+   ESTIMATE's hint tier but its own count — a maximum matching of the lines still dark, marked on the sky, recounted
+   live —, Sweep only highlights dark lines). **Stargazer is the current,
    live design intent and the default.** CATASTROPHE INC. is kept, whole and
    working, as a hidden alternative (an easter egg): tap the "Stargazer" title
    on Tonight seven times, or open `?skin=catastrophe`; its pages carry a
@@ -127,7 +128,11 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
       `DeskHeader`/`DeskContext`/`DeskPage` — the one desktop header every page shares: brand, Tonight · Atlas · Voyage · Rush ·
       Duel, streak pill, avatar to Me; `StargazerApp` provides its props through `DeskContext`, a phone-column page wears it with
       `DeskPage active=…`, the wide pages (Tonight, Me, Stats) render `DeskHeader` themselves), `play/` (`SkyPlay` — the one board screen every mode uses, phone
-      column or desktop three-column —, `SkyBoard`, the telescope, `sky.ts`, and `warp.ts` — where each
+      column or desktop three-column —, `SkyBoard`, the telescope (**Count**: `domain/hints.ts` `hintDarkMatching` — a maximum matching, Edmonds'
+      blossom in `domain/matching.ts`, of the lines with no lit star — drawn on `SkyBoard` as `counted` lines inside the
+      art group, so the loupe shows them too; it stays on for the sky and recounts on every tap, `sky.ts` `countMessage`
+      says "at least N more" and only claims par is out of reach when lit + N passes it; generation's `matchingBound`
+      and CATASTROPHE INC.'s ESTIMATE keep the greedy `hintMatching`), `sky.ts`, and `warp.ts` — where each
       star is drawn: the lattice taken off the grid with a seeded tilt,
       stretch, slant, slow drift, per-star nudge and longer/shorter tails, plus
       a size per star; seeded by the figure itself (`skySeed`), so a sky, its
