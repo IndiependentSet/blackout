@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Level, SiteResult } from '../../../domain/types';
 import { skyLayout } from './warp';
-import { SKY_STEP, activeScope, darkLabel, scopeForKey, skyEntries, skyMessage, skyOf, skyProgress, starfield } from './sky';
+import { CORE_R, HALO_R, SKY_STEP, activeScope, darkLabel, scopeForKey, skyEntries, skyMessage, skyOf, skyPoints, skyProgress, starfield } from './sky';
 
 /* a path of three stars, 0 - 1 - 2: par is the middle one */
 const path: Level = {
@@ -22,6 +22,75 @@ describe('skyOf', () => {
     expect(sky.lines.map(l => l.lit)).toEqual([true, false]);
     expect(sky.dark).toBe(1);
     expect(sky.scale).toBe(1);
+  });
+});
+
+/* a row of seven stars: a long, thin sky */
+const row: Level = {
+  nodes: Array.from({ length: 7 }, (_, i) => ({ c: i, r: 0 })),
+  edges: Array.from({ length: 6 }, (_, i) => [i, i + 1] as [number, number]),
+  adj: Array.from({ length: 7 }, (_, i) => [i - 1, i + 1].filter(j => j >= 0 && j < 7)), k: 3, sol: [1, 3, 5], stars: 1,
+};
+/* a square of four: as wide as it is tall */
+const square: Level = {
+  nodes: [{ c: 0, r: 0 }, { c: 1, r: 0 }, { c: 1, r: 1 }, { c: 0, r: 1 }],
+  edges: [[0, 1], [1, 2], [2, 3], [3, 0]], adj: [[1, 3], [0, 2], [1, 3], [2, 0]], k: 2, sol: [0, 2], stars: 1,
+};
+/* a 8 × 5 grid: forty stars, the biggest sky the game plays */
+const grid: Level = (() => {
+  const nodes = Array.from({ length: 40 }, (_, i) => ({ c: i % 8, r: Math.floor(i / 8) }));
+  const edges: [number, number][] = [];
+  nodes.forEach((n, i) => { if (n.c < 7) edges.push([i, i + 1]); if (n.r < 4) edges.push([i, i + 8]); });
+  const adj = nodes.map((_, i) => edges.filter(e => e.includes(i)).map(([a, b]) => (a === i ? b : a)));
+  return { nodes, edges, adj, k: 20, sol: [], stars: 3 };
+})();
+const vb = (viewBox: string) => viewBox.split(' ').map(Number);
+const pxPerUnit = (viewBox: string, w: number, h: number) => { const [, , vw, vh] = vb(viewBox); return Math.min(w / vw, h / vh); };
+
+describe('skyOf on the board', () => {
+  it('draws exactly as a preview does with no view (previews and the atlas)', () => {
+    expect(skyOf(grid, [3])).toEqual(skyOf(grid, [3], {}));
+    expect(skyOf(grid, [3]).turned).toBe(false);
+  });
+
+  it('turns a long sky a quarter turn to fill a tall board, and only then', () => {
+    expect(skyOf(row, [], { box: { w: 300, h: 600 } }).turned).toBe(true);
+    expect(skyOf(row, [], { box: { w: 600, h: 300 } }).turned).toBe(false);
+    expect(skyOf(square, [], { box: { w: 300, h: 330 } }).turned).toBe(false);
+  });
+
+  it('turns by moving the stars only: a quarter turn of the same sky, lines and lit stars kept', () => {
+    const flat = skyPoints(row), turned = skyPoints(row, { box: { w: 300, h: 600 } });
+    expect(turned.turned).toBe(true);
+    expect([turned.w, turned.h]).toEqual([flat.h, flat.w]);
+    turned.at.forEach((p, i) => {
+      expect(p.x).toBeCloseTo(flat.h - flat.at[i].y);
+      expect(p.y).toBeCloseTo(flat.at[i].x);
+    });
+    const a = skyOf(row, [2], { box: { w: 300, h: 600 } }), b = skyOf(row, [2]);
+    expect(a.lines.map(l => l.lit)).toEqual(b.lines.map(l => l.lit));
+    expect(a.stars.map(s => [s.lit, s.size])).toEqual(b.stars.map(s => [s.lit, s.size]));
+    expect(a.hit).toBe(b.hit);
+  });
+
+  it('keeps a tighter margin when asked', () => {
+    const loose = vb(skyOf(grid, [], { box: { w: 340, h: 360 } }).viewBox);
+    const tight = vb(skyOf(grid, [], { box: { w: 340, h: 360 }, tight: true }).viewBox);
+    expect(tight[0]).toBeGreaterThan(loose[0]);
+    expect(tight[2]).toBeLessThan(loose[2]);
+  });
+
+  it('draws a big sky on a phone no smaller than readable, without its stars meeting', () => {
+    for (const box of [{ w: 343, h: 363 }, { w: 200, h: 200 }]) {
+      const sky = skyOf(grid, [], { box, tight: true });
+      const closest = Math.min(...sky.stars.flatMap((a, i) => sky.stars.slice(i + 1).map(b => Math.hypot(a.x - b.x, a.y - b.y))));
+      const maxSize = Math.max(...sky.stars.map(s => s.size));
+      const core = CORE_R * sky.scale * pxPerUnit(sky.viewBox, box.w, box.h);
+      expect(HALO_R * sky.scale * maxSize).toBeLessThanOrEqual(closest / 2 + 1e-6);
+      expect(core >= 4.5 - 1e-3 || HALO_R * sky.scale * 1.2 >= closest / 2 - 1e-3).toBe(true);
+    }
+    /* a small board raises the scale past the preview's */
+    expect(skyOf(grid, [], { box: { w: 200, h: 200 }, tight: true }).scale).toBeGreaterThan(skyOf(grid, []).scale);
   });
 });
 

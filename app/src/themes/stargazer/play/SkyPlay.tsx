@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { isCleared } from '../../../domain/cover';
 import { nearestInDirection } from '../../../domain/navigation';
+import { useBoxSize } from '../../../hooks/useBoxSize';
 import { useWindowKey } from '../../../hooks/useWindowKey';
 import { audio } from '../../../game/audio/AudioService';
 import { useClearSaver } from '../../../game/hooks/useClearSaver';
@@ -19,9 +20,8 @@ import { useWide } from '../kit/useWide';
 import { SkyBoard } from './SkyBoard';
 import { SkyStage } from './SkyStage';
 import type { Pace } from './slew';
-import { skyLayout } from './warp';
 import { LitCount, ParPill, SkyDots, SkyList, Telescope } from './StargazerParts';
-import { SCOPE_TIER, activeScope, darkLabel, scopeForKey, skyMessage, skyProgress, type Scope, type SkyEntry } from './sky';
+import { BIG_SKY, SCOPE_TIER, activeScope, darkLabel, scopeForKey, skyMessage, skyPoints, skyProgress, type Scope, type SkyEntry } from './sky';
 import styles from './Stargazer.module.css';
 
 const OUT_OF_POWER = 'The telescope is out of power. Dim a star first.';
@@ -64,6 +64,8 @@ export function SkyPlay({ session, userId, locked = false, tone = 'night', activ
   const dispatch = useCallback<typeof session.dispatch>(a => { if (!locked || a.type === 'keyboard') session.dispatch(a); }, [locked, session]);
   const wide = useWide() && !top;
   const desk = useDesk();
+  /* the board's size: a sky turns and its stars grow to fit it, and the arrow keys follow what's drawn */
+  const { setEl: measure, box } = useBoxSize<HTMLDivElement>();
   const onSaveError = useCallback((error: string) => session.dispatch({ type: 'notice', msg: SAVE_FAILED + error }), [session]);
   const { saveClear } = useClearSaver(userId, session.save, onSaveError, session.onSchedule ?? true);
 
@@ -122,8 +124,9 @@ export function SkyPlay({ session, userId, locked = false, tone = 'night', activ
         e.preventDefault(); return dispatch({ type: 'tap', node: state.focus, lv: level });
       case 'move': {
         e.preventDefault();
-        /* by where the stars are drawn, not their lattice cells: a tilted sky turns its rows */
-        const node = nearestInDirection(skyLayout(level).at, state.focus, a.dir);
+        /* by where the stars are drawn, not their lattice cells: a tilted or turned sky turns its rows */
+        const at = skyPoints(level, { box, tight: true }).at.map(p => ({ c: p.x, r: p.y }));
+        const node = nearestInDirection(at, state.focus, a.dir);
         if (node >= 0) dispatch({ type: 'focus', node });
         return;
       }
@@ -137,15 +140,17 @@ export function SkyPlay({ session, userId, locked = false, tone = 'night', activ
   /* which sky of the mode is up: a new one is reached by slewing the telescope (SkyStage) */
   const slot = (session.siteOffset ?? 0) + state.idx;
   const board = (
-    <SkyStage level={level} placed={state.placed} slot={slot} pace={pace} wide={wide}>
+    <SkyStage level={level} placed={state.placed} slot={slot} pace={pace} wide={wide} measure={measure} box={box}>
       {level ? (
         <SkyBoard level={level} placed={state.placed} sweep={scope === 'sweep'}
           ring={scope === 'spot' && state.hint?.kind === 'reveal' ? state.hint.node : null}
-          focus={state.kbd ? state.focus : null}
+          focus={state.kbd ? state.focus : null} box={box}
           onTapStar={node => dispatch({ type: 'tap', node, lv: level })} />
       ) : <div className={styles.waiting}>Scanning the sky…</div>}
     </SkyStage>
   );
+  /* a big sky on a phone: the column around it tightens so the board gets the room */
+  const compact = !!level && level.nodes.length >= BIG_SKY;
   const button = primary && (
     <Button block disabled={primary.disabled ?? !cleared} onClick={act}>{primary.label}</Button>
   );
@@ -182,7 +187,7 @@ export function SkyPlay({ session, userId, locked = false, tone = 'night', activ
   }
 
   return (
-    <DeskPage active={active} tone={tone} className={styles.col}>
+    <DeskPage active={active} tone={tone} className={cx(styles.col, compact && styles.compact)}>
       {top ?? (
         <>
           <div className={styles.top}>

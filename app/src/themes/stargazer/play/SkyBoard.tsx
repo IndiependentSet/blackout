@@ -1,6 +1,6 @@
 import { memo, useId } from 'react';
 import type { Level } from '../../../domain/types';
-import { skyOf } from './sky';
+import { CORE_R, HALO_R, skyOf, type Box } from './sky';
 import styles from './SkyBoard.module.css';
 
 /** A four-point star, 15 units from tip to centre. */
@@ -16,12 +16,14 @@ interface Props {
   /** keyboard focus, drawn only once the keyboard has been used */
   focus: number | null;
   onTapStar: (node: number) => void;
+  /** the board's size on screen: the sky turns and its stars grow to fit it (none: drawn as a preview is) */
+  box?: Box | null;
 }
 
 /** The puzzle as a patch of night sky: tap a star to light it, and every line touching it glows. */
-export const SkyBoard = memo(function SkyBoard({ level, placed, sweep, ring, focus, onTapStar }: Props) {
+export const SkyBoard = memo(function SkyBoard({ level, placed, sweep, ring, focus, onTapStar, box }: Props) {
   const glowId = 'sg-glow' + useId().replace(/[^a-zA-Z0-9_-]/g, '');
-  const sky = skyOf(level, placed);
+  const sky = skyOf(level, placed, { box, tight: true });
   const s = sky.scale;
   const dark = sky.lines.filter(l => !l.lit);
   const lit = sky.lines.filter(l => l.lit);
@@ -58,8 +60,8 @@ export const SkyBoard = memo(function SkyBoard({ level, placed, sweep, ring, foc
         </g>
       ) : (
         <g key={n.i}>
-          <circle cx={n.x} cy={n.y} r={13 * s * n.size} className={styles.halo} />
-          <circle cx={n.x} cy={n.y} r={6 * s * n.size} className={styles.dim} />
+          <circle cx={n.x} cy={n.y} r={HALO_R * s * n.size} className={styles.halo} />
+          <circle cx={n.x} cy={n.y} r={CORE_R * s * n.size} className={styles.dim} />
         </g>
       ))}
       {sky.stars.map(n => (

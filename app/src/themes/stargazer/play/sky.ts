@@ -5,9 +5,27 @@ import { skyLayout } from './warp';
 
 /** World units per line on the sky board (the median line is this long). */
 export const SKY_STEP = 100;
+/** room around the stars for a lit star's glow (previews and the atlas), and the board's tighter one: the board's
+    svg lets the glow spill past its edge, so it only keeps a lit star's own points inside */
 const MARGIN = 48;
+const MARGIN_TIGHT = 22;
 /** a star's tap target, world units, at most: a warped sky shrinks it to half its closest pair */
 const HIT = 45;
+/** the board turns a sky a quarter turn only when that draws it at least this much bigger */
+const TURN_GAIN = 1.15;
+/** on screen, a dim star's core is never drawn smaller than this, in px (a line keeps in proportion) */
+const MIN_CORE_PX = 4.5;
+/** a dim star's core and halo, world units at scale 1 and size 1 (SkyBoard draws them), and the largest star size */
+export const CORE_R = 6;
+export const HALO_R = 13;
+const MAX_SIZE = 1.2;
+/** from this many stars a sky is big: the phone column around it tightens */
+export const BIG_SKY = 20;
+
+/** The board's size on screen, px. */
+export interface Box { w: number; h: number }
+/** How the board shows a sky: in a box of this size (it may turn and draw its stars bigger to fit), with a tight margin. */
+export interface SkyView { box?: Box | null; tight?: boolean }
 
 export interface SkyStar {
   i: number; x: number; y: number; lit: boolean;
@@ -25,34 +43,82 @@ export interface Sky {
   dark: number;
   /** tap target radius: never so big that two stars' targets overlap */
   hit: number;
+  /** drawn a quarter turn round, to fit the board */
+  turned: boolean;
 }
 
-/** The level drawn as a patch of sky: stars where `skyLayout` puts them (off the lattice), lines lit once a
-    star at either end is. */
-export function skyOf(lv: Pick<Level, 'nodes' | 'edges'>, placed: readonly number[]): Sky {
-  const lit = new Set(placed);
-  const covered = coveredEdges(lv, placed);
-  const { at: pos, size } = skyLayout(lv);
+interface Points { at: { x: number; y: number }[]; w: number; h: number; turned: boolean; base: number; closest: number }
+
+/** the stars' scale before any floor: a big sky's stars grow so it shrinks less on screen */
+const baseScale = (w: number, h: number) => Math.min(2, Math.max(1, Math.max(w, h) / 400));
+/** the viewBox's size for a sky w × h drawn at scale s */
+const frame = (w: number, h: number, s: number, tight?: boolean) => {
+  const pad = (tight ? MARGIN_TIGHT : MARGIN) * s;
+  return { pad, w: w + 2 * pad, h: h + 2 * pad };
+};
+/** px per world unit when a frame is fitted ("meet") into a box */
+const fitOf = (f: { w: number; h: number }, box: Box) => Math.min(box.w / f.w, box.h / f.h);
+
+/** Where each star is drawn on the board, world units from the sky's top left corner: where `skyLayout` puts it, turned
+    a quarter turn (clockwise) when the board is a box the turned sky fills at least `TURN_GAIN` better. Drawing only:
+    every player sees the same sky, turned to fit their screen. The arrow keys move by these too. */
+export function skyPoints(lv: Pick<Level, 'nodes' | 'edges'>, view: SkyView = {}): Points {
+  const { at: pos } = skyLayout(lv);
   const xs = pos.map(p => p.c), ys = pos.map(p => p.r);
   const x0 = Math.min(...xs), y0 = Math.min(...ys);
   const w = (Math.max(...xs) - x0) * SKY_STEP, h = (Math.max(...ys) - y0) * SKY_STEP;
-  const at = (i: number) => ({ x: (pos[i].c - x0) * SKY_STEP, y: (pos[i].r - y0) * SKY_STEP });
-  const scale = Math.min(2, Math.max(1, Math.max(w, h) / 400));
-  const pad = MARGIN * scale;
+  const at = pos.map(p => ({ x: (p.c - x0) * SKY_STEP, y: (p.r - y0) * SKY_STEP }));
+  const base = baseScale(w, h);
+  const closest = closestPair(pos) * SKY_STEP;
+  const box = view.box;
+  if (box && box.w > 0 && box.h > 0) {
+    const asIs = fitOf(frame(w, h, base, view.tight), box), round = fitOf(frame(h, w, base, view.tight), box);
+    if (round >= asIs * TURN_GAIN) {
+      return { at: at.map(p => ({ x: h - p.y, y: p.x })), w: h, h: w, turned: true, base, closest };
+    }
+  }
+  return { at, w, h, turned: false, base, closest };
+}
+
+/** The stars' scale on the board: never so small that a dim star's core is under `MIN_CORE_PX` on screen, nor so big
+    that two stars' halos meet. Without a box, the base scale (previews and the atlas). */
+function boardScale(p: Points, view: SkyView): number {
+  const box = view.box;
+  if (!box || box.w <= 0 || box.h <= 0) return p.base;
+  const cap = p.closest / 2 / (HALO_R * MAX_SIZE);
+  let s = p.base;
+  /* the margin grows with the scale, so the fit moves a little: twice settles it */
+  for (let k = 0; k < 2; k++) {
+    const pxPerUnit = fitOf(frame(p.w, p.h, s, view.tight), box);
+    s = Math.max(p.base, Math.min(cap, MIN_CORE_PX / (CORE_R * pxPerUnit)));
+  }
+  return s;
+}
+
+/** The level drawn as a patch of sky: stars where `skyPoints` puts them, lines lit once a star at either end is.
+    `view` is the board's: without it (previews, the atlas) the sky is drawn as it always was. */
+export function skyOf(lv: Pick<Level, 'nodes' | 'edges'>, placed: readonly number[], view: SkyView = {}): Sky {
+  const lit = new Set(placed);
+  const covered = coveredEdges(lv, placed);
+  const { size } = skyLayout(lv);
+  const p = skyPoints(lv, view);
+  const scale = boardScale(p, view);
+  const f = frame(p.w, p.h, scale, view.tight);
   return {
-    viewBox: `${-pad} ${-pad} ${w + 2 * pad} ${h + 2 * pad}`,
+    viewBox: `${-f.pad} ${-f.pad} ${f.w} ${f.h}`,
     scale,
-    stars: lv.nodes.map((_, i) => ({ i, ...at(i), lit: lit.has(i), size: size[i] })),
+    stars: lv.nodes.map((_, i) => ({ i, ...p.at[i], lit: lit.has(i), size: size[i] })),
     lines: lv.edges.map(([u, v], i) => {
-      const a = at(u), b = at(v);
+      const a = p.at[u], b = p.at[v];
       return { i, x1: a.x, y1: a.y, x2: b.x, y2: b.y, lit: covered.has(i) };
     }),
     dark: lv.edges.length - covered.size,
-    hit: Math.min(HIT, closest(pos) * SKY_STEP / 2),
+    hit: Math.min(HIT, p.closest / 2),
+    turned: p.turned,
   };
 }
 
-function closest(pos: readonly { c: number; r: number }[]): number {
+function closestPair(pos: readonly { c: number; r: number }[]): number {
   let d = Infinity;
   for (let i = 0; i < pos.length; i++)
     for (let j = i + 1; j < pos.length; j++) d = Math.min(d, Math.hypot(pos[i].c - pos[j].c, pos[i].r - pos[j].r));

@@ -135,6 +135,11 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
       a line, crowd another star, sit on a line not theirs or fold two lines
       together are calmed one by one, then put back on their cells. Drawing
       only: the puzzle is untouched, and arrow keys move by the drawn positions;
+      **the board fits a big sky to the phone** (`sky.ts`, given the board's size from `hooks/useBoxSize` via `SkyPlay`):
+      `skyPoints` turns a sky a quarter turn when that draws it ≥ 15% bigger (board only — `Figure`, previews and the
+      atlas pass no view and draw as before), the board keeps a tight margin (its svg lets the glow spill), and the stars'
+      scale is raised so a dim star's core is ≥ 4.5px on screen, capped so halos never meet; a sky of `BIG_SKY` (20)
+      stars or more tightens the phone column (`.compact`, the same CSS variables the short-phone media query sets);
       `SkyStage` — where the board sits, and the **telescope slew** between skies: whenever `SkyPlay`'s slot
       (`siteOffset + idx`) changes, in any mode, the view closes to an eyepiece with a reticle (the rest of the page
       dark around it), the sky just charted slides away while faint stars streak past and the `ScopeArt` telescope in
@@ -523,7 +528,8 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
 
 *(This and the next section are the CATASTROPHE INC. board, in `themes/catastrophe/`.
 Stargazer's `SkyBoard` is a plain SVG fitted to the sky — a small graph needs no
-camera — with its star size growing for big skies, capped, in `play/sky.ts`, and
+camera — with its star size growing for big skies, capped, and the sky turned and its stars kept readable to fit
+the board, in `play/sky.ts`, and
 its stars placed off the lattice by `play/warp.ts`.)*
 
 Levels used to be scaled down to fit a fixed viewBox, so spacing collapsed as
