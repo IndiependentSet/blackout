@@ -2,6 +2,7 @@ import type { SkyFigure } from '../../../../domain/types';
 import { Button } from '../../kit/Button';
 import { Figure } from '../../kit/Figure';
 import { DeskPage } from '../../kit/DeskPage';
+import { Split } from '../../kit/Layout';
 import { Eyebrow } from '../../kit/Page';
 import styles from './FirstNight.module.css';
 
@@ -27,23 +28,28 @@ interface Props {
 export function FirstNightScreen({ onStart, onClose }: Props) {
   return (
     <DeskPage active="tonight" tone="night" className={styles.page}>
-      <Eyebrow>Your first night watch</Eyebrow>
-      <h1 className={styles.title}>The sky is full of figures no one has named.</h1>
-      <ol className={styles.steps}>
-        {STEPS.map(s => (
-          <li key={s.head} className={styles.step}>
-            <div className={styles.thumb}><Figure figure={DEMO} mode={s.lit.length ? 'lit' : 'dim'} lit={s.lit} /></div>
-            <div className={styles.text}>
-              <b>{s.head}</b>
-              <span>{s.body ?? <>The true minimum is <b className={styles.par}>par</b>. Hit it and the figure is yours to name.</>}</span>
-            </div>
-          </li>
-        ))}
-      </ol>
-      <div className={styles.actions}>
-        <Button block onClick={onStart}>Start my first sky</Button>
-        <Button block kind="ghost" size="md" onClick={onClose}>I’ve played before</Button>
-      </div>
+      <Split
+        before={<>
+          <Eyebrow>Your first night watch</Eyebrow>
+          <h1 className={styles.title}>The sky is full of figures no one has named.</h1>
+        </>}
+        lead={
+          <ol className={styles.steps}>
+            {STEPS.map(s => (
+              <li key={s.head} className={styles.step}>
+                <div className={styles.thumb}><Figure figure={DEMO} mode={s.lit.length ? 'lit' : 'dim'} lit={s.lit} /></div>
+                <div className={styles.text}>
+                  <b>{s.head}</b>
+                  <span>{s.body ?? <>The true minimum is <b className={styles.par}>par</b>. Hit it and the figure is yours to name.</>}</span>
+                </div>
+              </li>
+            ))}
+          </ol>
+        }
+        after={<div className={styles.actions}>
+          <Button block onClick={onStart}>Start my first sky</Button>
+          <Button block kind="ghost" size="md" onClick={onClose}>I’ve played before</Button>
+        </div>} />
     </DeskPage>
   );
 }

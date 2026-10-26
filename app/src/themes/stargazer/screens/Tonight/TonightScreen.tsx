@@ -10,6 +10,7 @@ import { ListCard, ListRow } from '../../kit/ListCard';
 import { Planet } from '../../kit/Planet';
 import { Eyebrow, Page } from '../../kit/Page';
 import { ProgressStars } from '../../kit/ProgressStars';
+import { Split } from '../../kit/Layout';
 import { useWide } from '../../kit/useWide';
 import { TabBar, type Tab } from '../../kit/TabBar';
 import { cx } from '../../kit/cx';
@@ -141,10 +142,10 @@ export function TonightScreen(p: Props) {
 
   return (
     <Page tone="night">
-      <div className={styles.head}>{title}<StreakPill streak={p.streak} className={styles.streak} /></div>
-      <NightCard {...p} wide={false} />
-      <MoreWays p={p} wide={false} />
-      <TabBar active="tonight" onOpen={p.onTab} />
+      <Split
+        before={<div className={styles.head}>{title}<StreakPill streak={p.streak} className={styles.streak} /></div>}
+        lead={<NightCard {...p} wide={false} />}
+        after={<><MoreWays p={p} wide={false} /><TabBar active="tonight" onOpen={p.onTab} /></>} />
     </Page>
   );
 }
