@@ -33,10 +33,13 @@ function frame(box: { w: number; h: number }) {
 
 function setup(box: { w: number; h: number }) {
   const onTap = vi.fn();
-  render(<SkyBoard level={path} placed={[]} sweep={false} ring={null} focus={null} onTapStar={onTap} box={box} />);
+  const { rerender } = render(<SkyBoard level={path} placed={[]} sweep={false} ring={null} focus={null} onTapStar={onTap} box={box} />);
   const f = frame(box);
   Object.defineProperty(sky(), 'getScreenCTM', { configurable: true, value: () => ({ inverse: () => f.inverse }) });
-  return { onTap, at: f.client };
+  /** the board measured at a new size, as when the phone turns */
+  const resize = (to: { w: number; h: number }) =>
+    rerender(<SkyBoard level={path} placed={[]} sweep={false} ring={null} focus={null} onTapStar={onTap} box={to} />);
+  return { onTap, at: f.client, resize };
 }
 
 const touch = { pointerType: 'touch', pointerId: 1, isPrimary: true };
@@ -76,6 +79,17 @@ describe('SkyBoard loupe', () => {
     hold();
     fireEvent.pointerCancel(sky(), touch);
     expect(loupe()).toBeNull();
+    expect(onTap).not.toHaveBeenCalled();
+  });
+
+  it('closes when the board changes size under the finger, and that touch lights nothing', () => {
+    const { onTap, at, resize } = setup(SMALL);
+    fireEvent.pointerDown(sky(), { ...touch, ...at(1) });
+    hold();
+    expect(loupe()).not.toBeNull();
+    resize({ w: 80, h: 50 });
+    expect(loupe()).toBeNull();
+    fireEvent.pointerUp(sky(), { ...touch, ...at(1) });
     expect(onTap).not.toHaveBeenCalled();
   });
 

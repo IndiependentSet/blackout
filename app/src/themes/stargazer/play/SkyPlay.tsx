@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { isCleared } from '../../../domain/cover';
 import { nearestInDirection } from '../../../domain/navigation';
 import { useBoxSize } from '../../../hooks/useBoxSize';
+import { useMediaQuery } from '../../../hooks/useMediaQuery';
 import { useWindowKey } from '../../../hooks/useWindowKey';
 import { audio } from '../../../game/audio/AudioService';
 import { useClearSaver } from '../../../game/hooks/useClearSaver';
@@ -16,7 +17,7 @@ import { DeskHeader, type DeskDest } from '../kit/DeskHeader';
 import { useDesk } from '../kit/DeskContext';
 import { DeskPage } from '../kit/DeskPage';
 import { Page, type Tone } from '../kit/Page';
-import { useWide } from '../kit/useWide';
+import { UPRIGHT_PHONE, useWide } from '../kit/useWide';
 import { SkyBoard } from './SkyBoard';
 import { SkyStage } from './SkyStage';
 import type { Pace } from './slew';
@@ -134,8 +135,13 @@ export function SkyPlay({ session, userId, locked = false, tone = 'night', activ
   });
 
   /* ---- what to show ---- */
+  /* a big sky on a phone: the column around it tightens so the board gets the room, and upright, the first message
+     says a sideways phone shows it bigger */
+  const compact = !!level && level.nodes.length >= BIG_SKY;
+  const upright = useMediaQuery(UPRIGHT_PHONE);
   const notice = state.msg === REFUSED_MSG ? OUT_OF_POWER : state.msg.startsWith(SAVE_FAILED) ? state.msg : '';
-  const msg = notice || (scope ? skyMessage(level, state.placed, state.hint, scope, '') : status || skyMessage(level, state.placed, state.hint, null, ''));
+  const msg = notice || (scope ? skyMessage(level, state.placed, state.hint, scope, '')
+    : status || skyMessage(level, state.placed, state.hint, null, '', { turnHint: upright && compact }));
   const telescope = features.hints && <Telescope wide={wide} active={scope} onUse={point} />;
   /* which sky of the mode is up: a new one is reached by slewing the telescope (SkyStage) */
   const slot = (session.siteOffset ?? 0) + state.idx;
@@ -149,8 +155,6 @@ export function SkyPlay({ session, userId, locked = false, tone = 'night', activ
       ) : <div className={styles.waiting}>Scanning the sky…</div>}
     </SkyStage>
   );
-  /* a big sky on a phone: the column around it tightens so the board gets the room */
-  const compact = !!level && level.nodes.length >= BIG_SKY;
   const button = primary && (
     <Button block disabled={primary.disabled ?? !cleared} onClick={act}>{primary.label}</Button>
   );
@@ -186,26 +190,33 @@ export function SkyPlay({ session, userId, locked = false, tone = 'night', activ
     );
   }
 
+  /* One tree upright and sideways, so turning the phone never remounts the board (lit stars, the loupe and a slew
+     carry on): the CSS lays it out. Upright, the side group dissolves into the column and the head goes above the
+     board; on a sideways phone the board takes the height and the side group is a panel beside it. */
   return (
     <DeskPage active={active} tone={tone} className={cx(styles.col, compact && styles.compact)}>
-      {top ?? (
-        <>
-          <div className={styles.top}>
-            <button className={styles.icon} aria-label={backLabel} onClick={onBack}><BackIcon /></button>
-            <div className={styles.titleBlock}><div className={styles.title}>{title}</div>{skies && <SkyDots skies={skies.entries} />}</div>
-            <button className={styles.icon} aria-label="Dim all" onClick={reset}><ResetIcon /></button>
-          </div>
-          <div className={styles.countRow}>
-            <LitCount lit={state.placed.length} label={darkLabel(level, state.placed)} wide={false} />
-            {level && <ParPill par={level.k} />}
-          </div>
-        </>
-      )}
       <div className={styles.board}>{board}</div>
-      {telescope}
-      <div className={styles.msg} role="status">{msg}</div>
-      {button}
-      {footer}
+      <div className={styles.side}>
+        <div className={styles.head}>
+          {top ?? (
+            <>
+              <div className={styles.top}>
+                <button className={styles.icon} aria-label={backLabel} onClick={onBack}><BackIcon /></button>
+                <div className={styles.titleBlock}><div className={styles.title}>{title}</div>{skies && <SkyDots skies={skies.entries} />}</div>
+                <button className={styles.icon} aria-label="Dim all" onClick={reset}><ResetIcon /></button>
+              </div>
+              <div className={styles.countRow}>
+                <LitCount lit={state.placed.length} label={darkLabel(level, state.placed)} wide={false} />
+                {level && <ParPill par={level.k} />}
+              </div>
+            </>
+          )}
+        </div>
+        {telescope}
+        <div className={styles.msg} role="status">{msg}</div>
+        {button && <div className={styles.go}>{button}</div>}
+        {footer}
+      </div>
     </DeskPage>
   );
 }

@@ -128,6 +128,8 @@ describe('skyMessage', () => {
   it('nudges, then says how the sky came out', () => {
     expect(skyMessage(path, [], null, null, '')).toBe('Tap a star to light it. Every line it touches will glow.');
     expect(skyMessage(path, [0], null, null, '')).toBe('1 line still dark. Light a star at either end.');
+    expect(skyMessage(path, [], null, null, '', { turnHint: true })).toBe('Turn your phone sideways for a bigger sky.');
+    expect(skyMessage(path, [0], null, null, '', { turnHint: true })).toBe('1 line still dark. Light a star at either end.');
     expect(skyMessage(path, [0, 2], null, null, '')).toBe('The whole figure shows. Par is 1. Can you dim one and still show it all?');
     expect(skyMessage(path, [1], null, null, '')).toBe('Par. The figure is complete and the sky is ready to chart.');
   });

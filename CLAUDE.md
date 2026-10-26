@@ -146,6 +146,15 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
       second drawing) with the star it would light ringed; lifting lights that star once (the click after it is swallowed),
       cancelling lights nothing, a quick tap is the board's own click; never during a slew (`SkyStage` stops the press);
       `Reticle` is shared with the slew's eyepiece;
+      **a phone turned sideways** (landscape, ≤ 560px tall, under the 1024px desktop layout): `SkyPlay`'s phone tree is
+      the same upright and sideways — the board, then a `.side` group (`.head` = the title bar and count, or a mode's
+      `top`; telescope, message, `.go` button, footer) — and only CSS lays it out: upright `.side` is `display: contents`
+      and `.head` is ordered above the board; sideways the column is a grid, the board takes the full height on the left
+      and `.side` is a panel on the right that scrolls on its own. So turning the phone never remounts the board: lit
+      stars, the telescope and a slew carry on, the board re-measures (and may turn the sky), and an open loupe closes
+      (`useLoupe`'s `layout`). Upright on a touch phone, a big sky's first message is "Turn your phone sideways for a
+      bigger sky." (`skyMessage`'s `turnHint`, `kit/useWide` `UPRIGHT_PHONE`). Other pages are not laid out for
+      sideways phones yet;
       `SkyStage` — where the board sits, and the **telescope slew** between skies: whenever `SkyPlay`'s slot
       (`siteOffset + idx`) changes, in any mode, the view closes to an eyepiece with a reticle (the rest of the page
       dark around it), the sky just charted slides away while faint stars streak past and the `ScopeArt` telescope in

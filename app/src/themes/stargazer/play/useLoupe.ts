@@ -33,8 +33,10 @@ export function loupeReducer(s: State, a: Action): State {
 const SWALLOW_MS = 450;
 
 /** Press and hold on the board (touch or pen, and only when `enabled`) opens the loupe; sliding moves it; lifting
-    calls `onPick` with where the finger was. A quick tap is left to the board's own click. */
-export function useLoupe(svg: SVGSVGElement | null, enabled: boolean, onPick: (touch: Touch) => void) {
+    calls `onPick` with where the finger was. A quick tap is left to the board's own click. `layout` names the board's
+    size: when it changes (the phone turned) the sky has moved under the finger, so the loupe closes and that touch
+    lights nothing. */
+export function useLoupe(svg: SVGSVGElement | null, enabled: boolean, layout: string, onPick: (touch: Touch) => void) {
   const [state, dispatch] = useReducer(loupeReducer, { kind: 'idle' });
   const swallowUntil = useRef(0);
 
@@ -46,8 +48,9 @@ export function useLoupe(svg: SVGSVGElement | null, enabled: boolean, onPick: (t
     return () => clearTimeout(t);
   }, [pressing]);
 
-  /* turned off mid-press (a slew, the sky changing size): let go */
+  /* turned off mid-press (a slew, the sky changing size), or the board resized under the finger: let go */
   useEffect(() => { if (!enabled) dispatch({ type: 'end' }); }, [enabled]);
+  useEffect(() => { dispatch({ type: 'end' }); }, [layout]);
 
   const touchAt = (e: PointerEvent): Touch | null => {
     if (!svg) return null;

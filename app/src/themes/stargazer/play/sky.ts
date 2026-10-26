@@ -162,8 +162,10 @@ export function activeScope(chosen: Scope | null, hint: Hint | null): Scope | nu
   return chosen;
 }
 
-/** The message panel: what the telescope found, a notice, or a nudge for where the sky stands. */
-export function skyMessage(lv: Level | null, placed: number[], hint: Hint | null, scope: Scope | null, notice: string): string {
+/** The message panel: what the telescope found, a notice, or a nudge for where the sky stands. `turnHint`: a big sky on a
+    phone held upright, where turning it sideways gives the board more room. */
+export function skyMessage(lv: Level | null, placed: number[], hint: Hint | null, scope: Scope | null, notice: string,
+  { turnHint = false }: { turnHint?: boolean } = {}): string {
   if (!lv) return 'Scanning the sky…';
   if (notice) return notice;
   const dark = lv.edges.length - coveredEdges(lv, placed).size;
@@ -172,7 +174,7 @@ export function skyMessage(lv: Level | null, placed: number[], hint: Hint | null
   }
   if (scope === 'spot' && hint?.kind === 'reveal') return 'The ringed star is part of a par answer.';
   if (scope === 'sweep' && dark) return `${plural(dark, 'dark line')} highlighted. Each needs a lit star at one end.`;
-  if (!placed.length) return 'Tap a star to light it. Every line it touches will glow.';
+  if (!placed.length) return turnHint ? 'Turn your phone sideways for a bigger sky.' : 'Tap a star to light it. Every line it touches will glow.';
   if (dark) return `${plural(dark, 'line')} still dark. Light a star at either end.`;
   if (placed.length > lv.k) return `The whole figure shows. Par is ${lv.k}. Can you dim one and still show it all?`;
   return 'Par. The figure is complete and the sky is ready to chart.';

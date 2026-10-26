@@ -33,7 +33,7 @@ export const SkyBoard = memo(function SkyBoard({ level, placed, sweep, ring, foc
   const [svg, setSvg] = useState<SVGSVGElement | null>(null);
   const ppu = box ? pxPerUnit(sky.viewBox, box) : 0;
   const reach = reachOf(sky.hit);
-  const { open, handlers } = useLoupe(svg, !!box && isTight(sky.hit, ppu), t => {
+  const { open, handlers } = useLoupe(svg, !!box && isTight(sky.hit, ppu), box ? `${box.w}x${box.h}` : '', t => {
     const star = pickStar(sky.stars, t.world, reach);
     if (star != null) onTapStar(star);
   });
