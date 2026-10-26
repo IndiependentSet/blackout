@@ -153,8 +153,8 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
       and `.side` is a panel on the right that scrolls on its own. So turning the phone never remounts the board: lit
       stars, the telescope and a slew carry on, the board re-measures (and may turn the sky), and an open loupe closes
       (`useLoupe`'s `layout`). Upright on a touch phone, a big sky's first message is "Turn your phone sideways for a
-      bigger sky." (`skyMessage`'s `turnHint`, `kit/useWide` `UPRIGHT_PHONE`). Every other page has its own sideways
-      layout too (below, *a phone turned sideways*);
+      bigger sky." (`skyMessage`'s `turnHint`, `kit/useWide` `UPRIGHT_PHONE`). Other pages are not laid out for
+      sideways phones yet;
       `SkyStage` — where the board sits, and the **telescope slew** between skies: whenever `SkyPlay`'s slot
       (`siteOffset + idx`) changes, in any mode, the view closes to an eyepiece with a reticle (the rest of the page
       dark around it), the sky just charted slides away while faint stars streak past and the `ScopeArt` telescope in
@@ -174,16 +174,6 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
       scrolls inside its own `Scroll` panel, and `@media (max-height: 760px)`
       tightens spacing. A page with more than a screen of sections splits into
       sub-pages instead (Me's friends, leaderboard and Edit profile).
-      **A phone turned sideways** (landscape, ≤ 560px tall, under the 1024px desktop layout; the query lives in
-      `kit/kit.module.css` and `play/Stargazer.module.css`): the column pads less, the Tonight/Atlas/Me `TabBar` becomes a
-      rail down the left edge, and a page with one main part uses `kit/Layout`'s `Split` (`before`, `lead`, `after`):
-      upright its wrappers are `display: contents`, so the page lays out exactly as before (the column's `.fit`/`.scroll`
-      rules reach through them); sideways `lead` takes the left half at full height and `before` + `after` stack on the
-      right, each pane scrolling on its own if it must. Pages with `Split`: Tonight (the night card), Me (the month),
-      Edit profile (the picture icons go right), Night charted and the duel result (the figure), First night (the
-      steps), Voyage (the level path) and the Rush summary (the board). Lists-only pages (Atlas, friends, boards, Stats,
-      the Rush and duel lobbies) need nothing: their `Scroll` already takes the height. CSS only, so turning the phone
-      never remounts a page.
       **One radius scale** (`tokens.css`): `--sg-r-card` (24px) for every card and panel, `--sg-r-inner` (16px) for wells and
       tiles inside a card, 999px for pills and buttons; `--sg-divider` for hairlines. Don't add other card radii.
       **Me, Stats and Tonight** (the simplified layouts): Me is a profile card (`Edit` opens the Edit profile sub-page: handle +

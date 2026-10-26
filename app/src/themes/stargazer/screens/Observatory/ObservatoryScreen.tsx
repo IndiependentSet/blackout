@@ -12,7 +12,6 @@ import { signOut } from '../../../../services/repositories/auth';
 import { getProfile } from '../../../../services/repositories/profiles';
 import { Button } from '../../kit/Button';
 import { DeskHeader, type DeskProps } from '../../kit/DeskHeader';
-import { Split } from '../../kit/Layout';
 import { ListCard, ListRow } from '../../kit/ListCard';
 import { Avatar, Note, Page, TopBar } from '../../kit/Page';
 import { useWide } from '../../kit/useWide';
@@ -93,7 +92,7 @@ function Overview({ auth, userId, streak, named, month, today, stats, crew, week
     );
   }
   /* a phone: the month takes whatever height is left, so the page never scrolls */
-  return <Split before={profile} lead={<MonthCard today={today} month={month} fill />} after={links} />;
+  return <>{profile}<MonthCard today={today} month={month} fill />{links}</>;
 }
 
 function SignedIn(props: Props & { userId: string; view: View; setView: (v: View) => void; wide: boolean; footer: ReactNode; signOut: ReactNode }) {
