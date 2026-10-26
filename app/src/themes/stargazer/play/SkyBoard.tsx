@@ -1,6 +1,9 @@
-import { memo, useId } from 'react';
+import { memo, useId, useState } from 'react';
 import type { Level } from '../../../domain/types';
+import { Loupe } from './Loupe';
+import { isTight, pickStar, pxPerUnit, reachOf } from './loupe';
 import { CORE_R, HALO_R, skyOf, type Box } from './sky';
+import { useLoupe } from './useLoupe';
 import styles from './SkyBoard.module.css';
 
 /** A four-point star, 15 units from tip to centre. */
@@ -20,17 +23,28 @@ interface Props {
   box?: Box | null;
 }
 
-/** The puzzle as a patch of night sky: tap a star to light it, and every line touching it glows. */
+/** The puzzle as a patch of night sky: tap a star to light it, and every line touching it glows. On a touch screen,
+    when the stars are too close to tap easily, press and hold for the loupe: lifting lights the star ringed in it. */
 export const SkyBoard = memo(function SkyBoard({ level, placed, sweep, ring, focus, onTapStar, box }: Props) {
-  const glowId = 'sg-glow' + useId().replace(/[^a-zA-Z0-9_-]/g, '');
+  const uid = useId().replace(/[^a-zA-Z0-9_-]/g, '');
+  const glowId = 'sg-glow' + uid, artId = 'sg-art' + uid;
   const sky = skyOf(level, placed, { box, tight: true });
+  const at = (i: number | null) => (i == null ? null : sky.stars[i]);
+  const [svg, setSvg] = useState<SVGSVGElement | null>(null);
+  const ppu = box ? pxPerUnit(sky.viewBox, box) : 0;
+  const reach = reachOf(sky.hit);
+  const { open, handlers } = useLoupe(svg, !!box && isTight(sky.hit, ppu), t => {
+    const star = pickStar(sky.stars, t.world, reach);
+    if (star != null) onTapStar(star);
+  });
+  const pick = open && at(pickStar(sky.stars, open.world, reach));
   const s = sky.scale;
   const dark = sky.lines.filter(l => !l.lit);
   const lit = sky.lines.filter(l => l.lit);
-  const at = (i: number | null) => (i == null ? null : sky.stars[i]);
   const ringAt = at(ring), focusAt = at(focus);
   return (
-    <svg className={styles.sky} viewBox={sky.viewBox} preserveAspectRatio="xMidYMid meet" role="group" aria-label="Sky">
+    <>
+    <svg ref={setSvg} className={styles.sky} viewBox={sky.viewBox} preserveAspectRatio="xMidYMid meet" role="group" aria-label="Sky" {...handlers}>
       <defs>
         <radialGradient id={glowId}>
           <stop offset="0" className={styles.glowCore} />
@@ -38,6 +52,7 @@ export const SkyBoard = memo(function SkyBoard({ level, placed, sweep, ring, foc
           <stop offset="1" className={styles.glowEdge} />
         </radialGradient>
       </defs>
+      <g id={artId}>
       {dark.map(l => (
         <line key={l.i} className={styles.lineDark} x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2}
           strokeWidth={2.5 * s} strokeDasharray={`${2 * s} ${9 * s}`} />
@@ -64,10 +79,13 @@ export const SkyBoard = memo(function SkyBoard({ level, placed, sweep, ring, foc
           <circle cx={n.x} cy={n.y} r={CORE_R * s * n.size} className={styles.dim} />
         </g>
       ))}
+      </g>
       {sky.stars.map(n => (
         <circle key={'t' + n.i} className={styles.hit} cx={n.x} cy={n.y} r={sky.hit}
           role="button" tabIndex={-1} aria-pressed={n.lit} aria-label={'Star ' + (n.i + 1)} onClick={() => onTapStar(n.i)} />
       ))}
     </svg>
+    {open && box && <Loupe artId={artId} touch={open} pick={pick || null} scale={s} ppu={ppu} board={box} />}
+    </>
   );
 });

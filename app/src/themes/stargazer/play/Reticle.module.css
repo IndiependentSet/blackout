@@ -1,0 +1,5 @@
+/* The eyepiece's crosshair, in the slew and the loupe. */
+.reticle { display: block; width: 100%; height: 100%; overflow: visible; }
+.reticle line, .reticle circle {
+  fill: none; stroke: color-mix(in srgb, var(--sg-mint) 38%, transparent); stroke-width: 1; vector-effect: non-scaling-stroke;
+}

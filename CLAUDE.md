@@ -140,6 +140,12 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
       atlas pass no view and draw as before), the board keeps a tight margin (its svg lets the glow spill), and the stars'
       scale is raised so a dim star's core is ≥ 4.5px on screen, capped so halos never meet; a sky of `BIG_SKY` (20)
       stars or more tightens the phone column (`.compact`, the same CSS variables the short-phone media query sets);
+      **the loupe** (`loupe.ts` pure — `pickStar`, `loupePlacement`, `loupeViewBox`, `isTight` —, `useLoupe` the pointer
+      reducer, `Loupe` the drawing): on touch/pen, when the board's tap targets are under 44px on screen, a finger held
+      still for 300 ms opens an eyepiece 90px above it showing the sky 2.5× (through `<use>` of the board's art, not a
+      second drawing) with the star it would light ringed; lifting lights that star once (the click after it is swallowed),
+      cancelling lights nothing, a quick tap is the board's own click; never during a slew (`SkyStage` stops the press);
+      `Reticle` is shared with the slew's eyepiece;
       `SkyStage` — where the board sits, and the **telescope slew** between skies: whenever `SkyPlay`'s slot
       (`siteOffset + idx`) changes, in any mode, the view closes to an eyepiece with a reticle (the rest of the page
       dark around it), the sky just charted slides away while faint stars streak past and the `ScopeArt` telescope in

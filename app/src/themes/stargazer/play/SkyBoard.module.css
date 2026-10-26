@@ -1,4 +1,6 @@
 .sky { width: 100%; height: 100%; overflow: visible; display: block; -webkit-tap-highlight-color: transparent; }
+/* a held finger is the loupe's: no scrolling, zooming, selecting or the long-press menu */
+.sky { touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 
 .glowCore { stop-color: var(--sg-glow-core); stop-opacity: .8; }
 .glowMid { stop-color: var(--sg-glow-edge); stop-opacity: .22; }

@@ -1,7 +1,8 @@
-import { useCallback, useRef, type CSSProperties, type MouseEvent, type ReactNode } from 'react';
+import { useCallback, useRef, type CSSProperties, type MouseEvent, type PointerEvent, type ReactNode } from 'react';
 import type { Level } from '../../../domain/types';
 import { cx } from '../kit/cx';
 import { clamp } from '../kit/motion';
+import { Reticle } from './Reticle';
 import { ScopeArt } from './ScopeArt';
 import { SkyBoard } from './SkyBoard';
 import type { Box } from './sky';
@@ -34,6 +35,8 @@ export function SkyStage({ level, placed, slot, pace, wide, measure, box = null,
   const setStage = useCallback((el: HTMLDivElement | null) => { stage.current = el; measure?.(el); }, [measure]);
   const { slew, skip } = useSlew(level, placed, slot, pace, stage);
   const onSkip = (e: MouseEvent) => { e.stopPropagation(); e.preventDefault(); skip(); };
+  /* nor does a press: the loupe never opens on a sky that's still arriving */
+  const onHoldOff = (e: PointerEvent) => e.stopPropagation();
 
   const run = slew?.run;
   const f = slew?.frame;
@@ -46,7 +49,8 @@ export function SkyStage({ level, placed, slot, pace, wide, measure, box = null,
   };
   /* one tree whether or not a slew is on, so the live board is never remounted */
   return (
-    <div ref={setStage} className={cx(styles.stage, wide && styles.wide)} onClickCapture={slew ? onSkip : undefined}>
+    <div ref={setStage} className={cx(styles.stage, wide && styles.wide)} onClickCapture={slew ? onSkip : undefined}
+      onPointerDownCapture={slew ? onHoldOff : undefined}>
       <div className={cx(styles.view, slew && styles.moving)}>
         {run && f && <Field run={run} frame={f} distance={d} pace={pace} />}
         {run && f && (
@@ -79,19 +83,6 @@ function Field({ run, frame, distance, pace }: { run: SlewRun; frame: SlewFrame;
             width={2 * s.r + streak} height={2 * s.r} rx={s.r} opacity={s.a} />
         ))}
       </g>
-    </svg>
-  );
-}
-
-/** The eyepiece's crosshair: two broken hairlines and a small centre ring. */
-function Reticle() {
-  return (
-    <svg className={styles.reticle} viewBox="-50 -50 100 100">
-      <line x1={-47} y1={0} x2={-9} y2={0} />
-      <line x1={9} y1={0} x2={47} y2={0} />
-      <line x1={0} y1={-47} x2={0} y2={-9} />
-      <line x1={0} y1={9} x2={0} y2={47} />
-      <circle r={4} />
     </svg>
   );
 }
