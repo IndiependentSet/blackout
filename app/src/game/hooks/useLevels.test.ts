@@ -33,16 +33,18 @@ describe('useLevels', () => {
   });
 
   it('stops building when unmounted', async () => {
+    /* the first site finishes only once the test says so, after the unmount: no timer to race on a slow machine */
     const signals: AbortSignal[] = [];
+    let finish: () => void = () => {};
     const build = vi.fn((_s: unknown, seed: number, idx: number, o?: { signal?: AbortSignal }) => {
       if (o?.signal) signals.push(o.signal);
-      return new Promise<ReturnType<typeof ok<Level>>>(res => setTimeout(() => res(ok(lvl(seed + idx))), 5));
+      return new Promise<ReturnType<typeof ok<Level>>>(res => { finish = () => res(ok(lvl(seed + idx))); });
     });
     const { unmount } = renderHook(() => useLevels(12, DEFAULT_SCHEDULE, build as never));
     await waitFor(() => expect(build).toHaveBeenCalledTimes(1));
     unmount();
     expect(signals[0].aborted).toBe(true);
-    await act(async () => { await new Promise(r => setTimeout(r, 30)); });
+    await act(async () => { finish(); await new Promise(r => setTimeout(r, 30)); });
     expect(build).toHaveBeenCalledTimes(1);
   });
 
