@@ -135,6 +135,26 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
       a line, crowd another star, sit on a line not theirs or fold two lines
       together are calmed one by one, then put back on their cells. Drawing
       only: the puzzle is untouched, and arrow keys move by the drawn positions;
+      **the board fits a big sky to the phone** (`sky.ts`, given the board's size from `hooks/useBoxSize` via `SkyPlay`):
+      `skyPoints` turns a sky a quarter turn when that draws it ≥ 15% bigger (board only — `Figure`, previews and the
+      atlas pass no view and draw as before), the board keeps a tight margin (its svg lets the glow spill), and the stars'
+      scale is raised so a dim star's core is ≥ 4.5px on screen, capped so halos never meet; a sky of `BIG_SKY` (20)
+      stars or more tightens the phone column (`.compact`, the same CSS variables the short-phone media query sets);
+      **the loupe** (`loupe.ts` pure — `pickStar`, `loupePlacement`, `loupeViewBox`, `isTight` —, `useLoupe` the pointer
+      reducer, `Loupe` the drawing): on touch/pen, when the board's tap targets are under 44px on screen, a finger held
+      still for 300 ms opens an eyepiece 90px above it showing the sky 2.5× (through `<use>` of the board's art, not a
+      second drawing) with the star it would light ringed; lifting lights that star once (the click after it is swallowed),
+      cancelling lights nothing, a quick tap is the board's own click; never during a slew (`SkyStage` stops the press);
+      `Reticle` is shared with the slew's eyepiece;
+      **a phone turned sideways** (landscape, ≤ 560px tall, under the 1024px desktop layout): `SkyPlay`'s phone tree is
+      the same upright and sideways — the board, then a `.side` group (`.head` = the title bar and count, or a mode's
+      `top`; telescope, message, `.go` button, footer) — and only CSS lays it out: upright `.side` is `display: contents`
+      and `.head` is ordered above the board; sideways the column is a grid, the board takes the full height on the left
+      and `.side` is a panel on the right that scrolls on its own. So turning the phone never remounts the board: lit
+      stars, the telescope and a slew carry on, the board re-measures (and may turn the sky), and an open loupe closes
+      (`useLoupe`'s `layout`). Upright on a touch phone, a big sky's first message is "Turn your phone sideways for a
+      bigger sky." (`skyMessage`'s `turnHint`, `kit/useWide` `UPRIGHT_PHONE`). Other pages are not laid out for
+      sideways phones yet;
       `SkyStage` — where the board sits, and the **telescope slew** between skies: whenever `SkyPlay`'s slot
       (`siteOffset + idx`) changes, in any mode, the view closes to an eyepiece with a reticle (the rest of the page
       dark around it), the sky just charted slides away while faint stars streak past and the `ScopeArt` telescope in
@@ -523,7 +543,8 @@ camera system in `app/src/themes/catastrophe/game/camera/` are.
 
 *(This and the next section are the CATASTROPHE INC. board, in `themes/catastrophe/`.
 Stargazer's `SkyBoard` is a plain SVG fitted to the sky — a small graph needs no
-camera — with its star size growing for big skies, capped, in `play/sky.ts`, and
+camera — with its star size growing for big skies, capped, and the sky turned and its stars kept readable to fit
+the board, in `play/sky.ts`, and
 its stars placed off the lattice by `play/warp.ts`.)*
 
 Levels used to be scaled down to fit a fixed viewBox, so spacing collapsed as
