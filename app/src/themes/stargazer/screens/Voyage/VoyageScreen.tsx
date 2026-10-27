@@ -5,7 +5,7 @@ import type { Place } from '../../../../game/hooks/useBoard';
 import type { Persistence } from '../../../../game/hooks/useCampaignClears';
 import { usePoolPublished } from '../../../../game/hooks/usePoolPublished';
 import { Button } from '../../kit/Button';
-import { Scroll } from '../../kit/Layout';
+import { Scroll, Split } from '../../kit/Layout';
 import { PlaceLink } from '../../kit/PlaceLink';
 import { DeskPage } from '../../kit/DeskPage';
 import { Note, TopBar } from '../../kit/Page';
@@ -57,22 +57,27 @@ export function VoyageScreen({ signedIn, clears, persistence, place, onBoard, on
 
   return (
     <DeskPage active="voyage" tone="night" className={styles.page}>
-      <TopBar title="Voyage" onBack={onBack} backLabel="Tonight" right={`${cleared} / ${CAMPAIGN_LEVELS}`} />
-      <WorldsRow current={ch.index} reach={reach} onPick={setOpen} />
-      <ChapterCard chapter={ch} cleared={progress.cleared} />
-      {place && onBoard && <PlaceLink place={place} label="among voyagers" onOpen={onBoard} />}
-      {persistence === 'memory' && <Note>Your progress isn’t saved yet; it will be once the connection is back.</Note>}
-      {pool === 'empty' && <Note>{NO_SKIES}</Note>}
-      <Scroll label="Levels" fade><div className={styles.path} ref={path}>
-        {Array.from({ length: ch.to - ch.from + 1 }, (_, i) => ch.from + i).map((n, i) => {
-          const clear = clears.get(n);
-          return (
-            <Stop key={n} local={n - ch.from + 1} state={clear ? 'done' : n === unlocked ? 'current' : 'locked'} over={clear ? clear.run.used - clear.run.par : undefined}
-              offset={WAVE[i % WAVE.length]} onOpen={pool === 'empty' || persistence === 'loading' ? undefined : () => onOpenLevel(n)} />
-          );
-        })}
-      </div></Scroll>
-      <NextWorld next={next} locked={!!next && next.index > reach} />
+      <Split
+        before={<>
+          <TopBar title="Voyage" onBack={onBack} backLabel="Tonight" right={`${cleared} / ${CAMPAIGN_LEVELS}`} />
+          <WorldsRow current={ch.index} reach={reach} onPick={setOpen} />
+          <ChapterCard chapter={ch} cleared={progress.cleared} />
+          {place && onBoard && <PlaceLink place={place} label="among voyagers" onOpen={onBoard} />}
+          {persistence === 'memory' && <Note>Your progress isn’t saved yet; it will be once the connection is back.</Note>}
+          {pool === 'empty' && <Note>{NO_SKIES}</Note>}
+        </>}
+        lead={
+          <Scroll label="Levels" fade><div className={styles.path} ref={path}>
+            {Array.from({ length: ch.to - ch.from + 1 }, (_, i) => ch.from + i).map((n, i) => {
+              const clear = clears.get(n);
+              return (
+                <Stop key={n} local={n - ch.from + 1} state={clear ? 'done' : n === unlocked ? 'current' : 'locked'} over={clear ? clear.run.used - clear.run.par : undefined}
+                  offset={WAVE[i % WAVE.length]} onOpen={pool === 'empty' || persistence === 'loading' ? undefined : () => onOpenLevel(n)} />
+              );
+            })}
+          </div></Scroll>
+        }
+        after={<NextWorld next={next} locked={!!next && next.index > reach} />} />
     </DeskPage>
   );
 }

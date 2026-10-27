@@ -12,3 +12,15 @@ export const Fit = ({ children, max, className }: { children: ReactNode; max?: n
 export const Scroll = ({ children, className, label, fade }: { children: ReactNode; className?: string; label?: string; fade?: boolean }) => (
   <div className={cx(styles.scroll, fade && styles.scrollFade, className)} role={label ? 'region' : undefined} aria-label={label}>{children}</div>
 );
+
+/** A page with one main part (a drawing, the month, tonight's card) and the rest around it. Upright and on desktop it
+    changes nothing: `before`, `lead` and `after` are laid out as if they were the column's own children, in that order.
+    On a phone turned sideways, `lead` takes the left half at full height and `before` then `after` stack on the right,
+    `after` scrolling on its own if it must. Only CSS tells the two apart, so turning the phone never remounts anything. */
+export const Split = ({ before, lead, after }: { before?: ReactNode; lead: ReactNode; after?: ReactNode }) => (
+  <div className={styles.split}>
+    {before && <div className={styles.splitBefore}>{before}</div>}
+    <div className={styles.splitLead}>{lead}</div>
+    {after && <div className={styles.splitAfter}>{after}</div>}
+  </div>
+);
