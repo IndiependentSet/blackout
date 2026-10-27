@@ -14,6 +14,8 @@ interface Props {
   placed: number[];
   /** Sweep: the dark lines march in mint */
   sweep: boolean;
+  /** Count: the marked dark lines (indices into the level's edges), none when Count is off */
+  counted?: number[] | null;
   /** Spot: the star the telescope rings, if any */
   ring: number | null;
   /** keyboard focus, drawn only once the keyboard has been used */
@@ -25,7 +27,7 @@ interface Props {
 
 /** The puzzle as a patch of night sky: tap a star to light it, and every line touching it glows. On a touch screen,
     when the stars are too close to tap easily, press and hold for the loupe: lifting lights the star ringed in it. */
-export const SkyBoard = memo(function SkyBoard({ level, placed, sweep, ring, focus, onTapStar, box }: Props) {
+export const SkyBoard = memo(function SkyBoard({ level, placed, sweep, counted = null, ring, focus, onTapStar, box }: Props) {
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, '');
   const glowId = 'sg-glow' + uid, artId = 'sg-art' + uid;
   const sky = skyOf(level, placed, { box, tight: true });
@@ -41,6 +43,7 @@ export const SkyBoard = memo(function SkyBoard({ level, placed, sweep, ring, foc
   const s = sky.scale;
   const dark = sky.lines.filter(l => !l.lit);
   const lit = sky.lines.filter(l => l.lit);
+  const marked = counted ? new Set(counted) : null;
   const ringAt = at(ring), focusAt = at(focus);
   return (
     <>
@@ -60,6 +63,18 @@ export const SkyBoard = memo(function SkyBoard({ level, placed, sweep, ring, foc
       {sweep && dark.map(l => (
         <line key={'h' + l.i} className={styles.lineHot} x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2} strokeWidth={3.5 * s} />
       ))}
+      {marked && dark.filter(l => marked.has(l.i)).map(l => {
+        /* a solid line with a tick across its middle: one star still to light on each, none shared */
+        const len = Math.hypot(l.x2 - l.x1, l.y2 - l.y1) || 1;
+        const tx = (-(l.y2 - l.y1) / len) * 7 * s, ty = ((l.x2 - l.x1) / len) * 7 * s;
+        const mx = (l.x1 + l.x2) / 2, my = (l.y1 + l.y2) / 2;
+        return (
+          <g key={'c' + l.i} className={styles.counted} data-counted={l.i}>
+            <line x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2} strokeWidth={4 * s} />
+            <line x1={mx - tx} y1={my - ty} x2={mx + tx} y2={my + ty} strokeWidth={3 * s} />
+          </g>
+        );
+      })}
       {lit.map(l => (
         <g key={l.i}>
           <line className={styles.lineGlow} x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2} strokeWidth={10 * s} />

@@ -116,3 +116,23 @@ describe('SkyBoard loupe', () => {
     expect(loupe()).toBeNull();
   });
 });
+
+describe('Count on the board', () => {
+  const draw = (placed: number[], counted: number[] | null) =>
+    render(<SkyBoard level={path} placed={placed} sweep={false} counted={counted} ring={null} focus={null} onTapStar={() => {}} box={BIG} />);
+  const marks = () => [...document.querySelectorAll('[data-counted]')];
+
+  it('marks the counted lines inside the art the loupe shows', () => {
+    draw([], [1]);
+    expect(marks().map(m => m.getAttribute('data-counted'))).toEqual(['1']);
+    const art = document.querySelector('g[id^="sg-art"]')!;
+    expect(art.contains(marks()[0])).toBe(true);
+  });
+  it('marks nothing when Count is off, and never a lit line', () => {
+    draw([], null);
+    expect(marks()).toHaveLength(0);
+    document.body.innerHTML = '';
+    draw([0], [0]);
+    expect(marks()).toHaveLength(0);
+  });
+});

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Level, SiteResult } from '../../../domain/types';
 import { skyLayout } from './warp';
-import { CORE_R, HALO_R, SKY_STEP, activeScope, darkLabel, scopeForKey, skyEntries, skyMessage, skyOf, skyPoints, skyProgress, starfield } from './sky';
+import { CORE_R, HALO_R, SKY_STEP, activeScope, countMessage, darkLabel, SCOPES, scopeForKey, skyEntries, skyMessage, skyOf, skyPoints, skyProgress, starfield } from './sky';
 
 /* a path of three stars, 0 - 1 - 2: par is the middle one */
 const path: Level = {
@@ -115,12 +115,32 @@ describe('telescope', () => {
   it('maps keys 1/2/3 to Spot, Sweep, Count', () => {
     expect([1, 2, 3].map(t => scopeForKey(t as 1 | 2 | 3))).toEqual(['spot', 'sweep', 'count']);
   });
-  it('shows Spot and Count only once the reducer has answered with their hint', () => {
+  it('shows Spot only once the reducer has answered with its star; Count draws its own proof', () => {
     expect(activeScope('spot', null)).toBeNull();
     expect(activeScope('spot', { kind: 'reveal', node: 1 })).toBe('spot');
+    expect(activeScope('count', null)).toBe('count');
     expect(activeScope('count', { kind: 'proof', edges: [0] })).toBe('count');
     expect(activeScope('sweep', null)).toBe('sweep');
     expect(activeScope(null, { kind: 'reveal', node: 1 })).toBeNull();
+  });
+  it("labels Count \"Count what's left\" on desktop and \"Count\" on a phone", () => {
+    const count = SCOPES.find(t => t.scope === 'count')!;
+    expect([count.short, count.long]).toEqual(['Count', "Count what's left"]);
+  });
+});
+
+describe('countMessage', () => {
+  /* par 5 */
+  it('says how many more stars at least, never that par is the count', () => {
+    expect(countMessage(5, 0, 4)).toBe('4 marked lines share no star: this sky needs at least 4 stars. Par may need more.');
+    expect(countMessage(5, 1, 2)).toBe('2 marked lines share no star: you need at least 2 more stars. Par may need more.');
+    expect(countMessage(5, 3, 2)).toBe('2 marked lines share no star: at least 2 more stars — all that par has left.');
+    expect(countMessage(5, 4, 2)).toBe('2 marked lines share no star: at least 2 more, so par (5) is out of reach with these stars lit. Dim one.');
+  });
+  it('speaks of one line in the singular', () => {
+    expect(countMessage(5, 0, 1)).toBe('1 marked line is still dark: this sky needs at least 1 star. Par may need more.');
+    expect(countMessage(5, 2, 1)).toBe('1 marked line is still dark: you need at least 1 more star. Par may need more.');
+    expect(countMessage(5, 4, 1)).toBe('1 marked line is still dark: at least 1 more star — all that par has left.');
   });
 });
 
@@ -135,7 +155,12 @@ describe('skyMessage', () => {
   });
   it('puts a notice first, then what the telescope found', () => {
     expect(skyMessage(path, [], null, null, 'out of power')).toBe('out of power');
-    expect(skyMessage(path, [], { kind: 'proof', edges: [0] }, 'count', '')).toContain('fewer than 1 star.');
+    expect(skyMessage(path, [], null, 'count', '', { counted: [0] }))
+      .toBe('1 marked line is still dark: this sky needs at least 1 star. Par may need more.');
+    expect(skyMessage(path, [0, 2], null, 'count', '', { counted: [] }))
+      .toBe('The whole figure shows. Par is 1. Can you dim one and still show it all?');
+    expect(skyMessage(path, [2], null, 'count', '', { counted: [0] }))
+      .toBe('1 marked line is still dark: at least 1 more, so par (1) is out of reach with these stars lit. Dim one.');
     expect(skyMessage(path, [], { kind: 'reveal', node: 1 }, 'spot', '')).toBe('The ringed star is part of a par answer.');
     expect(skyMessage(path, [0], null, 'sweep', '')).toBe('1 dark line highlighted. Each needs a lit star at one end.');
   });

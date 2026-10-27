@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { isCleared } from '../../../domain/cover';
+import { hintDarkMatching } from '../../../domain/hints';
 import { nearestInDirection } from '../../../domain/navigation';
 import { useBoxSize } from '../../../hooks/useBoxSize';
 import { useMediaQuery } from '../../../hooks/useMediaQuery';
@@ -70,10 +71,15 @@ export function SkyPlay({ session, userId, locked = false, tone = 'night', activ
   const onSaveError = useCallback((error: string) => session.dispatch({ type: 'notice', msg: SAVE_FAILED + error }), [session]);
   const { saveClear } = useClearSaver(userId, session.save, onSaveError, session.onSchedule ?? true);
 
-  /* the telescope view picked for the board exactly as it stands: lighting or dimming a star puts it away */
-  const boardKey = state.idx + ':' + state.placed.join(',');
+  /* the telescope view picked: Spot and Sweep for the board exactly as it stands (lighting or dimming a star puts them
+     away), Count for the whole sky (it recounts what's left as stars change, until pressed again, a reset or a new sky) */
+  const slot = (session.siteOffset ?? 0) + state.idx;
+  const boardKey = slot + ':' + state.placed.join(',');
   const [picked, setPicked] = useState<{ scope: Scope; key: string } | null>(null);
-  const scope = activeScope(picked && picked.key === boardKey ? picked.scope : null, state.hint);
+  const keyFor = (s: Scope) => (s === 'count' ? String(slot) : boardKey);
+  const scope = activeScope(picked && picked.key === keyFor(picked.scope) ? picked.scope : null, state.hint);
+  const counted = useMemo(() => (scope === 'count' && level ? hintDarkMatching(level, state.placed) : null),
+    [scope, level, state.placed]);
 
   const handled = useRef(state.event ? state.event.seq : 0);   // an event from before this screen mounted is not ours
   useEffect(() => {
@@ -102,12 +108,13 @@ export function SkyPlay({ session, userId, locked = false, tone = 'night', activ
 
   const cleared = !!level && isCleared(level, state.placed);
   const act = () => { if (primary && !primary.disabled && primary.onClick) primary.onClick(); };
-  const reset = () => dispatch({ type: 'reset' });
+  const reset = () => { dispatch({ type: 'reset' }); if (!locked) setPicked(null); };
   const point = (s: Scope) => {
     if (!level || locked) return;
+    if (s === 'count' && scope === 'count') { setPicked(null); return; }   // Count pressed again puts it away
     const tier = SCOPE_TIER[s];
     if (tier) dispatch({ type: 'consult', tier, lv: level });
-    setPicked({ scope: s, key: boardKey });
+    setPicked({ scope: s, key: keyFor(s) });
   };
 
   useWindowKey(e => {
@@ -140,15 +147,14 @@ export function SkyPlay({ session, userId, locked = false, tone = 'night', activ
   const compact = !!level && level.nodes.length >= BIG_SKY;
   const upright = useMediaQuery(UPRIGHT_PHONE);
   const notice = state.msg === REFUSED_MSG ? OUT_OF_POWER : state.msg.startsWith(SAVE_FAILED) ? state.msg : '';
-  const msg = notice || (scope ? skyMessage(level, state.placed, state.hint, scope, '')
+  const msg = notice || (scope ? skyMessage(level, state.placed, state.hint, scope, '', { counted })
     : status || skyMessage(level, state.placed, state.hint, null, '', { turnHint: upright && compact }));
   const telescope = features.hints && <Telescope wide={wide} active={scope} onUse={point} />;
-  /* which sky of the mode is up: a new one is reached by slewing the telescope (SkyStage) */
-  const slot = (session.siteOffset ?? 0) + state.idx;
+  /* which sky of the mode is up (`slot`, above): a new one is reached by slewing the telescope (SkyStage) */
   const board = (
     <SkyStage level={level} placed={state.placed} slot={slot} pace={pace} wide={wide} measure={measure} box={box}>
       {level ? (
-        <SkyBoard level={level} placed={state.placed} sweep={scope === 'sweep'}
+        <SkyBoard level={level} placed={state.placed} sweep={scope === 'sweep'} counted={counted}
           ring={scope === 'spot' && state.hint?.kind === 'reveal' ? state.hint.node : null}
           focus={state.kbd ? state.focus : null} box={box}
           onTapStar={node => dispatch({ type: 'tap', node, lv: level })} />
