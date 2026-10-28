@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
+import { useCallback, useEffect, useReducer, useState } from 'react';
 import { dayNumber, daySeed } from '../domain/calendar';
 import { resultsFromClears } from '../domain/scoring';
 import { DAILY_SET, SITE_COUNT } from '../domain/sites';
@@ -6,6 +6,7 @@ import type { PlayFeatures } from '../domain/types';
 import { useAuth } from '../services/auth/authContext';
 import { getDayClears, recordClear } from '../services/repositories/siteClears';
 import { prefersMoreContrast } from './env';
+import { clearPendingNight, loadPendingNight, savePendingNight } from './pendingNight';
 import { useDailyLevels } from './hooks/useDailyLevels';
 import { useDailySchedule } from './hooks/useDailySchedule';
 import { useLevels } from './hooks/useLevels';
@@ -47,19 +48,27 @@ export function useGameSession(): GameSession {
     return () => { live = false; };
   }, [restorable, userId, day]);
 
-  /* Clears made while signed out were never recorded. When the player signs in on this page, record what the board
-     already holds (the published week only: an on-device week is never recorded), so tonight is not lost. */
-  const wasSignedOut = useRef(userId === null);
-  const resultsRef = useRef(state.results);
-  useEffect(() => { resultsRef.current = state.results; }, [state.results]);
+  /* Clears made while signed out are never recorded, so they are kept on the device (`pendingNight`) and put back on
+     the board after a reload. Once the player is signed in they are recorded and dropped, so tonight is not lost. */
   useEffect(() => {
-    if (userId === null) { wasSignedOut.current = true; return; }
-    if (!wasSignedOut.current || !restorable) return;
-    wasSignedOut.current = false;
-    resultsRef.current.forEach((run, idx) => {
+    if (!restorable && userId !== null) return;
+    if (userId === null) {
+      if (published.status === 'published') savePendingNight(day, state.results);
+      return;
+    }
+    const kept = loadPendingNight(day, SITE_COUNT);
+    if (!kept) return;
+    dispatch({ type: 'restore', results: kept });
+    kept.forEach((run, idx) => {
       if (run) void recordClear(userId, day, idx, run.used, run.par, run.stars);
     });
-  }, [userId, restorable, day]);
+    clearPendingNight();
+  }, [userId, restorable, published.status, day, state.results]);
+  useEffect(() => {
+    if (userId !== null || published.status !== 'published') return;
+    const kept = loadPendingNight(day, SITE_COUNT);
+    if (kept) dispatch({ type: 'restore', results: kept });
+  }, [userId, published.status, day]);
 
   const [expanded, setExpanded] = useState(false);
   /* someone who has asked their system for more contrast gets the house
