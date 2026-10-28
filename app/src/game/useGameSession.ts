@@ -6,6 +6,7 @@ import type { PlayFeatures } from '../domain/types';
 import { useAuth } from '../services/auth/authContext';
 import { getDayClears, recordClear } from '../services/repositories/siteClears';
 import { prefersMoreContrast } from './env';
+import { clearPendingNight, loadPendingNight, savePendingNight } from './pendingNight';
 import { useDailyLevels } from './hooks/useDailyLevels';
 import { useDailySchedule } from './hooks/useDailySchedule';
 import { useLevels } from './hooks/useLevels';
@@ -46,6 +47,28 @@ export function useGameSession(): GameSession {
     });
     return () => { live = false; };
   }, [restorable, userId, day]);
+
+  /* Clears made while signed out are never recorded, so they are kept on the device (`pendingNight`) and put back on
+     the board after a reload. Once the player is signed in they are recorded and dropped, so tonight is not lost. */
+  useEffect(() => {
+    if (!restorable && userId !== null) return;
+    if (userId === null) {
+      if (published.status === 'published') savePendingNight(day, state.results);
+      return;
+    }
+    const kept = loadPendingNight(day, SITE_COUNT);
+    if (!kept) return;
+    dispatch({ type: 'restore', results: kept });
+    kept.forEach((run, idx) => {
+      if (run) void recordClear(userId, day, idx, run.used, run.par, run.stars);
+    });
+    clearPendingNight();
+  }, [userId, restorable, published.status, day, state.results]);
+  useEffect(() => {
+    if (userId !== null || published.status !== 'published') return;
+    const kept = loadPendingNight(day, SITE_COUNT);
+    if (kept) dispatch({ type: 'restore', results: kept });
+  }, [userId, published.status, day]);
 
   const [expanded, setExpanded] = useState(false);
   /* someone who has asked their system for more contrast gets the house
