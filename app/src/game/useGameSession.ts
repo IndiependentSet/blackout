@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useReducer, useState } from 'react';
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { dayNumber, daySeed } from '../domain/calendar';
 import { resultsFromClears } from '../domain/scoring';
 import { DAILY_SET, SITE_COUNT } from '../domain/sites';
@@ -46,6 +46,20 @@ export function useGameSession(): GameSession {
     });
     return () => { live = false; };
   }, [restorable, userId, day]);
+
+  /* Clears made while signed out were never recorded. When the player signs in on this page, record what the board
+     already holds (the published week only: an on-device week is never recorded), so tonight is not lost. */
+  const wasSignedOut = useRef(userId === null);
+  const resultsRef = useRef(state.results);
+  useEffect(() => { resultsRef.current = state.results; }, [state.results]);
+  useEffect(() => {
+    if (userId === null) { wasSignedOut.current = true; return; }
+    if (!wasSignedOut.current || !restorable) return;
+    wasSignedOut.current = false;
+    resultsRef.current.forEach((run, idx) => {
+      if (run) void recordClear(userId, day, idx, run.used, run.par, run.stars);
+    });
+  }, [userId, restorable, day]);
 
   const [expanded, setExpanded] = useState(false);
   /* someone who has asked their system for more contrast gets the house
