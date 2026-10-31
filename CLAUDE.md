@@ -682,8 +682,9 @@ raster pass per frame. Everything above is plain strokes.
 
 Code comments, variable names (`BLACKOUT engine`, `bo-*` CSS classes in the
 old prototype), the `cc-*` CSS keyframe prefix, the `CatCoverGame`
-name in old commits, and this repo's own name (`blackout`) are all leftovers
-from earlier pivots (BLACKOUT, then CAT COVER). Don't be misled by them —
+name in old commits are all leftovers from earlier pivots (BLACKOUT, then
+CAT COVER). The repo itself was `blackout` until it was renamed `stargazer`
+(old URLs redirect; the local Supabase stack is `stargazer` too). Don't be misled by them —
 the shipped app is now Stargazer. Shared code (`domain/`, `game/`,
 `services/`) still speaks CATASTROPHE INC. (sites, pads, hire/recall, cats);
 that is fine — rename only if asked. In `themes/stargazer/` use Stargazer's

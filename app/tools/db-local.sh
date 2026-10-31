@@ -32,7 +32,7 @@ need() {
 # Refuse to start if one of our ports is taken, and say by what, instead of letting the CLI fail half-way.
 check_ports() {
   # our own stack already holds them: running `up` again is fine
-  docker ps --format '{{.Names}}' | grep -qx supabase_db_blackout && return 0
+  docker ps --format '{{.Names}}' | grep -qx supabase_db_stargazer && return 0
   local busy=""
   for p in 55320 55321 55322 55323 55324 5180; do
     if lsof -nP -iTCP:"$p" -sTCP:LISTEN >/dev/null 2>&1; then busy="$busy $p"; fi
