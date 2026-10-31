@@ -4,7 +4,7 @@
 # Only the services the app uses: Postgres, API (PostgREST), Auth, Realtime and Studio.
 # The schema is NOT applied by the CLI: the migrations live in app/sql/ and run
 # through tools/migrate.sh, exactly as they do in CI and production.
-project_id = "blackout"
+project_id = "stargazer"
 
 [api]
 enabled = true
